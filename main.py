@@ -58,8 +58,11 @@ FEATURECOUNTS_EXECUTABLE = "/Users/aasho2/opt/anaconda3/envs/bbmap/bin/featureCo
 # NEW IN V0.4: Indicate to featureCounts whether reads are paired-end
 PAIRED_END_READS = True
 
-# NEW IN V0.4: Number of threads to use for featureCounts and splice analysis
-NUMBER_OF_THREADS = 12
+# NEW IN V0.4: Number of threads to use for featureCounts
+FEATURECOUNTS_NUMBER_OF_THREADS = 12
+
+# NEW IN V0.4: Number of processes to use for reading from multiple bam files simultaneously during splice analysis
+SPLICE_ANALYSIS_NUMBER_OF_PROCESSES = 24
 
 # REFACTORED IN V0.4: Path to existing featureCounts output - leave empty to run featureCounts
 COUNTS_FILE = ""
@@ -251,7 +254,7 @@ def main(verbose: bool = False) -> None:
             REFERENCE_GENOME_GTF_PATH,
             feature_counts_output_path,
             paired_end_reads=PAIRED_END_READS,
-            threads=NUMBER_OF_THREADS
+            threads=FEATURECOUNTS_NUMBER_OF_THREADS
         )
         print_if_verbose("...done\n")
 
@@ -282,6 +285,7 @@ def main(verbose: bool = False) -> None:
         annotated_transcript_library,
         gene_counts,
         OUTPUT_DIR,
+        n_processes=SPLICE_ANALYSIS_NUMBER_OF_PROCESSES,
         verbose=verbose
     )
 
