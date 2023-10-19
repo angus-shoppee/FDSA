@@ -55,9 +55,11 @@ def calculate_exonic_overlap(
     j_start, j_end = j_pos
 
     j_range = range(j_start, j_end + 1)
-    f_range = range(f_start, f_end + 1)
+    f_range = range(f_start, f_end + 1) if f_start <= f_end else range(f_end, f_start)  # Account for reverse strand
 
     e_ranges = [range(e.start, e.end + 1) for e in transcript.exons]
+
+    # print(e_ranges)
 
     # Ugly way to make a set from a list of ranges... is there a more pythonic way to do this?
     e_union_set = set()
@@ -152,6 +154,36 @@ def get_splice_analysis_result_for_sample(
     )
 
 
+# def _print_transcript_debug_info(
+#     transcript: TranscriptRecord,
+#     feature_substring: str,
+#     splice_junction_loci: str
+# ) -> None:
+#
+#     print("-" * 40)
+#
+#     print(f"{transcript.transcript_id} / {transcript.gene_name}")
+#     print(f"Strand: ({transcript.strand})")
+#     print(f"Transcript exons: {[(e.start, e.end) for e in transcript.exons]}")
+#     print(f"GBSeq exons: {[(e.start, e.end) for e in transcript.gbseq.exons]}")
+#     print(f"Exon map: {transcript.exon_map}")
+#     print(f"Overlapping junctions: {splice_junction_loci}")
+#
+#     for feature in transcript.gbseq.features:
+#         if feature.has_qual_value_containing(feature_substring):
+#             try:
+#                 g_start = transcript.genomic_position_from_local(feature.start)
+#                 g_end = transcript.genomic_position_from_local(feature.end)
+#                 print(f"Feature with '{feature_substring}' qual: Local = " +
+#                       f"{str(feature.start) + ', ' + str(feature.end)}")
+#                 print(f"Feature with '{feature_substring}' qual: Genomic = " +
+#                       f"{str(g_start) + ', ' + str(g_end)}")
+#             except ValueError:
+#                 print("Unable to convert local positions to global")
+#
+#     print("-" * 40)
+
+
 def perform_splice_analysis(
     features_to_analyze: List[str],
     overlap_threshold: float,
@@ -159,7 +191,7 @@ def perform_splice_analysis(
     transcript_library: TranscriptLibrary,
     gene_counts: FeatureCountsResult,
     output_dir: str,
-    n_processes: int = 1,
+    max_n_processes: int = 1,
     verbose: bool = True,
 ) -> None:
 
@@ -174,15 +206,10 @@ def perform_splice_analysis(
 
     _analysis_start_ms = time.time_ns() / 1_000_000
 
+    n_processes = min(len(samples), max_n_processes)
+
     pool = Pool(processes=n_processes)
     print_if_verbose(f"Created worker pool with {n_processes} processes for parallel BAM file parsing\n")
-    if verbose:
-        _n_samples = len(samples)
-        if n_processes > _n_samples:
-            print(
-                f"NOTE: {_n_samples} BAM files have been supplied; spawning more than {_n_samples} processes will " +
-                f"not provide additional speed improvements.\n"
-            )
 
     for feature_substring in features_to_analyze:
 
@@ -209,12 +236,21 @@ def perform_splice_analysis(
 
             for _i, transcript in enumerate(transcript_library.get_all_transcripts()):
 
-                # START DEBUG BLOCK
-                if transcript.gene_name not in ("Cacna1d", "Cd74", "Gpr6", "Pkd1"):
+                # TODO: Exclude "redundant" transcripts with duplicate or matching annotation.
+                #       Skipping prior to performing splice analysis will result in large time savings and additionally
+                #       reduce size and redundancy of output.
+
+                # # START DEBUG BLOCK
+                # if transcript.gene_name not in ("Cacna1d", "Cd74", "Gpr6", "Pkd1"):
+                #     continue
+                # if _i > 5000:
+                #     break
+                # # END OF DEBUG BLOCK
+
+                # START DEBUG BLOCK 2
+                if transcript.gene_name not in ("Cd274", "Tnfrsf1b", "Bcl2"):
                     continue
-                if _i > 5000:
-                    break
-                # END OF DEBUG BLOCK
+                # END OF DEBUG BLOCK 2
 
                 _start_ms = time.time_ns() / 1_000_000
 
@@ -269,8 +305,9 @@ def perform_splice_analysis(
                             frequency_occurrences[result.sample_name] = result.frequency_occurrences
                             overlapping_junctions_loci += result.junctions_loci
 
+                        # _print_transcript_debug_info(transcript, feature_substring, overlapping_junctions_loci)
+
                         # Write to output (one row per feature per transcript)
-                        # TODO: Exclude "redundant" transcripts with duplicate or matching annotation
                         out_csv.writerow(
                             [
                                 transcript.transcript_id,

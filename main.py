@@ -62,7 +62,7 @@ PAIRED_END_READS = True
 FEATURECOUNTS_NUMBER_OF_THREADS = 12
 
 # NEW IN V0.4: Number of processes to use for reading from multiple bam files simultaneously during splice analysis
-SPLICE_ANALYSIS_NUMBER_OF_PROCESSES = 24
+SPLICE_ANALYSIS_MAX_NUMBER_OF_PROCESSES = 24
 
 # REFACTORED IN V0.4: Path to existing featureCounts output - leave empty to run featureCounts
 COUNTS_FILE = ""
@@ -285,7 +285,7 @@ def main(verbose: bool = False) -> None:
         annotated_transcript_library,
         gene_counts,
         OUTPUT_DIR,
-        n_processes=SPLICE_ANALYSIS_NUMBER_OF_PROCESSES,
+        max_n_processes=SPLICE_ANALYSIS_MAX_NUMBER_OF_PROCESSES,
         verbose=verbose
     )
 
