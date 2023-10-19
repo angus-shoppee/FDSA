@@ -9,7 +9,7 @@ class Sample:
 
     name: str
     suffix: str
-    sam: AlignmentFile
+    bam_path: str
 
     def __init__(
         self,
@@ -17,7 +17,6 @@ class Sample:
         bam_suffix: str,
     ) -> None:
 
-        self.name = os.path.basename(bam_path.replace("\\", "/")).replace(bam_suffix, "")
+        self.bam_path = bam_path.replace("\\", "/")
+        self.name = os.path.basename(self.bam_path).replace(bam_suffix, "")
         self.suffix = bam_suffix
-
-        self.sam = AlignmentFile(bam_path, "rb")

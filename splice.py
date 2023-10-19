@@ -4,6 +4,8 @@
 from typing import List, NamedTuple
 from pysam import AlignmentFile
 
+from experiment import Sample
+
 
 STAR_DEFAULT_MAPQ_FOR_UNIQUE_MAPPING = 255
 
@@ -52,13 +54,15 @@ class SpliceJunction:
         self.n_multi = n_multi
 
 
-def get_splice_junctions_from_sam(
-        sam: AlignmentFile,
+def get_splice_junctions_from_sample(
+        sample: Sample,
         chromosome: str,
         start: int,
         end: int,
         offset: int = 0,
 ) -> List[SpliceJunction]:
+
+    sam = AlignmentFile(sample.bam_path, "rb")
 
     # Fetch reads at the specified region, and extract splice junctions from CIGAR strings
 

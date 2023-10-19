@@ -102,6 +102,8 @@ def perform_splice_analysis(
     if not os.path.isdir(output_dir):
         raise ValueError(f"output_directory must be a valid directory. Got: {output_dir}")
 
+    _analysis_start_ms = time.time_ns() / 1_000_000
+
     for feature_substring in features_to_analyze:
 
         print_if_verbose(f"Performing splice analysis for term \"{feature_substring}\"...")
@@ -127,12 +129,12 @@ def perform_splice_analysis(
 
             for _i, transcript in enumerate(transcript_library.get_all_transcripts()):
 
-                # START DEBUG BLOCK
-                if transcript.gene_name not in ("Cacna1d", "Cd74", "Gpr6", "Pkd1"):
-                    continue
-                if _i > 5000:
-                    break
-                # END OF DEBUG BLOCK
+                # # START DEBUG BLOCK
+                # if transcript.gene_name not in ("Cacna1d", "Cd74", "Gpr6", "Pkd1"):
+                #     continue
+                # if _i > 5000:
+                #     break
+                # # END OF DEBUG BLOCK
 
                 # _start_ms = time.time_ns() / 1_000_000
 
@@ -163,7 +165,9 @@ def perform_splice_analysis(
                         raw_number_occurrences = {}  # Dict[str, int]
                         frequency_occurrences = {}  # Dict[str, float]
 
-                        for sample in samples.values():
+                        samples_alphabetical = [samples[sample_name] for sample_name in sample_names_alphabetical]
+
+                        for sample in samples_alphabetical:
 
                             raw_number_occurrences[sample.name] = 0
                             frequency_occurrences[sample.name] = 0.0
@@ -239,6 +243,11 @@ def perform_splice_analysis(
                 #     f"INFO: Processed transcript ({transcript.transcript_id} / {transcript.gene_name}) " +
                 #     f"in {_finish_ms - _start_ms} ms"
                 # )
+
+        _analysis_finish_ms = time.time_ns() / 1_000_000
+        _analysis_runtime_minutes = (_analysis_finish_ms - _analysis_start_ms) / (1000 * 60)
+
+        print(f"TIME: Completed in {_analysis_runtime_minutes} minutes")
 
         print_if_verbose(
             f"...finished " +
