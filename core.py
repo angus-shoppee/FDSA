@@ -55,7 +55,7 @@ def calculate_exonic_overlap(
     j_start, j_end = j_pos
 
     j_range = range(j_start, j_end + 1)
-    f_range = range(f_start, f_end + 1) if f_start <= f_end else range(f_end, f_start)  # Account for reverse strand
+    f_range = range(f_start, f_end + 1) if f_start <= f_end else range(f_end, f_start + 1)  # Account for reverse strand
 
     e_ranges = [range(e.start, e.end + 1) for e in transcript.exons]
 
@@ -251,7 +251,7 @@ def perform_splice_analysis(
                     continue
                 if _i > 5000:
                     break
-                print("REGION:", f"{transcript.seqname}:{transcript.start}-{transcript.end}")
+                # print("REGION:", f"{transcript.seqname}:{transcript.start}-{transcript.end}")
                 # END OF DEBUG BLOCK
 
                 # # START DEBUG BLOCK 2
@@ -338,7 +338,8 @@ def perform_splice_analysis(
                                         gene_counts,
                                         overlap_threshold,
                                         f_start_genomic,
-                                        f_end_genomic
+                                        f_end_genomic,
+                                        primary_alignment_only
                                     ) for sample in samples_alphabetical[1:]
                                 ]
 

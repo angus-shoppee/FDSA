@@ -33,15 +33,20 @@ FEATURES_TO_ANALYZE = [
     "transmembrane region"
 ]
 
-# NEW (VERSION 0.3) - How much of the feature (as fraction, 0.0 to 1.0)
-#                     should overlap with the splice junction?
+# NEW IN V0.4: Indicate whether to only use annotation from the longest annotated transcript per gene
+ONLY_USE_LONGEST_ANNOTATED_TRANSCRIPT = True
+
+# NEW IN V0.4: Indicate whether to ignore transcripts with duplicate feature annotation
+#              (Overridden by ONLY_USE_LONGEST_ANNOTATED_TRANSCRIPT)
+SKIP_TRANSCRIPTS_WITH_REDUNDANT_FEATURE_ANNOTATION = True
+
 FEATURE_JUNCTION_OVERLAP_THRESHOLD = 0.5
 
 EXPERIMENTAL_ALLOW_JUNCTION_START_OUTSIDE_TRANSCRIPT = False
 EXPERIMENTAL_ALLOW_JUNCTION_END_OUTSIDE_TRANSCRIPT = False
 
 # Where to save output files
-OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4_test2"
+OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4_test"
 
 # Sorted, indexed BAM files to be analyzed
 BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/hons_PD1KO/sorted"
@@ -232,10 +237,68 @@ def main(verbose: bool = False) -> None:
     print_if_verbose(f"Enabling screening for features containing term(s): \"{', '.join(FEATURES_TO_ANALYZE)}\"...")
 
     for feature_substring in FEATURES_TO_ANALYZE:
-        for transcript in annotated_transcript_library.get_all_transcripts():
-            for gbfeature in transcript.gbseq.features:
-                if gbfeature.has_qual_value_containing(feature_substring):
-                    transcript.gbseq.set_analysis_feature(feature_substring, gbfeature)
+
+        if SKIP_TRANSCRIPTS_WITH_REDUNDANT_FEATURE_ANNOTATION or ONLY_USE_LONGEST_ANNOTATED_TRANSCRIPT:
+
+            transcripts_by_gene = annotated_transcript_library.get_transcripts_for_all_genes()
+
+            for gene_name in transcripts_by_gene.keys():
+
+                print("-" * 40 + "\n" + gene_name + "\n")
+
+                transcripts_ordered_by_length = sorted(
+                    transcripts_by_gene[gene_name].values(),
+                    key=lambda x: x.get_length(),
+                    reverse=True
+                )
+
+                if ONLY_USE_LONGEST_ANNOTATED_TRANSCRIPT:
+
+                    reached_transcript_with_relevant_annotation = False
+                    for transcript in transcripts_ordered_by_length:
+
+                        for gbfeature in transcript.gbseq.features:
+                            if gbfeature.has_qual_value_containing(feature_substring):
+                                reached_transcript_with_relevant_annotation = True
+                                transcript.gbseq.set_analysis_feature(feature_substring, gbfeature)
+
+                        if reached_transcript_with_relevant_annotation:
+                            break
+
+                else:
+
+                    # Get relevant features and store against transcript_id
+                    analysis_features = {
+                        transcript.transcript_id: list() for transcript in transcripts_ordered_by_length
+                    }
+                    for transcript_id, transcript in transcripts_by_gene[gene_name].items():
+                        for gbfeature in transcript.gbseq.features:
+                            if gbfeature.has_qual_value_containing(feature_substring):
+                                analysis_features[transcript_id].append(gbfeature)
+
+                    # Only use set_analysis_feature for transcripts with unique annotation, defaulting to longest
+                    print("Lengths:", [transcript.get_length() for transcript in transcripts_ordered_by_length])
+
+                    encountered = []
+                    for transcript in transcripts_ordered_by_length:
+                        summary_of_analysis_features = [
+                            (gbfeature.start, gbfeature.end) for gbfeature in analysis_features[transcript.transcript_id]
+                        ]
+                        if summary_of_analysis_features not in encountered:
+                            encountered.append(summary_of_analysis_features)
+                            for gbfeature in analysis_features[transcript.transcript_id]:
+                                transcript.gbseq.set_analysis_feature(feature_substring, gbfeature)
+                        else:
+                            print("Skipping", transcript.transcript_id)
+
+                print("-" * 40 + "\n")
+
+        else:
+
+            for transcript in annotated_transcript_library.get_all_transcripts():
+                for gbfeature in transcript.gbseq.features:
+                    if gbfeature.has_qual_value_containing(feature_substring):
+                        transcript.gbseq.set_analysis_feature(feature_substring, gbfeature)
 
     print_if_verbose("... done\n")
 

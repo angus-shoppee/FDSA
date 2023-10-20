@@ -204,6 +204,10 @@ class TranscriptRecord:
         self.gbseq = None
         self.exon_map = {}  # Exon number (str) mapping to index of refseq exon (int) or None
 
+    def get_length(self) -> int:
+
+        return self.end - self.start if self.end > self.start else self.start - self.end
+
     def set_gbseq(
         self,
         gbseq: GBSeq
@@ -279,12 +283,6 @@ class TranscriptLibrary:
         _i = 0
         _t = len(gene_names)
 
-        # # DEVELOPMENT - TEMPORARY BLOCK
-        # # TODO: Remove this once behaviour is stable
-        # gene_names = gene_names[:2000]
-        # print("[DEVELOPMENT] - Limited gene set to first 1000 gene names while generating transcript library")
-        # # END OF TEMPORARY BLOCK
-
         for gene_name in gene_names:
 
             if init_verbose:
@@ -329,11 +327,15 @@ class TranscriptLibrary:
         return all_transcripts
 
     def get_transcripts_for_gene(
-            self,
-            gene_name: str
+        self,
+        gene_name: str
     ) -> List[TranscriptRecord]:
 
         return list(self._transcripts_by_gene[gene_name].values())
+
+    def get_transcripts_for_all_genes(self) -> Dict[str, Dict[str, TranscriptRecord]]:
+
+        return self._transcripts_by_gene
 
     def get_transcript(
         self,

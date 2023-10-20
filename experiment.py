@@ -2,7 +2,6 @@
 # EXPERIMENT DESIGN, SAMPLES AND THEIR ASSOCIATED DATA
 
 import os
-from pysam import AlignmentFile
 
 
 class Sample:
