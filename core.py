@@ -409,9 +409,12 @@ def perform_splice_analysis(
                             raw_number_occurrences = {}  # Dict[str, int]
                             frequency_occurrences = {}  # Dict[str, float]
 
-                            if sum(
-                                [len(j) for j in junctions_by_sample_name.values()]
-                            ) > min_total_n_junctions_to_use_multiprocessing:
+                            if all([
+                                pool is not None,
+                                sum(
+                                    [len(j) for j in junctions_by_sample_name.values()]
+                                ) > min_total_n_junctions_to_use_multiprocessing
+                            ]):
                                 args_to_pool = [[
                                     sample,
                                     junctions_by_sample_name[sample.name],
