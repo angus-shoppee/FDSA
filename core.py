@@ -34,6 +34,72 @@ def sanitize_string_for_filename(s: str) -> str:
     return "".join(c for c in s if c.isalnum() or c in (".", "_", "-", " ")).rstrip()
 
 
+def set_analysis_features(
+    features_to_analyze: List[str],
+    annotated_transcript_library: TranscriptLibrary,
+    only_use_longest_annotated_transcript: bool = False,
+    skip_transcripts_with_redundant_feature_annotation: bool = False
+) -> None:
+
+    for feature_substring in features_to_analyze:
+
+        if skip_transcripts_with_redundant_feature_annotation or only_use_longest_annotated_transcript:
+
+            transcripts_by_gene = annotated_transcript_library.get_transcripts_for_all_genes()
+
+            for gene_name in transcripts_by_gene.keys():
+
+                transcripts_ordered_by_length = sorted(
+                    transcripts_by_gene[gene_name].values(),
+                    key=lambda x: x.get_length(),
+                    reverse=True
+                )
+
+                if only_use_longest_annotated_transcript:
+
+                    reached_transcript_with_relevant_annotation = False
+                    for transcript in transcripts_ordered_by_length:
+
+                        for gbfeature in transcript.gbseq.features:
+                            if gbfeature.has_qual_value_containing(feature_substring):
+                                reached_transcript_with_relevant_annotation = True
+                                transcript.gbseq.set_analysis_feature(feature_substring, gbfeature)
+
+                        if reached_transcript_with_relevant_annotation:
+                            break
+
+                else:
+
+                    # Get relevant features and store against transcript_id
+                    analysis_features = {
+                        transcript.transcript_id: list() for transcript in transcripts_ordered_by_length
+                    }
+                    for transcript_id, transcript in transcripts_by_gene[gene_name].items():
+                        for gbfeature in transcript.gbseq.features:
+                            if gbfeature.has_qual_value_containing(feature_substring):
+                                analysis_features[transcript_id].append(gbfeature)
+
+                    # Only use set_analysis_feature for transcripts with unique annotation, defaulting to longest
+                    encountered = []
+                    for transcript in transcripts_ordered_by_length:
+                        summary_of_analysis_features = [
+                            (
+                                gbfeature.start, gbfeature.end
+                            ) for gbfeature in analysis_features[transcript.transcript_id]
+                        ]
+                        if summary_of_analysis_features not in encountered:
+                            encountered.append(summary_of_analysis_features)
+                            for gbfeature in analysis_features[transcript.transcript_id]:
+                                transcript.gbseq.set_analysis_feature(feature_substring, gbfeature)
+
+        else:
+
+            for transcript in annotated_transcript_library.get_all_transcripts():
+                for gbfeature in transcript.gbseq.features:
+                    if gbfeature.has_qual_value_containing(feature_substring):
+                        transcript.gbseq.set_analysis_feature(feature_substring, gbfeature)
+
+
 def calculate_optc(n_occurrences: int, n_reads: int) -> float:
 
     return 0.0 if not all((n_occurrences, n_reads)) else float((n_occurrences * 1000) / n_reads)
@@ -268,7 +334,7 @@ def perform_splice_analysis(
                 #     #     break
                 # # END OF DEBUG BLOCK 3
 
-                _start_ms = time.time_ns() / 1_000_000
+                # _start_ms = time.time_ns() / 1_000_000
 
                 if verbose:
                     if _i % 1000 == 0:
@@ -374,11 +440,11 @@ def perform_splice_analysis(
                             ]
                         )
 
-                _finish_ms = time.time_ns() / 1_000_000
-                print(
-                    f"INFO: Processed transcript ({transcript.transcript_id} / {transcript.gene_name}) " +
-                    f"in {_finish_ms - _start_ms} ms"
-                )
+                # _finish_ms = time.time_ns() / 1_000_000
+                # print(
+                #     f"INFO: Processed transcript ({transcript.transcript_id} / {transcript.gene_name}) " +
+                #     f"in {_finish_ms - _start_ms} ms"
+                # )
 
         _analysis_finish_ms = time.time_ns() / 1_000_000
         _analysis_runtime_minutes = (_analysis_finish_ms - _analysis_start_ms) / (1000 * 60)
