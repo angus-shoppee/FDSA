@@ -71,12 +71,12 @@ class SpliceJunction:
 
 
 def get_splice_junctions_from_sample(
-        sample: Sample,
-        chromosome: str,
-        start: int,
-        end: int,
-        offset: int = 0,
-        primary_alignment_only: bool = False
+    sample: Sample,
+    chromosome: str,
+    start: int,
+    end: int,
+    primary_alignment_only: bool,
+    offset: int = 0
 ) -> List[SpliceJunction]:
 
     sam = AlignmentFile(sample.bam_path, "rb")

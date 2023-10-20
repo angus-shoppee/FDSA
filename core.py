@@ -2,7 +2,7 @@
 # FASE CONFIG & CORE FUNCTIONS
 
 from dataclasses import dataclass
-from typing import Tuple, List, Dict, Any
+from typing import Tuple, List, Dict, Any, Union
 from multiprocessing import Pool
 import os
 import csv
@@ -12,7 +12,7 @@ import time  # DEBUG
 from transcript import TranscriptRecord, TranscriptLibrary
 from experiment import Sample
 from counts import FeatureCountsResult
-from splice import get_splice_junctions_from_sample
+from splice import SpliceJunction, get_splice_junctions_from_sample
 
 
 class FaseConfig:
@@ -155,12 +155,12 @@ class OverlappingJunctionsInfo:
 
 def get_splice_analysis_result_for_sample(
     sample: Sample,
+    junctions: List[SpliceJunction],
     transcript: TranscriptRecord,
-    gene_counts: FeatureCountsResult,
+    n_gene_counts: int,
     overlap_threshold: float,
     f_start_genomic: int,
     f_end_genomic: int,
-    primary_alignment_only: bool,
     experimental_allow_junction_start_outside_transcript: bool = False,
     experimental_allow_junction_end_outside_transcript: bool = False
 ) -> OverlappingJunctionsInfo:
@@ -168,18 +168,6 @@ def get_splice_analysis_result_for_sample(
     number_occurrences = 0
 
     overlapping_j_buffer = f"| {sample.name} "
-
-    # Load junctions in this locus
-    # _start_j_ms = time.time_ns() / 1_000_000
-    junctions = get_splice_junctions_from_sample(
-        sample,
-        transcript.seqname,
-        transcript.start,
-        transcript.end,
-        primary_alignment_only=primary_alignment_only
-    )
-    # _finish_j_ms = time.time_ns() / 1_000_000
-    # print(f"INFO: ran get_splice_junctions_from_sam in {_finish_j_ms - _start_j_ms} ms")
 
     for junction in junctions:
 
@@ -209,9 +197,10 @@ def get_splice_analysis_result_for_sample(
     # Set OPTC after tallying occurrences in all relevant junctions
     frequency_occurrences = calculate_optc(
         number_occurrences,
-        gene_counts.counts_by_gene_id[
-            transcript.gene_id
-        ][gene_counts.index_by_sample[f"{sample.name}{sample.suffix}"]]
+        n_gene_counts
+        # gene_counts.counts_by_gene_id[
+        #     transcript.gene_id
+        # ][gene_counts.index_by_sample[f"{sample.name}{sample.suffix}"]]
     )
 
     return OverlappingJunctionsInfo(
@@ -222,36 +211,6 @@ def get_splice_analysis_result_for_sample(
     )
 
 
-# def _print_transcript_debug_info(
-#     transcript: TranscriptRecord,
-#     feature_substring: str,
-#     splice_junction_loci: str
-# ) -> None:
-#
-#     print("-" * 40)
-#
-#     print(f"{transcript.transcript_id} / {transcript.gene_name}")
-#     print(f"Strand: ({transcript.strand})")
-#     print(f"Transcript exons: {[(e.start, e.end) for e in transcript.exons]}")
-#     print(f"GBSeq exons: {[(e.start, e.end) for e in transcript.gbseq.exons]}")
-#     print(f"Exon map: {transcript.exon_map}")
-#     print(f"Overlapping junctions: {splice_junction_loci}")
-#
-#     for feature in transcript.gbseq.features:
-#         if feature.has_qual_value_containing(feature_substring):
-#             try:
-#                 g_start = transcript.genomic_position_from_local(feature.start)
-#                 g_end = transcript.genomic_position_from_local(feature.end)
-#                 print(f"Feature with '{feature_substring}' qual: Local = " +
-#                       f"{str(feature.start) + ', ' + str(feature.end)}")
-#                 print(f"Feature with '{feature_substring}' qual: Genomic = " +
-#                       f"{str(g_start) + ', ' + str(g_end)}")
-#             except ValueError:
-#                 print("Unable to convert local positions to global")
-#
-#     print("-" * 40)
-
-
 def perform_splice_analysis(
     features_to_analyze: List[str],
     overlap_threshold: float,
@@ -259,8 +218,10 @@ def perform_splice_analysis(
     transcript_library: TranscriptLibrary,
     gene_counts: FeatureCountsResult,
     output_dir: str,
+    max_n_features_in_transcript: Union[None, int] = None,
     max_n_processes: int = 1,
-    ns_threshold_to_use_multiprocessing: int = 100_000_000,
+    min_bam_parse_time_ns_to_use_multiprocessing: int = 100_000_000,
+    min_total_n_junctions_to_use_multiprocessing: int = 300,
     primary_alignment_only: bool = False,
     verbose: bool = True,
 ) -> None:
@@ -280,10 +241,18 @@ def perform_splice_analysis(
 
     n_processes = min(len(samples), max_n_processes)
 
-    pool = Pool(processes=n_processes)
-    print_if_verbose(f"Created worker pool with {n_processes} processes for parallel BAM file parsing\n")
+    if n_processes > 1:
+        pool = Pool(processes=n_processes)
+        print_if_verbose(f"Created worker pool with {n_processes} processes\n")
+    else:
+        pool = None
 
     for feature_substring in features_to_analyze:
+
+        # TODO: Refactor to iterate over transcripts & samples, and perform analysis for all feature substrings with
+        #       only one BAM file query. i.e.:
+        #       get_splice_junctions_from_sample --> call get_splice_analysis_result_for_sample for each feature
+        #       (will require refactoring get_splice_analysis_result_for_sample to accept junctions rather than sample)
 
         print_if_verbose(f"Performing splice analysis for term \"{feature_substring}\"...")
 
@@ -292,6 +261,8 @@ def perform_splice_analysis(
         with open(os.path.join(output_dir, f"{sanitize_string_for_filename(feature_substring)}.csv"), "w") as f:
 
             sample_names_alphabetical = sorted(samples.keys())
+            samples_alphabetical = [samples[sample_name] for sample_name in sample_names_alphabetical]
+
             header = [
                 "Transcript ID",
                 "Gene name",
@@ -306,145 +277,196 @@ def perform_splice_analysis(
             out_csv = csv.writer(f)
             out_csv.writerow(header)
 
-            for _i, transcript in enumerate(transcript_library.get_all_transcripts()):
+            _info_time_bam_read = False
+            _info_time_transcripts = False
 
-                # TODO: Exclude "redundant" transcripts with duplicate or matching annotation.
-                #       Skipping prior to performing splice analysis will result in large time savings and additionally
-                #       reduce size and redundancy of output.
+            _progress = 0
+            for transcripts_by_id in transcript_library.get_transcripts_for_all_genes().values():
 
-                # START DEBUG BLOCK
-                if transcript.gene_name not in ("Cacna1d", "Cd74", "Gpr6", "Pkd1"):
+                if not transcripts_by_id:
                     continue
-                if _i > 5000:
-                    break
-                # print("REGION:", f"{transcript.seqname}:{transcript.start}-{transcript.end}")
-                # END OF DEBUG BLOCK
 
-                # # START DEBUG BLOCK 2
-                # if transcript.gene_name not in ("Cd274", "Tnfrsf1b", "Bcl2"):
+                transcripts = list(transcripts_by_id.values())
+
+                # # START DEBUG BLOCK
+                # if transcripts[0].gene_name not in ("Cacna1d", "Cd74", "Gpr6", "Pkd1"):
+                #     _progress += 1
                 #     continue
-                # # END OF DEBUG BLOCK 2
-
-                # # START OF DEBUG BLOCK 3
-                # if _i > 1000:
+                # if _progress > 5000:
                 #     break
-                #     # if transcript.gene_name not in ("Cacna1d", "Cd74", "Gpr6", "Pkd1"):
-                #     #     continue
-                #     # if _i > 5000:
-                #     #     break
-                # # END OF DEBUG BLOCK 3
+                # # print("REGION:", f"{transcript.seqname}:{transcript.start}-{transcript.end}")
+                # # END OF DEBUG BLOCK
 
-                # _start_ms = time.time_ns() / 1_000_000
+                n_gene_counts_by_sample_name = {
+                    sample.name: gene_counts.counts_by_gene_id[
+                        transcripts[0].gene_id
+                    ][gene_counts.index_by_sample[f"{sample.name}{sample.suffix}"]] for sample in samples_alphabetical
+                }
 
-                if verbose:
-                    if _i % 1000 == 0:
-                        print(f"Progress: {_i}/{transcript_library.number_of_transcripts}")
+                chromosome = transcripts[0].seqname
+                gene_region_start = min([transcript.start for transcript in transcripts])
+                gene_region_end = min([transcript.end for transcript in transcripts])
 
-                analysis_features = transcript.gbseq.get_analysis_features()
+                if _info_time_bam_read:
+                    _bam_read_start_ms = time.time_ns() / 1_000_000
 
-                if feature_substring in analysis_features.keys():
+                # Test time taken to parse junctions from first BAM file and decide whether parallelization is necessary
+                first_bam_start_ns = time.time_ns()
+                first_junctions = get_splice_junctions_from_sample(
+                    samples_alphabetical[0],
+                    chromosome,
+                    gene_region_start,
+                    gene_region_end,
+                    primary_alignment_only
+                )
+                first_bam_finish_ns = time.time_ns()
 
-                    features = analysis_features[feature_substring]
-                    n_features_in_transcript = len(features)
+                # Proceed with either serial function calls or pool.starmap if there is more than one BAM file
+                if n_samples > 1:
 
-                    for feature_index, feature in enumerate(features):
-
-                        try:
-                            f_start_genomic = transcript.genomic_position_from_local(feature.start)
-                            f_end_genomic = transcript.genomic_position_from_local(feature.end)
-                        except ValueError:
-                            skipped_exon_match_failure += 1
-                            continue
-
-                        feature_region = f"{transcript.seqname}({transcript.strand}):{f_start_genomic}-{f_end_genomic}"
-                        exon_positions = " ".join([f"{e.start}-{e.end}" for e in transcript.exons])
-                        overlapping_junctions_loci = ""
-
-                        raw_number_occurrences = {}  # Dict[str, int]
-                        frequency_occurrences = {}  # Dict[str, float]
-
-                        samples_alphabetical = [samples[sample_name] for sample_name in sample_names_alphabetical]
-
-                        # Test time taken to parse first BAM file and decide whether parallelization is necessary
-                        first_bam_start_ns = time.time_ns()
-                        first_result = get_splice_analysis_result_for_sample(
-                            samples_alphabetical[0],
-                            transcript,
-                            gene_counts,
-                            overlap_threshold,
-                            f_start_genomic,
-                            f_end_genomic,
+                    if all([
+                        pool is not None,
+                        first_bam_finish_ns - first_bam_start_ns > min_bam_parse_time_ns_to_use_multiprocessing
+                    ]):
+                        args_to_pool = [[
+                            sample,
+                            chromosome,
+                            gene_region_start,
+                            gene_region_end,
                             primary_alignment_only
+                        ] for sample in samples_alphabetical]
+                        remaining_junctions = pool.starmap(
+                            get_splice_junctions_from_sample,
+                            args_to_pool
                         )
-                        first_bam_finish_ns = time.time_ns()
 
-                        # Proceed with either serial function calls or pool.starmap if there is more than one BAM file
-                        if n_samples > 1:
+                    else:
+                        remaining_junctions = [
+                            get_splice_junctions_from_sample(
+                                sample,
+                                chromosome,
+                                gene_region_start,
+                                gene_region_end,
+                                primary_alignment_only
+                            ) for sample in samples_alphabetical[1:]
+                        ]
 
-                            if first_bam_finish_ns - first_bam_start_ns > ns_threshold_to_use_multiprocessing:
+                else:
+
+                    remaining_junctions = []
+
+                all_junctions = [first_junctions] + remaining_junctions
+
+                junctions_by_sample_name = {
+                    sample_names_alphabetical[i]: all_junctions[i] for i in range(len(sample_names_alphabetical))
+                }
+
+                if _info_time_bam_read:
+                    _bam_read_finish_ms = time.time_ns() / 1_000_000
+                    print(
+                        f"INFO: parsed splice junctions from BAM files for gene {transcripts[0].gene_name} in " +
+                        f"{_bam_read_finish_ms - _bam_read_start_ms} ms"
+                    )
+
+                for transcript in transcripts:
+
+                    if verbose:
+                        if _progress % 1000 == 0:
+                            print(f"Progress: {_progress}/{transcript_library.number_of_transcripts}")
+
+                    analysis_features = transcript.gbseq.get_analysis_features()
+
+                    # REFACTOR --> if any([s in analysis_features.keys() for s in features_to_analyze]):
+                    if feature_substring in analysis_features.keys():
+
+                        if _info_time_transcripts:
+                            _transcript_start_ms = time.time_ns() / 1_000_000
+
+                        features = analysis_features[feature_substring]
+                        n_features_in_transcript = len(features)
+
+                        if max_n_features_in_transcript:
+                            if n_features_in_transcript > max_n_features_in_transcript:
+                                _progress += 1
+                                continue
+
+                        for feature_index, feature in enumerate(features):
+
+                            # TODO: Implement multiprocessing of multiple features at a time for larger worker pools
+
+                            try:
+                                f_start_genomic = transcript.genomic_position_from_local(feature.start)
+                                f_end_genomic = transcript.genomic_position_from_local(feature.end)
+                            except ValueError:
+                                skipped_exon_match_failure += 1
+                                continue
+
+                            feature_region = \
+                                f"{transcript.seqname}({transcript.strand}):{f_start_genomic}-{f_end_genomic}"
+                            exon_positions = " ".join([f"{e.start}-{e.end}" for e in transcript.exons])
+                            overlapping_junctions_loci = ""
+
+                            raw_number_occurrences = {}  # Dict[str, int]
+                            frequency_occurrences = {}  # Dict[str, float]
+
+                            if sum(
+                                [len(j) for j in junctions_by_sample_name.values()]
+                            ) > min_total_n_junctions_to_use_multiprocessing:
                                 args_to_pool = [[
                                     sample,
+                                    junctions_by_sample_name[sample.name],
                                     transcript,
-                                    gene_counts,
+                                    n_gene_counts_by_sample_name[sample.name],
                                     overlap_threshold,
                                     f_start_genomic,
-                                    f_end_genomic,
-                                    primary_alignment_only
+                                    f_end_genomic
                                 ] for sample in samples_alphabetical]
-                                remaining_results = pool.starmap(
+                                results = pool.starmap(
                                     get_splice_analysis_result_for_sample,
                                     args_to_pool
                                 )
-
                             else:
-                                remaining_results = [
-                                    get_splice_analysis_result_for_sample(
-                                        sample,
-                                        transcript,
-                                        gene_counts,
-                                        overlap_threshold,
-                                        f_start_genomic,
-                                        f_end_genomic,
-                                        primary_alignment_only
-                                    ) for sample in samples_alphabetical[1:]
+                                results = [get_splice_analysis_result_for_sample(
+                                    sample,
+                                    junctions_by_sample_name[sample.name],
+                                    transcript,
+                                    n_gene_counts_by_sample_name[sample.name],
+                                    overlap_threshold,
+                                    f_start_genomic,
+                                    f_end_genomic
+                                ) for sample in samples_alphabetical]
+
+                            for result in results:
+                                raw_number_occurrences[result.sample_name] = result.number_occurrences
+                                frequency_occurrences[result.sample_name] = result.frequency_occurrences
+                                overlapping_junctions_loci += result.junctions_loci
+
+                            # Write to output (one row per feature per transcript)
+                            out_csv.writerow(
+                                [
+                                    transcript.transcript_id,
+                                    transcript.gene_name,
+                                    transcript.start,
+                                    exon_positions,
+                                    n_features_in_transcript,
+                                    feature_index + 1,
+                                    feature_region,
+                                    overlapping_junctions_loci
+                                ] + [
+                                    raw_number_occurrences[sample_name] for sample_name in sample_names_alphabetical
+                                ] + [
+                                    frequency_occurrences[sample_name] for sample_name in sample_names_alphabetical
                                 ]
+                            )
 
-                        else:
+                        if _info_time_transcripts:
+                            _transcript_finish_ms = time.time_ns() / 1_000_000
+                            print(
+                                f"INFO: Processed transcript ({transcript.transcript_id} / {transcript.gene_name}) " +
+                                f"in {_transcript_finish_ms - _transcript_start_ms} ms"
+                            )
 
-                            remaining_results = []
-
-                        results = [first_result] + remaining_results
-
-                        for result in results:
-                            raw_number_occurrences[result.sample_name] = result.number_occurrences
-                            frequency_occurrences[result.sample_name] = result.frequency_occurrences
-                            overlapping_junctions_loci += result.junctions_loci
-
-                        # _print_transcript_debug_info(transcript, feature_substring, overlapping_junctions_loci)
-
-                        # Write to output (one row per feature per transcript)
-                        out_csv.writerow(
-                            [
-                                transcript.transcript_id,
-                                transcript.gene_name,
-                                transcript.start,
-                                exon_positions,
-                                n_features_in_transcript,
-                                feature_index + 1,
-                                feature_region,
-                                overlapping_junctions_loci
-                            ] + [
-                                raw_number_occurrences[sample_name] for sample_name in sample_names_alphabetical
-                            ] + [
-                                frequency_occurrences[sample_name] for sample_name in sample_names_alphabetical
-                            ]
-                        )
-
-                # _finish_ms = time.time_ns() / 1_000_000
-                # print(
-                #     f"INFO: Processed transcript ({transcript.transcript_id} / {transcript.gene_name}) " +
-                #     f"in {_finish_ms - _start_ms} ms"
-                # )
+                    _progress += 1
 
         _analysis_finish_ms = time.time_ns() / 1_000_000
         _analysis_runtime_minutes = (_analysis_finish_ms - _analysis_start_ms) / (1000 * 60)
