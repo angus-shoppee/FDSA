@@ -41,7 +41,7 @@ EXPERIMENTAL_ALLOW_JUNCTION_START_OUTSIDE_TRANSCRIPT = False
 EXPERIMENTAL_ALLOW_JUNCTION_END_OUTSIDE_TRANSCRIPT = False
 
 # Where to save output files
-OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4"
+OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4_test2"
 
 # Sorted, indexed BAM files to be analyzed
 BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/hons_PD1KO/sorted"
@@ -57,6 +57,9 @@ FEATURECOUNTS_EXECUTABLE = "/Users/aasho2/opt/anaconda3/envs/bbmap/bin/featureCo
 
 # NEW IN V0.4: Indicate to featureCounts whether reads are paired-end
 PAIRED_END_READS = True
+
+# NEW IN V0.4: Indicate to featureCounts and perform_splice_analysis whether to only consider primary alignments
+PRIMARY_ALIGNMENT_ONLY = True
 
 # NEW IN V0.4: Number of threads to use for featureCounts
 FEATURECOUNTS_NUMBER_OF_THREADS = 12
@@ -254,6 +257,7 @@ def main(verbose: bool = False) -> None:
             REFERENCE_GENOME_GTF_PATH,
             feature_counts_output_path,
             paired_end_reads=PAIRED_END_READS,
+            primary_alignment_only=PRIMARY_ALIGNMENT_ONLY,
             threads=FEATURECOUNTS_NUMBER_OF_THREADS
         )
         print_if_verbose("...done\n")
@@ -286,6 +290,7 @@ def main(verbose: bool = False) -> None:
         gene_counts,
         OUTPUT_DIR,
         max_n_processes=SPLICE_ANALYSIS_MAX_NUMBER_OF_PROCESSES,
+        primary_alignment_only=PRIMARY_ALIGNMENT_ONLY,
         verbose=verbose
     )
 

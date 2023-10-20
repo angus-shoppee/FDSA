@@ -58,6 +58,7 @@ def run_feature_counts(
     reference_gtf_path: str,
     output_path: str,
     paired_end_reads: bool = True,
+    primary_alignment_only: bool = False,
     threads: int = 1,
     check_exit_code: bool = True
 ) -> int:
@@ -66,8 +67,9 @@ def run_feature_counts(
     bam_file_paths = [p for p in os.listdir(bam_files_dir) if p[-_suffix_length:] == bam_suffix]
 
     paired_flag = "-p " if paired_end_reads else ""
+    primary_flag = "--primary " if primary_alignment_only else ""
 
-    full_cmd = f"{feature_counts_command} -T {threads} {paired_flag}-t exon -g gene_id --primary " +\
+    full_cmd = f"{feature_counts_command} -T {threads} {paired_flag}-t exon -g gene_id {primary_flag}" +\
         f"-a {reference_gtf_path} -o {output_path} {' '.join(bam_file_paths)}"
 
     process = subprocess.run(full_cmd.split(" "), cwd=bam_files_dir, encoding="utf8", check=check_exit_code)

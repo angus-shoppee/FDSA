@@ -94,6 +94,7 @@ def get_splice_analysis_result_for_sample(
     overlap_threshold: float,
     f_start_genomic: int,
     f_end_genomic: int,
+    primary_alignment_only: bool,
     experimental_allow_junction_start_outside_transcript: bool = False,
     experimental_allow_junction_end_outside_transcript: bool = False
 ) -> OverlappingJunctionsInfo:
@@ -108,7 +109,8 @@ def get_splice_analysis_result_for_sample(
         sample,
         transcript.seqname,
         transcript.start,
-        transcript.end
+        transcript.end,
+        primary_alignment_only=primary_alignment_only
     )
     # _finish_j_ms = time.time_ns() / 1_000_000
     # print(f"INFO: ran get_splice_junctions_from_sam in {_finish_j_ms - _start_j_ms} ms")
@@ -192,6 +194,8 @@ def perform_splice_analysis(
     gene_counts: FeatureCountsResult,
     output_dir: str,
     max_n_processes: int = 1,
+    ns_threshold_to_use_multiprocessing: int = 100_000_000,
+    primary_alignment_only: bool = False,
     verbose: bool = True,
 ) -> None:
 
@@ -205,6 +209,8 @@ def perform_splice_analysis(
         raise ValueError(f"output_directory must be a valid directory. Got: {output_dir}")
 
     _analysis_start_ms = time.time_ns() / 1_000_000
+
+    n_samples = len(samples)
 
     n_processes = min(len(samples), max_n_processes)
 
@@ -240,17 +246,27 @@ def perform_splice_analysis(
                 #       Skipping prior to performing splice analysis will result in large time savings and additionally
                 #       reduce size and redundancy of output.
 
-                # # START DEBUG BLOCK
-                # if transcript.gene_name not in ("Cacna1d", "Cd74", "Gpr6", "Pkd1"):
-                #     continue
-                # if _i > 5000:
-                #     break
-                # # END OF DEBUG BLOCK
-
-                # START DEBUG BLOCK 2
-                if transcript.gene_name not in ("Cd274", "Tnfrsf1b", "Bcl2"):
+                # START DEBUG BLOCK
+                if transcript.gene_name not in ("Cacna1d", "Cd74", "Gpr6", "Pkd1"):
                     continue
-                # END OF DEBUG BLOCK 2
+                if _i > 5000:
+                    break
+                print("REGION:", f"{transcript.seqname}:{transcript.start}-{transcript.end}")
+                # END OF DEBUG BLOCK
+
+                # # START DEBUG BLOCK 2
+                # if transcript.gene_name not in ("Cd274", "Tnfrsf1b", "Bcl2"):
+                #     continue
+                # # END OF DEBUG BLOCK 2
+
+                # # START OF DEBUG BLOCK 3
+                # if _i > 1000:
+                #     break
+                #     # if transcript.gene_name not in ("Cacna1d", "Cd74", "Gpr6", "Pkd1"):
+                #     #     continue
+                #     # if _i > 5000:
+                #     #     break
+                # # END OF DEBUG BLOCK 3
 
                 _start_ms = time.time_ns() / 1_000_000
 
@@ -283,22 +299,54 @@ def perform_splice_analysis(
 
                         samples_alphabetical = [samples[sample_name] for sample_name in sample_names_alphabetical]
 
-                        args_to_pool = [[
-                            sample,
+                        # Test time taken to parse first BAM file and decide whether parallelization is necessary
+                        first_bam_start_ns = time.time_ns()
+                        first_result = get_splice_analysis_result_for_sample(
+                            samples_alphabetical[0],
                             transcript,
                             gene_counts,
                             overlap_threshold,
                             f_start_genomic,
-                            f_end_genomic
-                        ] for sample in samples_alphabetical]
-
-                        results = pool.starmap(
-                            get_splice_analysis_result_for_sample,
-                            args_to_pool
+                            f_end_genomic,
+                            primary_alignment_only
                         )
+                        first_bam_finish_ns = time.time_ns()
 
-                        for i, sample in enumerate(samples_alphabetical):
-                            assert results[i].sample_name == sample.name  # TESTING - Remove once confirmed safe
+                        # Proceed with either serial function calls or pool.starmap if there is more than one BAM file
+                        if n_samples > 1:
+
+                            if first_bam_finish_ns - first_bam_start_ns > ns_threshold_to_use_multiprocessing:
+                                args_to_pool = [[
+                                    sample,
+                                    transcript,
+                                    gene_counts,
+                                    overlap_threshold,
+                                    f_start_genomic,
+                                    f_end_genomic,
+                                    primary_alignment_only
+                                ] for sample in samples_alphabetical]
+                                remaining_results = pool.starmap(
+                                    get_splice_analysis_result_for_sample,
+                                    args_to_pool
+                                )
+
+                            else:
+                                remaining_results = [
+                                    get_splice_analysis_result_for_sample(
+                                        sample,
+                                        transcript,
+                                        gene_counts,
+                                        overlap_threshold,
+                                        f_start_genomic,
+                                        f_end_genomic
+                                    ) for sample in samples_alphabetical[1:]
+                                ]
+
+                        else:
+
+                            remaining_results = []
+
+                        results = [first_result] + remaining_results
 
                         for result in results:
                             raw_number_occurrences[result.sample_name] = result.number_occurrences

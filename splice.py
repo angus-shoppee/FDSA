@@ -2,6 +2,7 @@
 # SPLICE JUNCTION INFORMATION FROM BAM FILES
 
 from typing import List, NamedTuple
+from enum import Flag, auto
 from pysam import AlignmentFile
 
 from experiment import Sample
@@ -19,6 +20,21 @@ BAM_CHARD_CLIP = 5  # H
 BAM_CPAD = 6        # P
 BAM_CEQUAL = 7      # =
 BAM_CDIFF = 8       # X
+
+
+class SamFlag(Flag):
+    READ_PAIRED = auto()
+    READ_MAPPED_IN_PROPER_PAIR = auto()
+    READ_UNMAPPED = auto()
+    MATE_UNMAPPED = auto()
+    READ_REVERSE_STRAND = auto()
+    MATE_REVERSE_STRAND = auto()
+    FIRST_IN_PAIR = auto()
+    SECOND_IN_PAIR = auto()
+    NOT_PRIMARY_ALIGNMENT = auto()
+    READ_FAILS_PLATFORM_QUALITY_CHECKS = auto()
+    READ_IS_PCR_OR_OPTICAL_DUPLICATE = auto()
+    SUPPLEMENTARY_ALIGNMENT = auto()
 
 
 def bam_op_consumes_reference(op: int) -> bool:
@@ -60,6 +76,7 @@ def get_splice_junctions_from_sample(
         start: int,
         end: int,
         offset: int = 0,
+        primary_alignment_only: bool = False
 ) -> List[SpliceJunction]:
 
     sam = AlignmentFile(sample.bam_path, "rb")
@@ -69,6 +86,10 @@ def get_splice_junctions_from_sample(
     j_counts = {}
 
     for read in sam.fetch(chromosome, start, end):
+
+        if primary_alignment_only:
+            if SamFlag.NOT_PRIMARY_ALIGNMENT in SamFlag(read.flag):
+                continue
 
         g = read.reference_start + 1 + offset  # Add 1 as SAM format counts from 1, not 0
 
