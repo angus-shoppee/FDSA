@@ -288,6 +288,16 @@ def perform_splice_analysis(
 
                 transcripts = list(transcripts_by_id.values())
 
+                if verbose:
+                    if any((_progress + i) % 1000 == 0 for i in range(len(transcripts))):
+                        print(f"Progress: {_progress}/{transcript_library.number_of_transcripts}")
+
+                if not any(
+                    [feature_substring in transcript.gbseq.get_analysis_features().keys() for transcript in transcripts]
+                ):
+                    _progress += len(transcripts)
+                    continue
+
                 # # START DEBUG BLOCK
                 # if transcripts[0].gene_name not in ("Cacna1d", "Cd74", "Gpr6", "Pkd1"):
                 #     _progress += 1
@@ -369,10 +379,6 @@ def perform_splice_analysis(
                     )
 
                 for transcript in transcripts:
-
-                    if verbose:
-                        if _progress % 1000 == 0:
-                            print(f"Progress: {_progress}/{transcript_library.number_of_transcripts}")
 
                     analysis_features = transcript.gbseq.get_analysis_features()
 
