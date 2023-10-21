@@ -289,8 +289,9 @@ def perform_splice_analysis(
                 transcripts = list(transcripts_by_id.values())
 
                 if verbose:
-                    if any((_progress + i) % 1000 == 0 for i in range(len(transcripts))):
-                        print(f"Progress: {_progress}/{transcript_library.number_of_transcripts}")
+                    for _progress_plus_i in [_progress + i for i in range(len(transcripts))]:
+                        if _progress_plus_i % 1000 == 0:
+                            print(f"Progress: {_progress_plus_i}/{transcript_library.number_of_transcripts}")
 
                 if not any(
                     [feature_substring in transcript.gbseq.get_analysis_features().keys() for transcript in transcripts]
