@@ -12,7 +12,7 @@ import time  # DEBUG
 from transcript import TranscriptRecord, TranscriptLibrary
 from experiment import Sample
 from counts import FeatureCountsResult
-from splice import SpliceJunction, get_splice_junctions_from_sample
+from splice import DEFAULT_MAPQ_FOR_UNIQUE_MAPPING, SpliceJunction, get_splice_junctions_from_sample
 
 
 class FaseConfig:
@@ -222,6 +222,7 @@ def perform_splice_analysis(
     max_n_processes: int = 1,
     min_bam_parse_time_ns_to_use_multiprocessing: int = 100_000_000,
     min_total_n_junctions_to_use_multiprocessing: int = 300,
+    mapq_for_unique_mapping: int = DEFAULT_MAPQ_FOR_UNIQUE_MAPPING,
     primary_alignment_only: bool = False,
     verbose: bool = True,
 ) -> None:
@@ -253,6 +254,13 @@ def perform_splice_analysis(
         #       only one BAM file query. i.e.:
         #       get_splice_junctions_from_sample --> call get_splice_analysis_result_for_sample for each feature
         #       (will require refactoring get_splice_analysis_result_for_sample to accept junctions rather than sample)
+
+        if verbose:
+            if max_n_features_in_transcript:
+                print(
+                    f"Limiting analysis to transcripts containing up to {max_n_features_in_transcript} of the same "
+                    f"feature of interest\n"
+                )
 
         print_if_verbose(f"Performing splice analysis for term \"{feature_substring}\"...")
 
@@ -299,14 +307,14 @@ def perform_splice_analysis(
                     _progress += len(transcripts)
                     continue
 
-                # # START DEBUG BLOCK
-                # if transcripts[0].gene_name not in ("Cacna1d", "Cd74", "Gpr6", "Pkd1"):
-                #     _progress += 1
-                #     continue
-                # if _progress > 5000:
-                #     break
-                # # print("REGION:", f"{transcript.seqname}:{transcript.start}-{transcript.end}")
-                # # END OF DEBUG BLOCK
+                # START DEBUG BLOCK
+                if transcripts[0].gene_name not in ("Cacna1d", "Cd74", "Gpr6", "Pkd1"):
+                    _progress += 1
+                    continue
+                if _progress > 5000:
+                    break
+                # print("REGION:", f"{transcript.seqname}:{transcript.start}-{transcript.end}")
+                # END OF DEBUG BLOCK
 
                 n_gene_counts_by_sample_name = {
                     sample.name: gene_counts.counts_by_gene_id[
@@ -323,12 +331,13 @@ def perform_splice_analysis(
 
                 # Test time taken to parse junctions from first BAM file and decide whether parallelization is necessary
                 first_bam_start_ns = time.time_ns()
-                first_junctions = get_splice_junctions_from_sample(
+                first_reads, first_junctions = get_splice_junctions_from_sample(
                     samples_alphabetical[0],
                     chromosome,
                     gene_region_start,
                     gene_region_end,
-                    primary_alignment_only
+                    primary_alignment_only,
+                    mapq_for_unique_mapping
                 )
                 first_bam_finish_ns = time.time_ns()
 
@@ -344,28 +353,35 @@ def perform_splice_analysis(
                             chromosome,
                             gene_region_start,
                             gene_region_end,
-                            primary_alignment_only
+                            primary_alignment_only,
+                            mapq_for_unique_mapping
                         ] for sample in samples_alphabetical]
-                        remaining_junctions = pool.starmap(
+                        remaining_res = pool.starmap(
                             get_splice_junctions_from_sample,
                             args_to_pool
                         )
+                        remaining_reads = [res[0] for res in remaining_res]
+                        remaining_junctions = [res[1] for res in remaining_res]
 
                     else:
-                        remaining_junctions = [
+                        remaining_res = [
                             get_splice_junctions_from_sample(
                                 sample,
                                 chromosome,
                                 gene_region_start,
                                 gene_region_end,
-                                primary_alignment_only
+                                primary_alignment_only,
+                                mapq_for_unique_mapping
                             ) for sample in samples_alphabetical[1:]
                         ]
+                        remaining_reads = [res[0] for res in remaining_res]
+                        remaining_junctions = [res[1] for res in remaining_res]
 
                 else:
 
-                    remaining_junctions = []
+                    remaining_reads, remaining_junctions = [], []
 
+                all_reads = [first_reads] + remaining_reads
                 all_junctions = [first_junctions] + remaining_junctions
 
                 junctions_by_sample_name = {
@@ -484,6 +500,6 @@ def perform_splice_analysis(
         print(f"TIME: Completed in {_analysis_runtime_minutes} minutes")
 
         print_if_verbose(
-            f"...finished " +
-            f"({skipped_exon_match_failure} skipped due to failed matching between reference and annotation exons)\n"
+            f"...finished ({skipped_exon_match_failure} features skipped due to failed matching between reference "
+            f"and annotation exons)\n"
         )

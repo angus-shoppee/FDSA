@@ -1,14 +1,14 @@
 
 # SPLICE JUNCTION INFORMATION FROM BAM FILES
 
-from typing import List, NamedTuple
+from typing import List, Tuple, NamedTuple
 from enum import Flag, auto
 from pysam import AlignmentFile
 
 from experiment import Sample
 
 
-STAR_DEFAULT_MAPQ_FOR_UNIQUE_MAPPING = 255
+DEFAULT_MAPQ_FOR_UNIQUE_MAPPING = 255
 
 # CIGAR operations
 BAM_CMATCH = 0      # M
@@ -44,6 +44,8 @@ def bam_op_consumes_reference(op: int) -> bool:
 
 NumberOfJunctions = NamedTuple("NumberOfJunctions", [("unique", int), ("multi", int)])
 
+ReadLocus = NamedTuple("ReadLocus", [("start", int), ("end", int)])
+
 
 class SpliceJunction:
 
@@ -76,14 +78,17 @@ def get_splice_junctions_from_sample(
     start: int,
     end: int,
     primary_alignment_only: bool,
+    mapq_for_unique_mapping: int,
     offset: int = 0
-) -> List[SpliceJunction]:
+) -> Tuple[List[ReadLocus], List[SpliceJunction]]:
 
     sam = AlignmentFile(sample.bam_path, "rb")
 
     # Fetch reads at the specified region, and extract splice junctions from CIGAR strings
 
-    j_counts = {}
+    j_counts = {}  # Dict[str, NumberOfJunctions]
+
+    read_loci = []  # List[Tuple[int, int]]
 
     for read in sam.fetch(chromosome, start, end):
 
@@ -92,13 +97,14 @@ def get_splice_junctions_from_sample(
                 continue
 
         g = read.reference_start + 1 + offset  # Add 1 as SAM format counts from 1, not 0
+        read_start = g
 
         for op, n in read.cigartuples:  # Iterate over each event/operation in the CIGAR string
 
             if op == BAM_CREF_SKIP:  # A skip in position on the reference indicates a splice junction
                 sj_loc = f"{read.reference_name}:{g}-{g + n - 1}"
                 _prev_u, _prev_m = j_counts.get(sj_loc, NumberOfJunctions(0, 0))
-                if read.mapping_quality >= STAR_DEFAULT_MAPQ_FOR_UNIQUE_MAPPING:  # Uniquely mapped read
+                if read.mapping_quality >= mapq_for_unique_mapping:  # Uniquely mapped read
                     j_counts[sj_loc] = NumberOfJunctions(_prev_u + 1, _prev_m)
                 else:  # Non-uniquely mapped read
                     j_counts[sj_loc] = NumberOfJunctions(_prev_u, _prev_m + 1)
@@ -106,10 +112,15 @@ def get_splice_junctions_from_sample(
             if bam_op_consumes_reference(op):  # If this operation "moves along" the reference
                 g += n  # Increase genomic position by the given base count
 
+        read_loci.append(ReadLocus(read_start, g))
+
     # Populate junctions
 
-    return [SpliceJunction(
-        region=sj_loc,
-        n_unique=num_junctions.unique,
-        n_multi=num_junctions.multi
-    ) for sj_loc, num_junctions in j_counts.items()]
+    return (
+        read_loci,
+        [SpliceJunction(
+            region=sj_loc,
+            n_unique=num_junctions.unique,
+            n_multi=num_junctions.multi
+        ) for sj_loc, num_junctions in j_counts.items()]
+    )

@@ -40,6 +40,10 @@ ONLY_USE_LONGEST_ANNOTATED_TRANSCRIPT = True
 #              (Overridden by ONLY_USE_LONGEST_ANNOTATED_TRANSCRIPT)
 SKIP_TRANSCRIPTS_WITH_REDUNDANT_FEATURE_ANNOTATION = True
 
+# NEW IN V0.4: Specify whether to only analyze transcripts with a maximum number of n features
+#              (set to None or 0 to analyze all transcripts regardless of feature number)
+MAX_N_FEATURES_IN_TRANSCRIPT = 1
+
 FEATURE_JUNCTION_OVERLAP_THRESHOLD = 0.5
 
 EXPERIMENTAL_ALLOW_JUNCTION_START_OUTSIDE_TRANSCRIPT = False
@@ -295,6 +299,7 @@ def main(verbose: bool = False) -> None:
         annotated_transcript_library,
         gene_counts,
         OUTPUT_DIR,
+        max_n_features_in_transcript=MAX_N_FEATURES_IN_TRANSCRIPT,
         max_n_processes=SPLICE_ANALYSIS_MAX_NUMBER_OF_PROCESSES,
         primary_alignment_only=PRIMARY_ALIGNMENT_ONLY,
         verbose=verbose
