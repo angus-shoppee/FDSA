@@ -44,8 +44,6 @@ def bam_op_consumes_reference(op: int) -> bool:
 
 NumberOfJunctions = NamedTuple("NumberOfJunctions", [("unique", int), ("multi", int)])
 
-ReadLocus = NamedTuple("ReadLocus", [("start", int), ("end", int)])
-
 
 class SpliceJunction:
 
@@ -80,7 +78,7 @@ def get_splice_junctions_from_sample(
     primary_alignment_only: bool,
     mapq_for_unique_mapping: int,
     offset: int = 0
-) -> Tuple[List[ReadLocus], List[SpliceJunction]]:
+) -> Tuple[List[Tuple[int, int]], List[SpliceJunction]]:
 
     sam = AlignmentFile(sample.bam_path, "rb")
 
@@ -112,7 +110,7 @@ def get_splice_junctions_from_sample(
             if bam_op_consumes_reference(op):  # If this operation "moves along" the reference
                 g += n  # Increase genomic position by the given base count
 
-        read_loci.append(ReadLocus(read_start, g))
+        read_loci.append((read_start, g))
 
     # Populate junctions
 

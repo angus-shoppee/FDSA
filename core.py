@@ -7,7 +7,8 @@ from multiprocessing import Pool
 import os
 import csv
 import configparser
-import time  # DEBUG
+import time
+from statistics import mean
 
 from transcript import TranscriptRecord, TranscriptLibrary
 from experiment import Sample
@@ -100,9 +101,34 @@ def set_analysis_features(
                         transcript.gbseq.set_analysis_feature(feature_substring, gbfeature)
 
 
-def calculate_optc(n_occurrences: int, n_reads: int) -> float:
+def calculate_optc(
+    n_occurrences: int,
+    n_counts: int
+) -> float:
 
-    return 0.0 if not all((n_occurrences, n_reads)) else float((n_occurrences * 1000) / n_reads)
+    return 0.0 if not all((n_occurrences, n_counts)) else float((n_occurrences * 1000) / n_counts)
+
+
+def calculate_percent_occurrence(
+    f_start: int,
+    f_end: int,
+    n_occurrences: int,
+    read_loci: List[Tuple[int, int]]
+) -> float:
+
+    n_reads_overlapping_feature = 0
+
+    for read_start, read_end in read_loci:
+        if any([
+            f_start <= read_start <= f_end,  # Read starts within feature
+            f_start <= read_end <= f_end,  # Read ends within feature
+            read_start <= f_start <= read_end and read_start <= f_end <= read_end  # Entire feature is within read
+        ]):
+            n_reads_overlapping_feature += 1
+
+    return 0.0 if not all(
+        (n_occurrences, n_reads_overlapping_feature)
+    ) else (n_occurrences * 100) / n_reads_overlapping_feature
 
 
 @dataclass
@@ -125,8 +151,6 @@ def calculate_exonic_overlap(
 
     e_ranges = [range(e.start, e.end + 1) for e in transcript.exons]
 
-    # print(e_ranges)
-
     # Ugly way to make a set from a list of ranges... is there a more pythonic way to do this?
     e_union_set = set()
     for r in e_ranges:
@@ -140,7 +164,7 @@ def calculate_exonic_overlap(
     exonic_overlap = e_j_intersect.intersection(e_f_intersect)
     length_of_overlap = len(exonic_overlap)
 
-    overlap_fraction = 0 if not length_of_overlap else length_of_overlap / length_of_feature
+    overlap_fraction = 0.0 if not length_of_overlap else length_of_overlap / length_of_feature
 
     return ExonicOverlap(length_of_overlap, overlap_fraction)
 
@@ -157,7 +181,7 @@ def get_splice_analysis_result_for_sample(
     sample: Sample,
     junctions: List[SpliceJunction],
     transcript: TranscriptRecord,
-    n_gene_counts: int,
+    read_loci: List[Tuple[int, int]],
     overlap_threshold: float,
     f_start_genomic: int,
     f_end_genomic: int,
@@ -194,13 +218,12 @@ def get_splice_analysis_result_for_sample(
 
             number_occurrences += junction.n_unique
 
-    # Set OPTC after tallying occurrences in all relevant junctions
-    frequency_occurrences = calculate_optc(
+    # Calculate frequency as percent occurrence (splice junctions occur in N% of reads containing part of the feature)
+    frequency_occurrences = calculate_percent_occurrence(
+        f_start_genomic,
+        f_end_genomic,
         number_occurrences,
-        n_gene_counts
-        # gene_counts.counts_by_gene_id[
-        #     transcript.gene_id
-        # ][gene_counts.index_by_sample[f"{sample.name}{sample.suffix}"]]
+        read_loci
     )
 
     return OverlappingJunctionsInfo(
@@ -216,7 +239,6 @@ def perform_splice_analysis(
     overlap_threshold: float,
     samples: Dict[str, Sample],
     transcript_library: TranscriptLibrary,
-    gene_counts: FeatureCountsResult,
     output_dir: str,
     max_n_features_in_transcript: Union[None, int] = None,
     max_n_processes: int = 1,
@@ -279,8 +301,11 @@ def perform_splice_analysis(
                 "N instances of feature within transcript",
                 "Feature number within transcript",
                 "Feature region",
-                "Overlapping junctions in samples"
-            ] + sample_names_alphabetical + [f"OPTC {sample_name}" for sample_name in sample_names_alphabetical]
+                "Overlapping junctions in samples",
+                "Avg N occurrences",
+                "Avg percent occurrence"
+            ] + sample_names_alphabetical + [f"Percent {sample_name}" for sample_name in sample_names_alphabetical]
+            # ] + sample_names_alphabetical + [f"OPTC {sample_name}" for sample_name in sample_names_alphabetical]
 
             out_csv = csv.writer(f)
             out_csv.writerow(header)
@@ -307,20 +332,15 @@ def perform_splice_analysis(
                     _progress += len(transcripts)
                     continue
 
-                # START DEBUG BLOCK
-                if transcripts[0].gene_name not in ("Cacna1d", "Cd74", "Gpr6", "Pkd1"):
-                    _progress += 1
-                    continue
-                if _progress > 5000:
-                    break
-                # print("REGION:", f"{transcript.seqname}:{transcript.start}-{transcript.end}")
-                # END OF DEBUG BLOCK
-
-                n_gene_counts_by_sample_name = {
-                    sample.name: gene_counts.counts_by_gene_id[
-                        transcripts[0].gene_id
-                    ][gene_counts.index_by_sample[f"{sample.name}{sample.suffix}"]] for sample in samples_alphabetical
-                }
+                # # START DEBUG BLOCK
+                # # if transcripts[0].gene_name not in ("Cacna1d", "Cd74", "Gpr6", "Pkd1"):
+                # if transcripts[0].gene_name not in ("Lrch4",):
+                #     _progress += len(transcripts)
+                #     continue
+                # # if _progress > 5000:
+                # #     break
+                # # print("REGION:", f"{transcript.seqname}:{transcript.start}-{transcript.end}")
+                # # END OF DEBUG BLOCK
 
                 chromosome = transcripts[0].seqname
                 gene_region_start = min([transcript.start for transcript in transcripts])
@@ -384,6 +404,9 @@ def perform_splice_analysis(
                 all_reads = [first_reads] + remaining_reads
                 all_junctions = [first_junctions] + remaining_junctions
 
+                reads_by_sample_name = {
+                    sample_names_alphabetical[i]: all_reads[i] for i in range(len(sample_names_alphabetical))
+                }
                 junctions_by_sample_name = {
                     sample_names_alphabetical[i]: all_junctions[i] for i in range(len(sample_names_alphabetical))
                 }
@@ -442,7 +465,7 @@ def perform_splice_analysis(
                                     sample,
                                     junctions_by_sample_name[sample.name],
                                     transcript,
-                                    n_gene_counts_by_sample_name[sample.name],
+                                    reads_by_sample_name[sample.name],
                                     overlap_threshold,
                                     f_start_genomic,
                                     f_end_genomic
@@ -456,7 +479,7 @@ def perform_splice_analysis(
                                     sample,
                                     junctions_by_sample_name[sample.name],
                                     transcript,
-                                    n_gene_counts_by_sample_name[sample.name],
+                                    reads_by_sample_name[sample.name],
                                     overlap_threshold,
                                     f_start_genomic,
                                     f_end_genomic
@@ -468,6 +491,14 @@ def perform_splice_analysis(
                                 overlapping_junctions_loci += result.junctions_loci
 
                             # Write to output (one row per feature per transcript)
+                            out_n = [
+                                raw_number_occurrences[sample_name] for sample_name in sample_names_alphabetical
+                            ]
+                            out_freq = [
+                                "{:.2f}".format(
+                                    frequency_occurrences[sample_name]
+                                ) for sample_name in sample_names_alphabetical
+                            ]
                             out_csv.writerow(
                                 [
                                     transcript.transcript_id,
@@ -478,11 +509,11 @@ def perform_splice_analysis(
                                     feature_index + 1,
                                     feature_region,
                                     overlapping_junctions_loci
-                                ] + [
-                                    raw_number_occurrences[sample_name] for sample_name in sample_names_alphabetical
-                                ] + [
-                                    frequency_occurrences[sample_name] for sample_name in sample_names_alphabetical
-                                ]
+                                ] +
+                                ["{:.2f}".format(mean(out_n))] +
+                                ["{:.2f}".format(mean(frequency_occurrences.values()))] +
+                                out_n +
+                                out_freq
                             )
 
                         if _info_time_transcripts:

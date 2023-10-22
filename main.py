@@ -9,7 +9,6 @@ from transcript import (
 from entrez import download_and_save_feature_annotation_xml, get_gbseq_from_xml
 from biomart import create_and_save_name_lookup, load_name_lookup_from_file
 from experiment import Sample
-from counts import run_feature_counts, get_gene_counts_from_tsv
 from core import FaseConfig, set_analysis_features, perform_splice_analysis
 
 # ==================================================================================================================== #
@@ -222,22 +221,6 @@ def main(verbose: bool = False) -> None:
         annotated_transcript_library = load_transcript_library_from_file(annotated_transcript_library_path)
         print_if_verbose("...done\n")
 
-    # # START OF DEBUG BLOCK
-    # print(annotated_transcript_library)
-    # print("Number of transcripts:", len(annotated_transcript_library.get_all_transcripts()))
-    #
-    # for t in annotated_transcript_library.get_all_transcripts()[10:20]:
-    # 	print(t.gene_name, "\t", t.transcript_id, "\t", t.seqname, t.strand, t.start, t.end)
-    # 	print([(e.start, e.end) for e in t.exons])
-    # 	print([(e.start, e.end) for e in t.gbseq.exons])
-    # 	print(t.exon_map)
-    # 	try:
-    # 		print("local pos 85 --> genomic pos", t.genomic_position_from_local(85))
-    # 	except ValueError:
-    # 		print("local pos 85 couldn't be converted to genomic pos")
-    # 	print()
-    # # END OF DEBUG BLOCK
-
     print_if_verbose(f"Enabling screening for features containing term(s): \"{', '.join(FEATURES_TO_ANALYZE)}\"...")
 
     set_analysis_features(
@@ -253,33 +236,6 @@ def main(verbose: bool = False) -> None:
         if os.path.exists(OUTPUT_DIR):
             raise ValueError(f"The specified output directory ({OUTPUT_DIR}) already exists as a file.")
         os.makedirs(OUTPUT_DIR)
-
-    feature_counts_output_path = COUNTS_FILE if COUNTS_FILE else os.path.join(OUTPUT_DIR, "gene_counts.tsv")
-
-    # Run featureCounts if counts file has not been supplied and featureCounts has not been run in a previous analysis
-    if not os.path.exists(feature_counts_output_path):
-
-        print_if_verbose("Running featureCounts...")
-        run_feature_counts(
-            FEATURECOUNTS_EXECUTABLE,
-            BAM_FILES_DIR,
-            BAM_SUFFIX,
-            REFERENCE_GENOME_GTF_PATH,
-            feature_counts_output_path,
-            paired_end_reads=PAIRED_END_READS,
-            primary_alignment_only=PRIMARY_ALIGNMENT_ONLY,
-            threads=FEATURECOUNTS_NUMBER_OF_THREADS
-        )
-        print_if_verbose("...done\n")
-
-    print_if_verbose(f"Importing gene count data...")
-    gene_counts = get_gene_counts_from_tsv(feature_counts_output_path)
-    print_if_verbose("...done\n")
-
-    # # START OF DEBUG BLOCK
-    # print(index_by_sample_name)
-    # print(counts_by_gene_id["ENSMUSG00000016496.8"])
-    # # END OF DEBUG BLOCK
 
     _suffix_length = len(BAM_SUFFIX)
     bam_file_absolute_paths = [os.path.join(
@@ -297,7 +253,6 @@ def main(verbose: bool = False) -> None:
         FEATURE_JUNCTION_OVERLAP_THRESHOLD,
         samples,
         annotated_transcript_library,
-        gene_counts,
         OUTPUT_DIR,
         max_n_features_in_transcript=MAX_N_FEATURES_IN_TRANSCRIPT,
         max_n_processes=SPLICE_ANALYSIS_MAX_NUMBER_OF_PROCESSES,
