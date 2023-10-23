@@ -73,15 +73,15 @@ def create_exon_map_to_gbseq(
                     _n_matches += 1
                 _n_matches_per_round.append(_n_matches)
 
-        # DEBUG BLOCK
-        try:
-            _n_matches_per_round.index(max(_n_matches_per_round))
-        except ValueError:
-            print("transcript_exons:", transcript_exons)
-            print("gbseq_exons:", gbseq_exons)
-            print("_n_find_offset_iters:", _n_find_offset_iters)
-            print("_n_matches_per_round:", _n_matches_per_round)
-        # END DEBUG BLOCK
+        # # DEBUG BLOCK
+        # try:
+        #     _n_matches_per_round.index(max(_n_matches_per_round))
+        # except ValueError:
+        #     print("transcript_exons:", transcript_exons)
+        #     print("gbseq_exons:", gbseq_exons)
+        #     print("_n_find_offset_iters:", _n_find_offset_iters)
+        #     print("_n_matches_per_round:", _n_matches_per_round)
+        # # END DEBUG BLOCK
 
         offset = _n_matches_per_round.index(max(_n_matches_per_round))
 
@@ -222,6 +222,8 @@ class TranscriptRecord:
         local_position: int,
     ) -> int:
 
+        # TODO: Ensure that positions are being calculated correctly for first/last exons where length doesn't match
+
         if not self.gbseq:
             raise ValueError("The gbseq attribute must be set first")
 
@@ -229,29 +231,42 @@ class TranscriptRecord:
 
         # Find the exon the local position falls within
         within_gb_exon_index = None
-        delta = local_position
+        within_gb_exon_length = None
+        distance = local_position
         for i, gbseq_exon in enumerate(self.gbseq.exons):
             if gbseq_exon.start <= local_position <= gbseq_exon.end:
                 within_gb_exon_index = i
+                within_gb_exon_length = gbseq_exon.length
                 break
-            delta -= gbseq_exon.length
+            distance -= gbseq_exon.length
 
         inverted_map = {v: k for k, v in self.exon_map.items()}
+
+        _error_exon_info = f"Refseq exons: {[(e.start, e.end) for e in self.exons]}\n" +\
+            f"GBSeq exons: {[(e.start, e.end) for e in self.gbseq.exons]}\n" +\
+            f"Exon map: {self.exon_map}"
 
         try:
             within_ref_exon_number = inverted_map[within_gb_exon_index]
             for i, refseq_exon in enumerate(self.exons):
                 if int(refseq_exon.exon_number) == int(within_ref_exon_number):
+                    delta_length = (refseq_exon.end + 1 - refseq_exon.start) - within_gb_exon_length
                     # Forward stranded: count forward from start of exon
                     # Reverse stranded: count backward from end of exon (due to descending left-to-right formatting)
-                    return refseq_exon.start + delta if fwd_stranded else refseq_exon.end - delta
+                    if fwd_stranded:
+                        position = refseq_exon.start + distance + delta_length
+                    else:
+                        position = refseq_exon.end - distance - delta_length
+                    if not refseq_exon.start <= position <= refseq_exon.end:
+                        raise ValueError(
+                            f"Converted local position {local_position} to coordinate {position} which is outside of " +
+                            f"the refseq exon (forbidden)\n" + _error_exon_info
+                        )
+                    return position
 
         except KeyError:
             raise ValueError(
-                f"Failed to convert local position {local_position} - couldn't match exons.\n" +
-                f"Refseq exons: {[(e.start, e.end) for e in self.exons]}\n" +
-                f"GBSeq exons: {[(e.start, e.end) for e in self.gbseq.exons]}\n" +
-                f"Exon map: {self.exon_map}"
+                f"Failed to convert local position {local_position} - couldn't match exons.\n" + _error_exon_info
             )
 
         pass

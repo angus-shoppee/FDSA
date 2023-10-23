@@ -43,16 +43,13 @@ SKIP_TRANSCRIPTS_WITH_REDUNDANT_FEATURE_ANNOTATION = True
 #              (set to None or 0 to analyze all transcripts regardless of feature number)
 MAX_N_FEATURES_IN_TRANSCRIPT = 1
 
-FEATURE_JUNCTION_OVERLAP_THRESHOLD = 0.5
-
-EXPERIMENTAL_ALLOW_JUNCTION_START_OUTSIDE_TRANSCRIPT = False
-EXPERIMENTAL_ALLOW_JUNCTION_END_OUTSIDE_TRANSCRIPT = False
-
 # Where to save output files
-OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4_test"
+OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4_test2"
+# OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4 Mutu2020"
 
 # Sorted, indexed BAM files to be analyzed
-BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/hons_PD1KO/sorted"
+# BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/hons_PD1KO/sorted"
+BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/MuTu_dabraf_2020/sorted"
 
 # Everything that comes after sample identifier in the bam paths, including file extension
 BAM_SUFFIX = "_Aligned_Sorted.out.bam"
@@ -60,23 +57,18 @@ BAM_SUFFIX = "_Aligned_Sorted.out.bam"
 # Reference gtf file - make sure these are the same assembly your BAMs were aligned to
 REFERENCE_GENOME_GTF_PATH = "/Users/aasho2/PHD/Bioinformatics/STAR/genomes/GRCm39/gencode_M27_primary/gencode.vM27.primary_assembly.annotation.gtf"
 
-# Provide the full path to your featureCounts executable
-FEATURECOUNTS_EXECUTABLE = "/Users/aasho2/opt/anaconda3/envs/bbmap/bin/featureCounts"
-
-# NEW IN V0.4: Indicate to featureCounts whether reads are paired-end
-PAIRED_END_READS = True
-
-# NEW IN V0.4: Indicate to featureCounts and perform_splice_analysis whether to only consider primary alignments
-PRIMARY_ALIGNMENT_ONLY = True
-
-# NEW IN V0.4: Number of threads to use for featureCounts
-FEATURECOUNTS_NUMBER_OF_THREADS = 12
-
 # NEW IN V0.4: Number of processes to use for reading from multiple bam files simultaneously during splice analysis
 SPLICE_ANALYSIS_MAX_NUMBER_OF_PROCESSES = 24
 
-# REFACTORED IN V0.4: Path to existing featureCounts output - leave empty to run featureCounts
-COUNTS_FILE = ""
+# NEW IN V0.4: Indicate to perform_splice_analysis whether to only consider primary alignments
+#              No longer passed to featureCounts
+# TODO: Is this always redundant if only considering unique alignments?
+PRIMARY_ALIGNMENT_ONLY = True
+
+FEATURE_JUNCTION_OVERLAP_THRESHOLD = 0.5
+
+EXPERIMENTAL_ALLOW_JUNCTION_START_OUTSIDE_TRANSCRIPT = False
+EXPERIMENTAL_ALLOW_JUNCTION_END_OUTSIDE_TRANSCRIPT = False
 
 # Optional: Choose a biomart mirror
 BIOMART_MIRROR = 'http://asia.ensembl.org'
