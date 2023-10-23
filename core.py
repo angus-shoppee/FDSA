@@ -12,7 +12,6 @@ from statistics import mean
 
 from transcript import TranscriptRecord, TranscriptLibrary
 from experiment import Sample
-from counts import FeatureCountsResult
 from splice import DEFAULT_MAPQ_FOR_UNIQUE_MAPPING, SpliceJunction, get_splice_junctions_from_sample
 
 
@@ -191,7 +190,7 @@ def get_splice_analysis_result_for_sample(
 
     number_occurrences = 0
 
-    overlapping_j_buffer = f"| {sample.name} "
+    overlapping_j_buffer = f""
 
     for junction in junctions:
 
@@ -246,6 +245,7 @@ def perform_splice_analysis(
     min_total_n_junctions_to_use_multiprocessing: int = 300,
     mapq_for_unique_mapping: int = DEFAULT_MAPQ_FOR_UNIQUE_MAPPING,
     primary_alignment_only: bool = False,
+    include_all_junctions_in_output: bool = True,
     verbose: bool = True,
 ) -> None:
 
@@ -296,16 +296,18 @@ def perform_splice_analysis(
             header = [
                 "Transcript ID",
                 "Gene name",
+                "Chromosome",
+                "Strand",
                 "Transcript genomic start position",
                 "Exon positions",
+                "Feature region",
                 "N instances of feature within transcript",
                 "Feature number within transcript",
-                "Feature region",
-                "Overlapping junctions in samples",
+                "Overlapping splice junctions"
+            ] + (["All splice junctions"] if include_all_junctions_in_output else []) + [
                 "Avg N occurrences",
                 "Avg percent occurrence"
             ] + sample_names_alphabetical + [f"Percent {sample_name}" for sample_name in sample_names_alphabetical]
-            # ] + sample_names_alphabetical + [f"OPTC {sample_name}" for sample_name in sample_names_alphabetical]
 
             out_csv = csv.writer(f)
             out_csv.writerow(header)
@@ -334,10 +336,10 @@ def perform_splice_analysis(
 
                 # # START DEBUG BLOCK
                 # # if transcripts[0].gene_name not in ("Cacna1d", "Cd74", "Gpr6", "Pkd1"):
-                # if transcripts[0].gene_name not in ("Lrch4",):
+                # if transcripts[0].gene_name not in ("H2-Ab1",):
                 #     _progress += len(transcripts)
                 #     continue
-                # # if _progress > 5000:
+                # # if _progress > 2000:
                 # #     break
                 # # print("REGION:", f"{transcript.seqname}:{transcript.start}-{transcript.end}")
                 # # END OF DEBUG BLOCK
@@ -447,10 +449,8 @@ def perform_splice_analysis(
                                 skipped_exon_match_failure += 1
                                 continue
 
-                            feature_region = \
-                                f"{transcript.seqname}({transcript.strand}):{f_start_genomic}-{f_end_genomic}"
+                            feature_region = f"{f_start_genomic}-{f_end_genomic}"
                             exon_positions = " ".join([f"{e.start}-{e.end}" for e in transcript.exons])
-                            overlapping_junctions_loci = ""
 
                             raw_number_occurrences = {}  # Dict[str, int]
                             frequency_occurrences = {}  # Dict[str, float]
@@ -488,7 +488,21 @@ def perform_splice_analysis(
                             for result in results:
                                 raw_number_occurrences[result.sample_name] = result.number_occurrences
                                 frequency_occurrences[result.sample_name] = result.frequency_occurrences
-                                overlapping_junctions_loci += result.junctions_loci
+
+                            overlapping_junctions_loci = " | ".join(
+                                [f"{result.sample_name}: {result.junctions_loci}" for result in results]
+                            )
+
+                            junctions_loci_by_sample_name = {} if not include_all_junctions_in_output else {
+                                sample_name: " ".join(
+                                    [f"{junc.n_unique}*[{junc.start}-{junc.end}]" for junc in junctions if (
+                                        junc.n_unique > 0
+                                    )]
+                                ) for (sample_name, junctions) in junctions_by_sample_name.items()
+                            }
+                            all_junctions_loci = "" if not include_all_junctions_in_output else " | ".join(
+                                [f"{name}: {loci}" for (name, loci) in junctions_loci_by_sample_name.items()]
+                            ).replace("  ", " ").replace("\n", "")
 
                             # Write to output (one row per feature per transcript)
                             out_n = [
@@ -503,13 +517,16 @@ def perform_splice_analysis(
                                 [
                                     transcript.transcript_id,
                                     transcript.gene_name,
+                                    transcript.seqname,
+                                    transcript.strand,
                                     transcript.start,
                                     exon_positions,
+                                    feature_region,
                                     n_features_in_transcript,
                                     feature_index + 1,
-                                    feature_region,
                                     overlapping_junctions_loci
                                 ] +
+                                ([all_junctions_loci] if include_all_junctions_in_output else []) +
                                 ["{:.2f}".format(mean(out_n))] +
                                 ["{:.2f}".format(mean(frequency_occurrences.values()))] +
                                 out_n +
@@ -531,6 +548,7 @@ def perform_splice_analysis(
         print(f"TIME: Completed in {_analysis_runtime_minutes} minutes")
 
         print_if_verbose(
-            f"...finished ({skipped_exon_match_failure} features skipped due to failed matching between reference "
-            f"and annotation exons)\n"
+            f"...finished ({skipped_exon_match_failure} features skipped due to either failed matching between "
+            f"reference and annotation exons, or due to annotated position mapping outside the bounds of the "
+            f"corresponding reference exon)\n"
         )

@@ -47,6 +47,11 @@ MAX_N_FEATURES_IN_TRANSCRIPT = 1
 OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4_test2"
 # OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4 Mutu2020"
 
+# NEW IN V0.4: Indicate whether to output all splice junctions for each sample alongside overlapping junctions
+#              (Required for plotting splice graphs, but will increase output file size)
+#              NOTE: If number of unique splice junctions is very high, may exceed the Excel cell character limit
+INCLUDE_ALL_JUNCTIONS_IN_OUTPUT = True
+
 # Sorted, indexed BAM files to be analyzed
 # BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/hons_PD1KO/sorted"
 BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/MuTu_dabraf_2020/sorted"
@@ -249,6 +254,7 @@ def main(verbose: bool = False) -> None:
         max_n_features_in_transcript=MAX_N_FEATURES_IN_TRANSCRIPT,
         max_n_processes=SPLICE_ANALYSIS_MAX_NUMBER_OF_PROCESSES,
         primary_alignment_only=PRIMARY_ALIGNMENT_ONLY,
+        include_all_junctions_in_output=INCLUDE_ALL_JUNCTIONS_IN_OUTPUT,
         verbose=verbose
     )
 
