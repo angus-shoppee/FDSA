@@ -4,6 +4,7 @@
 from dataclasses import dataclass
 from typing import List, Dict, Union, Any
 from pandas import DataFrame
+import os
 import pickle
 
 from annotation import GBSeq, RefseqExon
@@ -60,6 +61,13 @@ def create_exon_map_to_gbseq(
     offset = 0
     _n_transcript_exons = len(transcript_exons)
     _n_gbseq_exons = len(gbseq_exons)
+    if _n_transcript_exons == 0 or _n_gbseq_exons == 0:
+        raise ValueError(
+            f"WARNING: Transcript and/or gbseq has zero exons!\n" +
+            f"transcript_exons: {[(e.start, e.end) for e in transcript_exons]}\n" +
+            f"gbseq_exons: {[(e.start, e.end) for e in gbseq_exons]}"
+        )
+
     if _n_transcript_exons != _n_gbseq_exons:
         _n_find_offset_iters = 1 + abs(_n_transcript_exons - _n_gbseq_exons)
         _with_more_exons = transcript_exons if _n_transcript_exons > _n_gbseq_exons else gbseq_exons
@@ -143,8 +151,10 @@ def create_exon_map_to_gbseq(
             if i + offset == _n_transcript_exons - 1:
                 if _n_transcript_exons > 1:
                     _prev_exon_no = str(int(float(transcript_exons[i + offset].exon_number)) - 1)
-                    if exon_map[_prev_exon_no] is not None:
+                    if _prev_exon_no in exon_map and exon_map[_prev_exon_no] is not None:
                         exon_map[transcript_exons[i + offset].exon_number] = i
+
+            # TODO: Log transcripts where all keys map to None in exon_map
 
     return exon_map
 
@@ -281,8 +291,9 @@ class TranscriptLibrary:
     def __init__(
         self,
         species: str,
-        gene_names: List[str],
+        name_lookup: NameLookup,
         ref_gtf: DataFrame,
+        numexpr_max_threads: int = 8,
         init_verbose: bool = False
     ) -> None:
 
@@ -293,6 +304,10 @@ class TranscriptLibrary:
         def print_if_verbose(s: Any):
             if init_verbose:
                 print(s)
+
+        os.environ["NUMEXPR_MAX_THREADS"] = str(numexpr_max_threads)
+
+        gene_names = name_lookup.get_all_gene_names()
 
         print_if_verbose("Creating transcript library...")
         _i = 0
@@ -310,8 +325,18 @@ class TranscriptLibrary:
 
             _t_ids = list(transcripts_slice['transcript_id'])
             transcripts = {}
-            for i, t_id in enumerate(_t_ids):
-                t_id = _t_ids[i]
+            # for i, t_id in enumerate(_t_ids):
+            for i in range(len(_t_ids)):
+                t_id = transcripts_slice.transcript_id.values[i]
+
+                # Only create TranscriptRecord instance if the transcript ID has a matching refseq ID
+                # TODO: Log number skipped due to no matching refseq
+                try:
+                    refseq = name_lookup.convert(t_id, "ensembl", "refseq")
+                except KeyError:
+                    refseq = ""
+                if not refseq:
+                    continue
 
                 transcripts[t_id] = TranscriptRecord(
                     seqname=transcripts_slice.seqname.values[i],
@@ -325,8 +350,12 @@ class TranscriptLibrary:
                     transcript_id=transcripts_slice.transcript_id.values[i],
                     gene_name=transcripts_slice.gene_name.values[i],
                     gene_id=transcripts_slice.gene_id.values[i],
-                    exons=get_exons_from_gtf(t_id, transcripts_slice.query(f"transcript_id=='{t_id}'"))
+                    # exons=get_exons_from_gtf(t_id, transcripts_slice.query(f"transcript_id=='{t_id}'"))
+                    exons=get_exons_from_gtf(t_id, res.query(f"transcript_id=='{t_id}'"))
                 )
+                # _exons = get_exons_from_gtf(t_id, res.query(f"transcript_id=='{t_id}'"))
+                # print(f"DEBUG: locus: {transcripts_slice.start.values[i]}-{transcripts_slice.end.values[i]}")
+                # print(f"DEBUG: exons: {_exons}")
                 self.number_of_transcripts += 1
 
             self._transcripts_by_gene[gene_name] = transcripts
@@ -372,15 +401,17 @@ class TranscriptLibrary:
 def create_and_save_transcript_library(
     species: str,
     output_path: str,
-    gene_names: List[str],
+    name_lookup: NameLookup,
     ref_gtf: DataFrame,
+    numexpr_max_threads: int = 8,
     verbose: bool = False
 ) -> TranscriptLibrary:
 
     transcript_library = TranscriptLibrary(
         species,
-        gene_names,
+        name_lookup,
         ref_gtf,
+        numexpr_max_threads=numexpr_max_threads,
         init_verbose=verbose
     )
 
@@ -407,8 +438,9 @@ def annotate_and_save_transcript_library(
 
     # Get all transcripts that have a refseq ID
     print_if_verbose("Applying annotation to transcripts with refseq IDs...")
-    _key_errors, _without_refseq, _no_gbseq, _successes = 0, 0, 0, 0
+    _key_errors, _without_refseq, _no_gbseq, _exon_map_failure, _successes = 0, 0, 0, 0, 0
     for transcript in transcript_library.get_all_transcripts():
+        # TODO: Remove this check and its counting as this is now handled previously when creating transcript library
         try:
             refseq = name_lookup.convert(transcript.transcript_id, "ensembl", "refseq")
         except KeyError:
@@ -421,8 +453,12 @@ def annotate_and_save_transcript_library(
             except KeyError:
                 gbseq = None
             if gbseq and gbseq.exons:
-                transcript.set_gbseq(gbseq)
-                _successes += 1
+                # transcript.set_gbseq(gbseq)
+                try:
+                    transcript.set_gbseq(gbseq)
+                    _successes += 1
+                except ValueError:
+                    _exon_map_failure += 1
             else:
                 transcript_library.delete_transcript(
                     transcript.gene_name,
@@ -439,7 +475,8 @@ def annotate_and_save_transcript_library(
 
     print_if_verbose(
         f"... finished with {_successes} successes; removed {_without_refseq} transcripts without refseq ID, " +
-        f"{_key_errors} unmappable due to missing or unrecognised ensembl ID, {_no_gbseq} without annotation\n"
+        f"{_key_errors} unmappable due to missing or unrecognised ensembl ID, {_no_gbseq} without annotation, "
+        f"{_exon_map_failure} failures to map reference genome exons to gbseq exons\n"
     )
 
     with open(output_path, "wb") as f:

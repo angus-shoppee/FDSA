@@ -66,9 +66,9 @@ class RecordAnalyzer(entrezpy.base.analyzer.EutilsAnalyzer):
         self.result.xml = response.getvalue()
 
 
-# TODO: Refactor use of XML file format to a more storage-efficient format (probably GTF)
+# TODO: Refactor use of XML file format to genbank format (>10x more storage efficient, faster parsing with gtfparse)
 def download_and_save_feature_annotation_xml(
-    transcript_ids: List[str],
+    refseq_ids_to_search: List[str],
     output_path: str,
     user_email: str,
     chunk_size: int = 100,
@@ -97,13 +97,18 @@ def download_and_save_feature_annotation_xml(
         }
         # Wipe previous output file if it exists
         open(output_path, "w").close()
+        with open(progress_file_path, "w") as progress_file:
+            json.dump(
+                progress,
+                progress_file
+            )
 
     # Split input into chunks of specified size
-    batch_size = len(transcript_ids)
+    batch_size = len(refseq_ids_to_search)
     chunks = []
     _chunk_offset = 0
     while _chunk_offset < batch_size:
-        chunks.append(transcript_ids[_chunk_offset:min(batch_size, _chunk_offset + chunk_size)])
+        chunks.append(refseq_ids_to_search[_chunk_offset:min(batch_size, _chunk_offset + chunk_size)])
         _chunk_offset += chunk_size
 
     number_of_chunks = len(chunks)
@@ -142,6 +147,7 @@ def download_and_save_feature_annotation_xml(
             fetch_features.add_fetch(
                 {
                     "rettype": "genbank",
+                    # "retmode": "gbwithparts"
                     "retmode": "xml"
                 },
                 dependency=sid,
@@ -189,6 +195,7 @@ def download_and_save_feature_annotation_xml(
 
         # Remove download progress file
         os.remove(progress_file_path)
+        print("DEBUG: Removed progress file")
 
 
 def _get_unique_child(

@@ -548,7 +548,7 @@ def perform_splice_analysis(
         print(f"TIME: Completed in {_analysis_runtime_minutes} minutes")
 
         print_if_verbose(
-            f"...finished ({skipped_exon_match_failure} features skipped due to either failed matching between "
+            f"...finished ({skipped_exon_match_failure} features skipped either due to failed matching between "
             f"reference and annotation exons, or due to annotated position mapping outside the bounds of the "
             f"corresponding reference exon)\n"
         )

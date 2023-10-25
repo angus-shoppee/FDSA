@@ -15,7 +15,7 @@ class NameLookup:
 
     def get_all_gene_names(self) -> List[str]:
 
-        return [gene_name for gene_name in self._dict["ensembl"]["gene"].values() if gene_name]
+        return [gene_name for gene_name in set(self._dict["ensembl"]["gene"].values()) if gene_name]
 
     def convert(
         self,

@@ -2,9 +2,15 @@
 # FEATURECOUNTS DISPATCH AND PARSING GENE COUNT DATA
 
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
+from typing import Dict, List
 import os
 import subprocess
+import pandas as pd
+import conorm
+
+
+DEFAULT_FEATURE_COUNTS_OUTPUT_GENE_ID_COLUMN_INDEX = 0
+DEFAULT_FEATURE_COUNTS_OUTPUT_LEFTMOST_COUNTS_COLUMN_INDEX = 6
 
 
 @dataclass
@@ -18,10 +24,37 @@ class FeatureCountsResult:
     counts_by_gene_id: Dict[str, List[int]]
 
 
+def get_tmm_cpm_from_gene_counts(
+    feature_counts_result: FeatureCountsResult
+) -> pd.DataFrame:
+
+    sample_names_ordered = sorted(
+        [(i, sample_name) for (sample_name, i) in feature_counts_result.index_by_sample.items()],
+        key=lambda x: x[0]
+    )
+
+    row_names, rows = [], []
+    for gene_id, counts in feature_counts_result.counts_by_gene_id.items():
+        row_names.append(gene_id)
+        rows.append(counts)
+
+    counts = pd.DataFrame(
+        rows,
+        index=row_names,
+        columns=sample_names_ordered
+    )
+
+    norm_factors = conorm.tmm_norm_factors(counts)
+
+    tmm_cpm = conorm.cpm(counts, norm_factors=norm_factors)
+
+    return tmm_cpm
+
+
 def get_gene_counts_from_tsv(
     file_path: str,
-    gene_id_column_index: int = 0,
-    leftmost_counts_column_index: int = 6
+    gene_id_column_index: int = DEFAULT_FEATURE_COUNTS_OUTPUT_GENE_ID_COLUMN_INDEX,
+    leftmost_counts_column_index: int = DEFAULT_FEATURE_COUNTS_OUTPUT_LEFTMOST_COUNTS_COLUMN_INDEX
 ) -> FeatureCountsResult:
 
     """Parses a featureCounts output file and returns data as a FeatureCountsResult instance"""
@@ -44,7 +77,7 @@ def get_gene_counts_from_tsv(
         # Parse remaining lines in file
         counts_by_gene_id = {}
         for line in f:
-            row = line.split("\t")
+            row = line.replace("\n", "").split("\t")
             gene_id = str(row[gene_id_column_index])
             counts_by_gene_id[gene_id] = [int(c) for c in row[leftmost_counts_column_index:]]
 
@@ -52,7 +85,7 @@ def get_gene_counts_from_tsv(
 
 
 def run_feature_counts(
-    feature_counts_command: str,
+    feature_counts_executable: str,
     bam_files_dir: str,
     bam_suffix: str,
     reference_gtf_path: str,
@@ -69,7 +102,7 @@ def run_feature_counts(
     paired_flag = "-p " if paired_end_reads else ""
     primary_flag = "--primary " if primary_alignment_only else ""
 
-    full_cmd = f"{feature_counts_command} -T {threads} {paired_flag}-t exon -g gene_id {primary_flag}" +\
+    full_cmd = f"{feature_counts_executable} -T {threads} {paired_flag}-t exon -g gene_id {primary_flag}" +\
         f"-a {reference_gtf_path} -o {output_path} {' '.join(bam_file_paths)}"
 
     process = subprocess.run(full_cmd.split(" "), cwd=bam_files_dir, encoding="utf8", check=check_exit_code)

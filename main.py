@@ -20,7 +20,8 @@ from core import FaseConfig, set_analysis_features, perform_splice_analysis
 EMAIL = "angus.shoppee@monash.edu"
 
 # NEW IN V0.4: Species from which sequencing data originates
-SPECIES = "Mouse"
+# SPECIES = "Mouse"
+SPECIES = "Human"
 
 # NEW IN V0.4: Path to single-column csv file / Leave empty to default to whole-genome
 # NOTE: Currently unused
@@ -44,8 +45,9 @@ SKIP_TRANSCRIPTS_WITH_REDUNDANT_FEATURE_ANNOTATION = True
 MAX_N_FEATURES_IN_TRANSCRIPT = 1
 
 # Where to save output files
-OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4_test2"
+# OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4_test2"
 # OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4 Mutu2020"
+OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4 HumanBloodDC"
 
 # NEW IN V0.4: Indicate whether to output all splice junctions for each sample alongside overlapping junctions
 #              (Required for plotting splice graphs, but will increase output file size)
@@ -54,13 +56,16 @@ INCLUDE_ALL_JUNCTIONS_IN_OUTPUT = True
 
 # Sorted, indexed BAM files to be analyzed
 # BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/hons_PD1KO/sorted"
-BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/MuTu_dabraf_2020/sorted"
+# BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/MuTu_dabraf_2020/sorted"
+BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/PRJNA287649_human_blood_dcs/run_231023/star_output"
 
 # Everything that comes after sample identifier in the bam paths, including file extension
-BAM_SUFFIX = "_Aligned_Sorted.out.bam"
+# BAM_SUFFIX = "_Aligned_Sorted.out.bam"
+BAM_SUFFIX = "_Aligned.sortedByCoord.out.bam"
 
 # Reference gtf file - make sure these are the same assembly your BAMs were aligned to
-REFERENCE_GENOME_GTF_PATH = "/Users/aasho2/PHD/Bioinformatics/STAR/genomes/GRCm39/gencode_M27_primary/gencode.vM27.primary_assembly.annotation.gtf"
+# REFERENCE_GENOME_GTF_PATH = "/Users/aasho2/PHD/Bioinformatics/STAR/genomes/GRCm39/gencode_M27_primary/gencode.vM27.primary_assembly.annotation.gtf"
+REFERENCE_GENOME_GTF_PATH = "/Users/aasho2/PHD/Bioinformatics/STAR/genomes/GRCh38/gencode_38_primary/gencode.v38.primary_assembly.annotation.gtf"
 
 # NEW IN V0.4: Number of processes to use for reading from multiple bam files simultaneously during splice analysis
 SPLICE_ANALYSIS_MAX_NUMBER_OF_PROCESSES = 24
@@ -78,14 +83,19 @@ EXPERIMENTAL_ALLOW_JUNCTION_END_OUTSIDE_TRANSCRIPT = False
 # Optional: Choose a biomart mirror
 BIOMART_MIRROR = 'http://asia.ensembl.org'
 
+# NEW IN V0.4: Number of threads to use for gtf queries while generating transcript library
+NUMEXPR_MAX_THREADS = 32
+
+# NEW IN V0.4
+FORCE_REGENERATE_TRANSCRIPT_LIBRARY = False
+FORCE_REDO_ANNOTATE_TRANSCRIPT_LIBRARY = False
+
 # NEW IN V0.4
 FORCE_REGENERATE_WHOLE_GENOME_LOOKUP = False
 
 # NEW IN V0.4
-FORCE_REGENERATE_TRANSCRIPT_LIBRARY = False
-
-# NEW IN V0.4
 FORCE_REGENERATE_GENBANK_FEATURE_XML = False
+DO_NOT_RESUME_PARTIAL_DOWNLOAD_GENBANK = False
 
 
 # ==================================================================================================================== #
@@ -132,7 +142,7 @@ def main(verbose: bool = False) -> None:
     else:
         name_lookup = load_name_lookup_from_file(name_lookup_path)
 
-    print_if_verbose("...done\n")
+    print_if_verbose("... initialization finished\n")
 
     annotated_transcript_library_path = os.path.join(species_specific_data_dir, "annotated_transcript_library.object")
 
@@ -140,10 +150,18 @@ def main(verbose: bool = False) -> None:
     if any([
         FORCE_REGENERATE_TRANSCRIPT_LIBRARY,
         FORCE_REGENERATE_GENBANK_FEATURE_XML,
+        FORCE_REDO_ANNOTATE_TRANSCRIPT_LIBRARY,
         not os.path.exists(annotated_transcript_library_path)
     ]):
 
-        print_if_verbose("Annotated transcript library has not been built and will be initialized this run.\n")
+        if not os.path.exists(annotated_transcript_library_path):
+            print_if_verbose("Annotated transcript library has not been built and will be initialized this run.\n")
+        if FORCE_REGENERATE_TRANSCRIPT_LIBRARY:
+            print_if_verbose("The FORCE_REGENERATE_TRANSCRIPT_LIBRARY flag has been enabled.\n")
+        if FORCE_REGENERATE_GENBANK_FEATURE_XML:
+            print_if_verbose("The FORCE_REGENERATE_GENBANK_FEATURE_XML flag has been enabled.\n")
+        if FORCE_REDO_ANNOTATE_TRANSCRIPT_LIBRARY:
+            print_if_verbose("The FORCE_REDO_ANNOTATE_TRANSCRIPT_LIBRARY flag has been enabled.\n")
 
         transcript_library_path = os.path.join(species_specific_data_dir, "transcript_library.object")
 
@@ -156,8 +174,9 @@ def main(verbose: bool = False) -> None:
             transcript_library = create_and_save_transcript_library(
                 SPECIES,
                 transcript_library_path,
-                name_lookup.get_all_gene_names(),
+                name_lookup,
                 ref_gtf,
+                numexpr_max_threads=NUMEXPR_MAX_THREADS,
                 verbose=verbose
             )
             del ref_gtf
@@ -167,9 +186,14 @@ def main(verbose: bool = False) -> None:
             transcript_library = load_transcript_library_from_file(transcript_library_path)
 
         genbank_feature_xml_path = os.path.join(species_specific_data_dir, "genbank_feature_annotation.xml")
+        xml_download_progress_file_path = os.path.join(species_specific_data_dir, ".download_progress.json")
 
         # Create genbank feature XML if required
-        if FORCE_REGENERATE_GENBANK_FEATURE_XML or not os.path.exists(genbank_feature_xml_path):
+        if any([
+            FORCE_REGENERATE_GENBANK_FEATURE_XML,
+            os.path.exists(xml_download_progress_file_path),  # Indicates previously started download has not finished
+            not os.path.exists(genbank_feature_xml_path)
+        ]):
             print_if_verbose("Downloading genbank feature annotation data...")
 
             transcripts_with_refseq = []
@@ -177,7 +201,8 @@ def main(verbose: bool = False) -> None:
                 try:
                     refseq = name_lookup.convert(t.transcript_id, "ensembl", "refseq")
                     if refseq:
-                        transcripts_with_refseq.append(t.transcript_id)
+                        # transcripts_with_refseq.append(t.transcript_id)
+                        transcripts_with_refseq.append(refseq)
                 except KeyError:
                     pass
 
@@ -185,6 +210,7 @@ def main(verbose: bool = False) -> None:
                 list(transcripts_with_refseq),
                 genbank_feature_xml_path,
                 EMAIL,
+                force_restart_download=DO_NOT_RESUME_PARTIAL_DOWNLOAD_GENBANK,
                 verbose=verbose
             )
 
