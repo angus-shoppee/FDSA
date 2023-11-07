@@ -233,6 +233,23 @@ def get_splice_analysis_result_for_sample(
     )
 
 
+def _convert_loci_to_junction_ids(
+    junction_loci: str,
+    junction_id_by_locus: Dict[str, str]
+) -> str:
+
+    converted_loci = []
+    for quantified_locus in junction_loci.split(" "):
+        if not quantified_locus:
+            continue
+        asterisk_index = quantified_locus.index("*")
+        quantifier = quantified_locus[:asterisk_index]
+        locus = quantified_locus[asterisk_index+2:-1]  # Strip quantifier and square brackets
+        converted_loci.append(f"{quantifier}*{junction_id_by_locus[locus]}")
+
+    return " ".join(converted_loci)
+
+
 def perform_splice_analysis(
     features_to_analyze: List[str],
     overlap_threshold: float,
@@ -242,7 +259,7 @@ def perform_splice_analysis(
     max_n_features_in_transcript: Union[None, int] = None,
     max_n_processes: int = 1,
     min_bam_parse_time_ns_to_use_multiprocessing: int = 100_000_000,
-    min_total_n_junctions_to_use_multiprocessing: int = 300,
+    min_total_n_junctions_to_use_multiprocessing: int = 10_000,
     mapq_for_unique_mapping: int = DEFAULT_MAPQ_FOR_UNIQUE_MAPPING,
     primary_alignment_only: bool = False,
     include_all_junctions_in_output: bool = True,
@@ -266,7 +283,7 @@ def perform_splice_analysis(
 
     if n_processes > 1:
         pool = Pool(processes=n_processes)
-        print_if_verbose(f"Created worker pool with {n_processes} processes\n")
+        print_if_verbose(f"Created worker pool with {n_processes} processes for BAM file processing\n")
     else:
         pool = None
 
@@ -303,8 +320,8 @@ def perform_splice_analysis(
                 "Feature region",
                 "N instances of feature within transcript",
                 "Feature number within transcript",
-                "Overlapping splice junctions"
-            ] + (["All splice junctions"] if include_all_junctions_in_output else []) + [
+            ] + (["Junction loci", "All splice junctions"] if include_all_junctions_in_output else []) + [
+                "Overlapping splice junctions",
                 "Avg N occurrences",
                 "Avg percent occurrence"
             ] + sample_names_alphabetical + [f"Percent {sample_name}" for sample_name in sample_names_alphabetical]
@@ -336,11 +353,11 @@ def perform_splice_analysis(
 
                 # # START DEBUG BLOCK
                 # # if transcripts[0].gene_name not in ("Cacna1d", "Cd74", "Gpr6", "Pkd1"):
-                # if transcripts[0].gene_name not in ("H2-Ab1",):
-                #     _progress += len(transcripts)
-                #     continue
-                # # if _progress > 2000:
-                # #     break
+                # # if transcripts[0].gene_name not in ("H2-Ab1",):
+                # #     _progress += len(transcripts)
+                # #     continue
+                # if _progress > 1000:
+                #     break
                 # # print("REGION:", f"{transcript.seqname}:{transcript.start}-{transcript.end}")
                 # # END OF DEBUG BLOCK
 
@@ -403,6 +420,13 @@ def perform_splice_analysis(
 
                     remaining_reads, remaining_junctions = [], []
 
+                if _info_time_bam_read:
+                    _bam_read_finish_ms = time.time_ns() / 1_000_000
+                    print(
+                        f"INFO: parsed splice junctions from BAM files for gene {transcripts[0].gene_name} in " +
+                        f"{_bam_read_finish_ms - _bam_read_start_ms} ms"
+                    )
+
                 all_reads = [first_reads] + remaining_reads
                 all_junctions = [first_junctions] + remaining_junctions
 
@@ -413,12 +437,32 @@ def perform_splice_analysis(
                     sample_names_alphabetical[i]: all_junctions[i] for i in range(len(sample_names_alphabetical))
                 }
 
-                if _info_time_bam_read:
-                    _bam_read_finish_ms = time.time_ns() / 1_000_000
-                    print(
-                        f"INFO: parsed splice junctions from BAM files for gene {transcripts[0].gene_name} in " +
-                        f"{_bam_read_finish_ms - _bam_read_start_ms} ms"
-                    )
+                junction_id_by_locus = {}
+                if include_all_junctions_in_output:
+                    for junctions in all_junctions:
+                        for junction in junctions:
+                            locus = f"{junction.start}-{junction.end}"
+                            try:
+                                # Do nothing if already present as key (rather than iterating over all keys)
+                                junction_id_by_locus[locus]
+                            except KeyError:
+                                junction_id = f"J{1 + len(junction_id_by_locus)}"
+                                junction_id_by_locus[locus] = junction_id
+
+                junction_definition = "" if not include_all_junctions_in_output else " ".join(
+                    [f"{junction_id}=[{locus}]" for (locus, junction_id) in junction_id_by_locus.items()]
+                )
+
+                junctions_loci_by_sample_name = {} if not include_all_junctions_in_output else {
+                    sample_name: " ".join(
+                        [f"{junc.n_unique}*" + junction_id_by_locus[
+                            f"{junc.start}-{junc.end}"
+                        ] for junc in junctions if (junc.n_unique > 0)]
+                    ) for (sample_name, junctions) in junctions_by_sample_name.items()
+                }
+                all_junctions_loci = "" if not include_all_junctions_in_output else " | ".join(
+                    [f"{name}: {loci}" for (name, loci) in junctions_loci_by_sample_name.items()]
+                ).replace("  ", " ")
 
                 for transcript in transcripts:
 
@@ -458,7 +502,7 @@ def perform_splice_analysis(
                             if all([
                                 pool is not None,
                                 sum(
-                                    [len(j) for j in junctions_by_sample_name.values()]
+                                    [sum([j.n_unique for j in j_list]) for j_list in junctions_by_sample_name.values()]
                                 ) > min_total_n_junctions_to_use_multiprocessing
                             ]):
                                 args_to_pool = [[
@@ -491,18 +535,11 @@ def perform_splice_analysis(
 
                             overlapping_junctions_loci = " | ".join(
                                 [f"{result.sample_name}: {result.junctions_loci}" for result in results]
+                            ) if not include_all_junctions_in_output else " | ".join(
+                                [f"""{result.sample_name}: {_convert_loci_to_junction_ids(
+                                    result.junctions_loci, junction_id_by_locus
+                                )}""" for result in results]
                             )
-
-                            junctions_loci_by_sample_name = {} if not include_all_junctions_in_output else {
-                                sample_name: " ".join(
-                                    [f"{junc.n_unique}*[{junc.start}-{junc.end}]" for junc in junctions if (
-                                        junc.n_unique > 0
-                                    )]
-                                ) for (sample_name, junctions) in junctions_by_sample_name.items()
-                            }
-                            all_junctions_loci = "" if not include_all_junctions_in_output else " | ".join(
-                                [f"{name}: {loci}" for (name, loci) in junctions_loci_by_sample_name.items()]
-                            ).replace("  ", " ").replace("\n", "")
 
                             # Write to output (one row per feature per transcript)
                             out_n = [
@@ -523,10 +560,10 @@ def perform_splice_analysis(
                                     exon_positions,
                                     feature_region,
                                     n_features_in_transcript,
-                                    feature_index + 1,
-                                    overlapping_junctions_loci
+                                    feature_index + 1
                                 ] +
-                                ([all_junctions_loci] if include_all_junctions_in_output else []) +
+                                ([junction_definition, all_junctions_loci] if include_all_junctions_in_output else []) +
+                                [overlapping_junctions_loci] +
                                 ["{:.2f}".format(mean(out_n))] +
                                 ["{:.2f}".format(mean(frequency_occurrences.values()))] +
                                 out_n +

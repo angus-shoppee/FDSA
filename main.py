@@ -20,8 +20,8 @@ from core import FaseConfig, set_analysis_features, perform_splice_analysis
 EMAIL = "angus.shoppee@monash.edu"
 
 # NEW IN V0.4: Species from which sequencing data originates
-# SPECIES = "Mouse"
-SPECIES = "Human"
+SPECIES = "Mouse"
+# SPECIES = "Human"
 
 # NEW IN V0.4: Path to single-column csv file / Leave empty to default to whole-genome
 # NOTE: Currently unused
@@ -45,9 +45,9 @@ SKIP_TRANSCRIPTS_WITH_REDUNDANT_FEATURE_ANNOTATION = True
 MAX_N_FEATURES_IN_TRANSCRIPT = 1
 
 # Where to save output files
-# OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4_test2"
+OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4"
 # OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4 Mutu2020"
-OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4 HumanBloodDC"
+# OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4 HumanBloodDC"
 
 # NEW IN V0.4: Indicate whether to output all splice junctions for each sample alongside overlapping junctions
 #              (Required for plotting splice graphs, but will increase output file size)
@@ -55,20 +55,23 @@ OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4 HumanBloodDC"
 INCLUDE_ALL_JUNCTIONS_IN_OUTPUT = True
 
 # Sorted, indexed BAM files to be analyzed
-# BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/hons_PD1KO/sorted"
+BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/hons_PD1KO/sorted"
 # BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/MuTu_dabraf_2020/sorted"
-BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/PRJNA287649_human_blood_dcs/run_231023/star_output"
+# BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/PRJNA287649_human_blood_dcs/run_231023/star_output"
 
 # Everything that comes after sample identifier in the bam paths, including file extension
-# BAM_SUFFIX = "_Aligned_Sorted.out.bam"
-BAM_SUFFIX = "_Aligned.sortedByCoord.out.bam"
+BAM_SUFFIX = "_Aligned_Sorted.out.bam"
+# BAM_SUFFIX = "_Aligned.sortedByCoord.out.bam"
 
 # Reference gtf file - make sure these are the same assembly your BAMs were aligned to
-# REFERENCE_GENOME_GTF_PATH = "/Users/aasho2/PHD/Bioinformatics/STAR/genomes/GRCm39/gencode_M27_primary/gencode.vM27.primary_assembly.annotation.gtf"
-REFERENCE_GENOME_GTF_PATH = "/Users/aasho2/PHD/Bioinformatics/STAR/genomes/GRCh38/gencode_38_primary/gencode.v38.primary_assembly.annotation.gtf"
+REFERENCE_GENOME_GTF_PATH = "/Users/aasho2/PHD/Bioinformatics/STAR/genomes/GRCm39/gencode_M27_primary/gencode.vM27.primary_assembly.annotation.gtf"
+# REFERENCE_GENOME_GTF_PATH = "/Users/aasho2/PHD/Bioinformatics/STAR/genomes/GRCh38/gencode_38_primary/gencode.v38.primary_assembly.annotation.gtf"
 
 # NEW IN V0.4: Number of processes to use for reading from multiple bam files simultaneously during splice analysis
 SPLICE_ANALYSIS_MAX_NUMBER_OF_PROCESSES = 24
+
+# NEW IN V0.4: Number of threads to use for gtf queries while generating transcript library
+NUMEXPR_MAX_THREADS = 32
 
 # NEW IN V0.4: Indicate to perform_splice_analysis whether to only consider primary alignments
 #              No longer passed to featureCounts
@@ -82,9 +85,6 @@ EXPERIMENTAL_ALLOW_JUNCTION_END_OUTSIDE_TRANSCRIPT = False
 
 # Optional: Choose a biomart mirror
 BIOMART_MIRROR = 'http://asia.ensembl.org'
-
-# NEW IN V0.4: Number of threads to use for gtf queries while generating transcript library
-NUMEXPR_MAX_THREADS = 32
 
 # NEW IN V0.4
 FORCE_REGENERATE_TRANSCRIPT_LIBRARY = False
@@ -102,9 +102,11 @@ DO_NOT_RESUME_PARTIAL_DOWNLOAD_GENBANK = False
 
 def main(verbose: bool = False) -> None:
 
-    def print_if_verbose(s: Any):
+    # TODO: Refactor print_if_verbose here and in dependencies to print / print_if_not_silent
+
+    def print_if_verbose(*args: Any):
         if verbose:
-            print(s)
+            print(*args)
 
     print_if_verbose("Initializing...")
 
@@ -264,6 +266,13 @@ def main(verbose: bool = False) -> None:
     bam_file_absolute_paths = [os.path.join(
         BAM_FILES_DIR, p
     ) for p in os.listdir(BAM_FILES_DIR) if p[-_suffix_length:] == BAM_SUFFIX]
+
+    if len(bam_file_absolute_paths) == 0:
+        raise ValueError(
+            "No BAM files were loaded - check that the supplied BAM directory is valid, and that the specified BAM " +
+            f"suffix is correct for these files.\nSpecified BAM suffix: {BAM_SUFFIX}\nDetected BAM files: " +
+            f"{bam_file_absolute_paths}"
+        )
 
     samples = {}
     for bam_path in bam_file_absolute_paths:
