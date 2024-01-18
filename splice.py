@@ -37,9 +37,23 @@ class SamFlag(Flag):
     SUPPLEMENTARY_ALIGNMENT = auto()
 
 
+_BAM_OP_CONSUMES_REFERENCE = {
+    0: True,
+    1: False,
+    2: True,
+    3: True,
+    4: False,
+    5: False,
+    6: False,
+    7: True,
+    8: True
+}
+
+
 def bam_op_consumes_reference(op: int) -> bool:
 
-    return True if op in (0, 2, 3, 7, 8) else False
+    # return True if op in (0, 2, 3, 7, 8) else False
+    return _BAM_OP_CONSUMES_REFERENCE[op]
 
 
 NumberOfJunctions = NamedTuple("NumberOfJunctions", [("unique", int), ("multi", int)])
