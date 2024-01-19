@@ -1,5 +1,6 @@
 
 from typing import Any
+import gc
 import os
 from gtfparse import read_gtf
 
@@ -10,6 +11,8 @@ from entrez import download_and_save_feature_annotation_xml, get_gbseq_from_xml
 from biomart import create_and_save_name_lookup, load_name_lookup_from_file
 from experiment import Sample
 from core import FaseConfig, set_analysis_features, perform_splice_analysis
+
+# NOTE: Cd80 does not appear in output but has feature annotation - why?
 
 # ==================================================================================================================== #
 
@@ -45,8 +48,8 @@ SKIP_TRANSCRIPTS_WITH_REDUNDANT_FEATURE_ANNOTATION = True
 MAX_N_FEATURES_IN_TRANSCRIPT = 1
 
 # Where to save output files
-OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4"
-# OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4 Mutu2020"
+# OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4"
+OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4 Mutu2020"
 # OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4 HumanBloodDC"
 
 # NEW IN V0.4: Indicate whether to output all splice junctions for each sample alongside overlapping junctions
@@ -55,8 +58,8 @@ OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4"
 INCLUDE_ALL_JUNCTIONS_IN_OUTPUT = True
 
 # Sorted, indexed BAM files to be analyzed
-BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/hons_PD1KO/sorted"
-# BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/MuTu_dabraf_2020/sorted"
+# BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/hons_PD1KO/sorted"
+BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/MuTu_dabraf_2020/sorted"
 # BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/PRJNA287649_human_blood_dcs/run_231023/star_output"
 
 # Everything that comes after sample identifier in the bam paths, including file extension
@@ -182,6 +185,7 @@ def main(verbose: bool = False) -> None:
                 verbose=verbose
             )
             del ref_gtf
+            gc.collect()
 
         # Load transcript library
         else:
@@ -217,6 +221,7 @@ def main(verbose: bool = False) -> None:
             )
 
             del transcripts_with_refseq
+            gc.collect()
 
             print_if_verbose("...done\n")
 
@@ -237,6 +242,7 @@ def main(verbose: bool = False) -> None:
 
         del transcript_library
         del gbseq_by_refseq
+        gc.collect()
 
         print_if_verbose("Annotated transcript library has been created and saved.\n")
 

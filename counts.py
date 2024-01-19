@@ -41,7 +41,7 @@ def get_tmm_cpm_from_gene_counts(
     counts = pd.DataFrame(
         rows,
         index=row_names,
-        columns=sample_names_ordered
+        columns=[x[1] for x in sample_names_ordered]
     )
 
     norm_factors = conorm.tmm_norm_factors(counts)
@@ -53,6 +53,7 @@ def get_tmm_cpm_from_gene_counts(
 
 def get_gene_counts_from_tsv(
     file_path: str,
+    bam_suffix: str = "",
     gene_id_column_index: int = DEFAULT_FEATURE_COUNTS_OUTPUT_GENE_ID_COLUMN_INDEX,
     leftmost_counts_column_index: int = DEFAULT_FEATURE_COUNTS_OUTPUT_LEFTMOST_COUNTS_COLUMN_INDEX
 ) -> FeatureCountsResult:
@@ -69,7 +70,11 @@ def get_gene_counts_from_tsv(
         else:
             header = line_0  # Otherwise, the first line of the file is the header row
 
+        if bam_suffix:
+            header = header.replace(bam_suffix, "")
+
         header_row = header.replace("\n", "").split("\t")
+
         index_by_sample_name = {
             sample_name: i for i, sample_name in enumerate(header_row[leftmost_counts_column_index:])
         }

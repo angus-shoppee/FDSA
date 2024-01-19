@@ -10,6 +10,7 @@ import configparser
 import time
 from statistics import mean
 
+from config import output_column_names as cols
 from transcript import TranscriptRecord, TranscriptLibrary
 from experiment import Sample
 from splice import DEFAULT_MAPQ_FOR_UNIQUE_MAPPING, SpliceJunction, get_splice_junctions_from_sample
@@ -311,19 +312,20 @@ def perform_splice_analysis(
             samples_alphabetical = [samples[sample_name] for sample_name in sample_names_alphabetical]
 
             header = [
-                "Transcript ID",
-                "Gene name",
-                "Chromosome",
-                "Strand",
-                "Transcript genomic start position",
-                "Exon positions",
-                "Feature region",
-                "N instances of feature within transcript",
-                "Feature number within transcript",
-            ] + (["Junction loci", "All splice junctions"] if include_all_junctions_in_output else []) + [
-                "Overlapping splice junctions",
-                "Avg N occurrences",
-                "Avg percent occurrence"
+                cols.TRANSCRIPT_ID,
+                cols.GENE_ID,
+                cols.GENE_NAME,
+                cols.CHROMOSOME,
+                cols.STRAND,
+                cols.TRANSCRIPT_START,
+                cols.EXON_POSITIONS,
+                cols.FEATURE_REGION,
+                cols.N_FEATURES_IN_TRANSCRIPT,
+                cols.FEATURE_NUMBER,
+            ] + ([cols.JUNCTION_DEFINITION, cols.ALL_JUNCTIONS] if include_all_junctions_in_output else []) + [
+                cols.OVERLAPPING_JUNCTIONS,
+                cols.AVG_NUMBER,
+                cols.AVG_FREQUENCY
             ] + sample_names_alphabetical + [f"Percent {sample_name}" for sample_name in sample_names_alphabetical]
 
             out_csv = csv.writer(f)
@@ -553,6 +555,7 @@ def perform_splice_analysis(
                             out_csv.writerow(
                                 [
                                     transcript.transcript_id,
+                                    transcript.gene_id,
                                     transcript.gene_name,
                                     transcript.seqname,
                                     transcript.strand,
