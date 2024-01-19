@@ -7,8 +7,8 @@ from pandas import DataFrame
 import os
 import pickle
 
-from annotation import GBSeq, RefseqExon
-from biomart import NameLookup
+from src.analysis.annotation import GBSeq, RefseqExon
+from src.analysis.biomart import NameLookup
 
 
 @dataclass
@@ -490,5 +490,6 @@ def load_transcript_library_from_file(path):
     with open(path, "rb") as f:
 
         transcript_library = pickle.load(f)
+        # transcript_library = RenameUnpickler(f).load()
 
     return transcript_library

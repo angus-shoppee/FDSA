@@ -11,7 +11,7 @@ from socket import timeout as socket_timeout
 from xml.etree import cElementTree
 from xml.etree.ElementTree import Element
 
-from annotation import GBSeq, GBFeature, GBQual
+from src.analysis.annotation import GBSeq, GBFeature, GBQual
 
 
 class FetchResult(entrezpy.base.result.EutilsResult):

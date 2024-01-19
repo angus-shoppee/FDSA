@@ -11,12 +11,12 @@ import time
 from statistics import mean
 
 from config import output_column_names as cols
-from transcript import TranscriptRecord, TranscriptLibrary
-from experiment import Sample
-from splice import DEFAULT_MAPQ_FOR_UNIQUE_MAPPING, SpliceJunction, get_splice_junctions_from_sample
+from src.analysis.transcript import TranscriptRecord, TranscriptLibrary
+from src.analysis.experiment import Sample
+from src.analysis.splice import DEFAULT_MAPQ_FOR_UNIQUE_MAPPING, SpliceJunction, get_splice_junctions_from_sample
 
 
-class FaseConfig:
+class FaseAnalysisConfig:
     allowed_species: List[str]
     biomart_name_for_species: Dict[str, str]
 

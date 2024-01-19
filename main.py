@@ -4,13 +4,13 @@ import gc
 import os
 from gtfparse import read_gtf
 
-from transcript import (
+from src.analysis.transcript import (
     create_and_save_transcript_library, annotate_and_save_transcript_library, load_transcript_library_from_file
 )
-from entrez import download_and_save_feature_annotation_xml, get_gbseq_from_xml
-from biomart import create_and_save_name_lookup, load_name_lookup_from_file
-from experiment import Sample
-from core import FaseConfig, set_analysis_features, perform_splice_analysis
+from src.analysis.entrez import download_and_save_feature_annotation_xml, get_gbseq_from_xml
+from src.analysis.biomart import create_and_save_name_lookup, load_name_lookup_from_file
+from src.analysis.experiment import Sample
+from src.analysis.core import FaseAnalysisConfig, set_analysis_features, perform_splice_analysis
 
 # NOTE: Cd80 does not appear in output but has feature annotation - why?
 
@@ -48,8 +48,8 @@ SKIP_TRANSCRIPTS_WITH_REDUNDANT_FEATURE_ANNOTATION = True
 MAX_N_FEATURES_IN_TRANSCRIPT = 1
 
 # Where to save output files
-# OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4"
-OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4 Mutu2020"
+OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4"
+# OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4 Mutu2020"
 # OUTPUT_DIR = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4 HumanBloodDC"
 
 # NEW IN V0.4: Indicate whether to output all splice junctions for each sample alongside overlapping junctions
@@ -116,15 +116,15 @@ def main(verbose: bool = False) -> None:
     base_dir = os.path.realpath(os.path.dirname(__file__))
 
     # Load config
-    fase_config = FaseConfig(
+    fase_analysis_config = FaseAnalysisConfig(
         os.path.join(base_dir, "config", "internal.config")
     )
 
     # Validate user settings (not exhaustive)
     # TODO: Complete
-    if SPECIES not in fase_config.allowed_species:
+    if SPECIES not in fase_analysis_config.allowed_species:
         raise ValueError(
-            f"Provided species '{SPECIES}' is not supported. Currently supported species: {fase_config.allowed_species}"
+            f"Provided species '{SPECIES}' is not supported. Currently supported species: {fase_analysis_config.allowed_species}"
         )
 
     # Create data directory for this species if required
@@ -137,7 +137,7 @@ def main(verbose: bool = False) -> None:
     # Create name lookup if required
     if FORCE_REGENERATE_WHOLE_GENOME_LOOKUP or not os.path.exists(name_lookup_path):
         name_lookup = create_and_save_name_lookup(
-            fase_config.biomart_name_for_species[SPECIES],
+            fase_analysis_config.biomart_name_for_species[SPECIES],
             BIOMART_MIRROR,
             name_lookup_path,
             verbose=verbose
