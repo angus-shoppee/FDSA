@@ -10,7 +10,7 @@ import configparser
 import time
 from statistics import mean
 
-from config import output_column_names as cols
+from src.config import output_column_names as cols
 from src.analysis.transcript import TranscriptRecord, TranscriptLibrary
 from src.analysis.experiment import Sample
 from src.analysis.splice import DEFAULT_MAPQ_FOR_UNIQUE_MAPPING, SpliceJunction, get_splice_junctions_from_sample
