@@ -9,6 +9,7 @@ TRANSCRIPT_SECTION_TEMPLATE = "transcript_section.html"
 @dataclass
 class TranscriptSectionRenderInfo:
     section_id: str
+    section_title: str
     gene_name: str
     transcript_id: str
     n_exons: int

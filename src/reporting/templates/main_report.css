@@ -1,0 +1,54 @@
+
+:root {
+    --sidebar-width: 260px;
+}
+
+body {
+    --padding-size: 10px;
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: var(--padding-size);
+    display: flex;
+    flex-flow: row nowrap;
+    width: calc(100vw - 2 * var(--padding-size));
+    height: calc(100vh - 2 * var(--padding-size));
+}
+
+/*.view-container {*/
+
+/*}*/
+
+h2 {
+    margin-top: 0;
+}
+
+#toc {
+    border: 1px solid #ddd;
+    padding: 10px;
+    background-color: #f9f9f9;
+    /*position: fixed;*/
+    /*top: 0;*/
+    /*left: 0;*/
+    max-width: var(--sidebar-width);
+    overflow-y: scroll;
+    max-height: 100%;
+}
+
+#toc a {
+    display: block;
+    margin-bottom: 5px;
+    text-decoration: none;
+    color: #333;
+}
+
+#content {
+    padding-left: 50px;
+    padding-right: 50px;
+    width: calc(100% - var(--sidebar-width));
+    overflow-x: scroll;
+    overflow-y: scroll;
+}
+
+#content img {
+    max-width: 90%;
+}
