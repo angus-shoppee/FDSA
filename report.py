@@ -2,7 +2,7 @@
 # FASE RESULTS PLOTTING AND REPORTING
 # TEMPORARILY IMPLEMENTED AS A STANDALONE SCRIPT
 
-from typing import List, Any
+from typing import List, Dict, Any
 import os
 import configparser
 from functools import reduce
@@ -59,7 +59,8 @@ def main(
     bam_files_dir: str,
     bam_suffix: str,
     fase_results_path: str,
-    output_dir: str
+    output_dir: str,
+    max_n_plotted: int = 9999
 ) -> None:
 
     # ---------------------------------------------------------------------------------------------------------------- #
@@ -161,27 +162,60 @@ def main(
     fase_results = load_fase_results(
         fase_results_path,
         samples,
-        min_total_number_occurrences_across_all_samples=999999,
+        # min_total_number_occurrences_across_all_samples=999999,
         #     force_include_gene_names = ["Clec9a"]
         #     force_include_gene_names = ["H2-Q7"]
         #     force_include_gene_names = ["Cd86"]
         #     force_include_gene_names = ["Treml4"]
         #     force_include_gene_names = ["Ifnar2", "Ifnlr1"]
-        force_include_gene_names=["Tnfrsf9", "Cd69"]
+        # force_include_gene_names=["Tnfrsf9", "Cd69"]
         #     force_include_gene_names = ["Pdcd1", "Cd274", "Pdcd1lg2"]
     )
 
     print("Generating figures for report...")
 
-    plots = {
-        fase_result.transcript_id:
-        {
+    # plots = {
+    #     fase_result.transcript_id:
+    #     {
+    #         "expression": plot_splice_rate(
+    #             fase_result,
+    #             norm_gene_counts,
+    #             sample_groups,
+    #             group_name_by_sample,
+    #             color_by_group_name
+    #         ),
+    #         "splice": plot_transcript(
+    #             fase_result,
+    #             draw_junctions_with_min_n_occurrences=2,
+    #             show_main_title=False
+    #         )
+    #     }
+    #     for fase_result in fase_results
+    # }
+
+    plots: Dict[str, Dict[str, str]] = {}
+    _current = 1
+    _total = min(len(fase_results), max_n_plotted)
+    print()  # Print blank line to be consumed by first one-line-up ansi code
+    for fase_result in fase_results:
+
+        if _current > max_n_plotted:
+            break
+
+        print(
+            "\x1b[A" + f"Progress: [{_current}/{_total}] {fase_result.gene_name} / {fase_result.transcript_id} " +
+            f"feature {fase_result.feature_number} of {fase_result.total_features_in_transcript}"
+        )
+        _current += 1
+
+        plots[fase_result.transcript_id] = {
             "expression": plot_splice_rate(
                 fase_result,
                 norm_gene_counts,
                 sample_groups,
                 group_name_by_sample,
-                color_by_group_name
+                color_by_group_name,
+                show_main_title=False
             ),
             "splice": plot_transcript(
                 fase_result,
@@ -189,8 +223,6 @@ def main(
                 show_main_title=False
             )
         }
-        for fase_result in fase_results
-    }
 
     print("... finished")
 
@@ -215,5 +247,6 @@ if __name__ == "__main__":
         BAM_FILES_DIR,
         BAM_SUFFIX,
         FASE_RESULTS_PATH,
-        OUTPUT_DIR
+        OUTPUT_DIR,
+        max_n_plotted=10
     )

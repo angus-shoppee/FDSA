@@ -12,6 +12,15 @@ REPORT_CSS = "templates/main_report.css"
 SVG_SCHEME = "data:image/svg+xml;base64,"
 
 
+# def _try_get_plot(
+#     lookup_key,
+#     lookup: Dict[str, Dict[str, str]],
+#     plot_type: str
+# ) -> str:
+#
+#     pass
+
+
 def generate_html_report(
     run_name: str,
     feature_name: str,
@@ -23,7 +32,8 @@ def generate_html_report(
     all_render_info = [
         TranscriptSectionRenderInfo(
             section_id=f"transcript-{fase_result.transcript_id}",
-            section_title=f"{fase_result.gene_name} ({fase_result.feature_number} of {fase_result.total_features_in_transcript})",
+            section_title=f"{fase_result.gene_name} " +
+                          f"({fase_result.feature_number} of {fase_result.total_features_in_transcript})",
             gene_name=fase_result.gene_name,
             transcript_id=fase_result.transcript_id,
             n_exons=len(fase_result.exon_positions),
@@ -33,7 +43,7 @@ def generate_html_report(
             expression_plot_uri=svg_scheme+plots[fase_result.transcript_id]["expression"],
             splice_plot_uri=svg_scheme+plots[fase_result.transcript_id]["splice"]
         )
-        for fase_result in fase_results
+        for fase_result in fase_results if plots.get(fase_result.transcript_id, None) is not None
     ]
 
     toc_html = "\n".join([

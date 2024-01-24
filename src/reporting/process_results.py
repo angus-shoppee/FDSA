@@ -88,6 +88,10 @@ class FaseResult:
 
         self.frequencies = frequencies
 
+    def total_number_occurrences_across_all_samples(self) -> int:
+
+        return sum([sum([locus.n for locus in loci] for loci in self.overlapping.values())])
+
 
 def load_fase_results_as_df(
     fase_results_path: str,

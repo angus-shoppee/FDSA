@@ -521,9 +521,9 @@ def plot_splice_rate(
     norm_gene_counts: DataFrame,
     sample_groups: Dict[str, List[str]],
     group_name_by_sample: Dict[str, str],
-    color_by_group_name: Dict[str, str]
+    color_by_group_name: Dict[str, str],
+    show_main_title: bool = True
 ) -> str:
-    # TODO: Take sample_groups, color_by_group_name, group_name_by_sample as inputs! Currently cursed
 
     x, y, color, labels = [], [], [], []
     for sample_name, frequency in fase_result.frequencies.items():
@@ -572,25 +572,12 @@ def plot_splice_rate(
 
     legend = plt.gca().get_legend()
 
-    # TODO: Find different way of scaling and positioning legend without pre-rendering the figure
-
-    # TEMP REMOVE
-    # plt.draw()  # Draw plot so that legend width can be calculated
-    # legend_width = legend.get_window_extent().width / plt.gcf().dpi
-    # figure_width = plt.gcf().get_figwidth()
-    # #     legend_width_ratio = legend_width / (legend_width + figure_width)
-    # legend_width_ratio = legend_width / figure_width
-    # legend.set_bbox_to_anchor((1.03 + legend_width_ratio * 1.35, 0.5))
-    # END OF TEMP REMOVE
-
-    #     plt.subplots_adjust(right=(1 - legend_width_ratio))
-    #     plt.subplots_adjust(right=0.7)  # Shrink width to make room for legend
-
-    ax.set_title(
-        f"{fase_result.gene_name} - Feature {fase_result.feature_number}" +
-        f" of {fase_result.total_features_in_transcript}",
-        size=28
-    )
+    if show_main_title:
+        ax.set_title(
+            f"{fase_result.gene_name} - Feature {fase_result.feature_number}" +
+            f" of {fase_result.total_features_in_transcript}",
+            size=28
+        )
 
     # Write plot to bytes buffer
     svg_buffer = BytesIO()
