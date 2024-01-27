@@ -14,12 +14,14 @@ body {
     height: calc(100vh - 2 * var(--padding-size));
 }
 
-/*.view-container {*/
-
-/*}*/
-
 h2 {
     margin-top: 0;
+}
+
+hr {
+    border: solid rgba(0, 0, 0, 0.5) 0.05rem;
+    /*height: 0.1rem;*/
+    width: 100%;
 }
 
 #toc {
@@ -29,6 +31,10 @@ h2 {
     max-width: var(--sidebar-width);
     overflow-y: scroll;
     max-height: 100%;
+}
+
+#toc ul {
+    padding-left: 20px;
 }
 
 #toc a {
@@ -46,8 +52,22 @@ h2 {
     overflow-y: scroll;
 }
 
-#content img {
+.transcript-section {
+    display: flex;
+    flex-flow: column nowrap;
+    align-items: center;
+}
+
+.transcript-section img {
     max-width: 90%;
     padding-bottom: 50px;
     padding-top: 50px;
+}
+
+.section-title-container, .transcript-details-container {
+    width: 90%;
+}
+
+.section-title-container {
+    padding-top: 1rem;
 }

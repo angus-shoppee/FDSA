@@ -248,5 +248,5 @@ if __name__ == "__main__":
         BAM_SUFFIX,
         FASE_RESULTS_PATH,
         OUTPUT_DIR,
-        max_n_plotted=10
+        max_n_plotted=2
     )

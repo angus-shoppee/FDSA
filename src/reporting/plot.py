@@ -544,7 +544,7 @@ def plot_splice_rate(
         )
 
     plt.xlabel("Gene expression (TMM norm. CPM)", fontsize=22)
-    plt.ylabel("Splice event frequency (%)", fontsize=22)
+    plt.ylabel("Splice event detection (%)", fontsize=22)
     ax.tick_params(axis='both', which='major', labelsize=18)
 
     handles, labels = ax.get_legend_handles_labels()

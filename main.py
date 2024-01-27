@@ -4,13 +4,14 @@ import gc
 import os
 from gtfparse import read_gtf
 
+from src.config.parse_config import FaseInternalConfig
 from src.analysis.transcript import (
     create_and_save_transcript_library, annotate_and_save_transcript_library, load_transcript_library_from_file
 )
 from src.analysis.entrez import download_and_save_feature_annotation_xml, get_gbseq_from_xml
 from src.analysis.biomart import create_and_save_name_lookup, load_name_lookup_from_file
 from src.analysis.experiment import Sample
-from src.analysis.core import FaseAnalysisConfig, set_analysis_features, perform_splice_analysis
+from src.analysis.core import set_analysis_features, perform_splice_analysis
 
 # NOTE: Cd80 does not appear in output but has feature annotation - why?
 
@@ -116,8 +117,8 @@ def main(verbose: bool = False) -> None:
     base_dir = os.path.realpath(os.path.dirname(__file__))
 
     # Load config
-    fase_analysis_config = FaseAnalysisConfig(
-        os.path.join(base_dir, "config", "internal.config")
+    fase_analysis_config = FaseInternalConfig(
+        os.path.join(base_dir, "src", "config", "internal.config")
     )
 
     # Validate user settings (not exhaustive)

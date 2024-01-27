@@ -6,7 +6,6 @@ from typing import Tuple, List, Dict, Any, Union
 from multiprocessing import Pool
 import os
 import csv
-import configparser
 import time
 from statistics import mean
 
@@ -16,21 +15,6 @@ from src.analysis.experiment import Sample
 from src.analysis.splice import DEFAULT_MAPQ_FOR_UNIQUE_MAPPING, SpliceJunction, get_splice_junctions_from_sample
 
 
-class FaseAnalysisConfig:
-    allowed_species: List[str]
-    biomart_name_for_species: Dict[str, str]
-
-    def __init__(self, internal_config_path):
-
-        config = configparser.ConfigParser()
-        config.read(internal_config_path)
-
-        self.allowed_species = config["DEFAULT"]["AllowedSpecies"].split(" ")
-        self.biomart_name_for_species = {k: v for k, v in [
-            s.split(":") for s in config["DEFAULT"]["BiomartNameForSpecies"].split(" ")
-        ]}
-
-
 def sanitize_string_for_filename(s: str) -> str:
     return "".join(c for c in s if c.isalnum() or c in (".", "_", "-", " ")).rstrip()
 
@@ -38,8 +22,8 @@ def sanitize_string_for_filename(s: str) -> str:
 def set_analysis_features(
     features_to_analyze: List[str],
     annotated_transcript_library: TranscriptLibrary,
-    only_use_longest_annotated_transcript: bool = False,
-    skip_transcripts_with_redundant_feature_annotation: bool = False
+    only_use_longest_annotated_transcript: bool = True,
+    skip_transcripts_with_redundant_feature_annotation: bool = True
 ) -> None:
 
     for feature_substring in features_to_analyze:

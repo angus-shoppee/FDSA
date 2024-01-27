@@ -46,10 +46,14 @@ def generate_html_report(
         for fase_result in fase_results if plots.get(fase_result.transcript_id, None) is not None
     ]
 
-    toc_html = "\n".join([
-        f"""<li><a href="#{render_info.section_id}">{render_info.section_title}</a></li>"""
-        for render_info in all_render_info
-    ])
+    toc_html = (
+        "<ul>" +
+        "\n".join([
+            f"""<li><a href="#{render_info.section_id}">{render_info.section_title}</a></li>"""
+            for render_info in all_render_info
+        ]) +
+        "/ul"
+    )
 
     sections_html = "\n".join(transcript_section(render_info) for render_info in all_render_info)
 
