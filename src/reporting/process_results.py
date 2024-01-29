@@ -102,6 +102,7 @@ def load_fase_results_as_df(
     min_per_sample_occurrences_in_at_least_n_samples: int = 0,
     fase_result_frequency_column_prefix: str = FASE_RESULT_FREQUENCY_COLUMN_PREFIX
 ) -> pd.DataFrame:
+
     if force_include_gene_names is None:
         force_include_gene_names = list()
 
@@ -199,6 +200,7 @@ def convert_fase_results_df_to_objects(fase_results_df: pd.DataFrame) -> List[Fa
         *[fase_results_df[column_name] for column_name in _frequency_column_names]
     ))
 
+    # TODO: Investigate type warning (expected str got dict)
     return [
         FaseResult(
             *[row[col_i] for col_i in range(len(_zipped_info_columns[0]))],
@@ -217,6 +219,7 @@ def load_fase_results(
     min_per_sample_occurrences_in_at_least_n_samples: int = 0,
     fase_result_frequency_column_prefix: str = FASE_RESULT_FREQUENCY_COLUMN_PREFIX
 ) -> List[FaseResult]:
+
     fase_results_df = load_fase_results_as_df(
         fase_results_path=fase_results_path,
         samples=samples,

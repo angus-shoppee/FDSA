@@ -19,6 +19,13 @@ def sanitize_string_for_filename(s: str) -> str:
     return "".join(c for c in s if c.isalnum() or c in (".", "_", "-", " ")).rstrip()
 
 
+def name_output_file(
+    run_name: str,
+    feature_name: str
+) -> str:
+    return sanitize_string_for_filename(f"{run_name} - {feature_name}")
+
+
 def set_analysis_features(
     features_to_analyze: List[str],
     annotated_transcript_library: TranscriptLibrary,
@@ -236,6 +243,7 @@ def _convert_loci_to_junction_ids(
 
 
 def perform_splice_analysis(
+    run_name: str,
     features_to_analyze: List[str],
     overlap_threshold: float,
     samples: Dict[str, Sample],
@@ -290,7 +298,7 @@ def perform_splice_analysis(
 
         skipped_exon_match_failure = 0
 
-        with open(os.path.join(output_dir, f"{sanitize_string_for_filename(feature_substring)}.csv"), "w") as f:
+        with open(os.path.join(output_dir, f"{name_output_file(run_name, feature_substring)}.csv"), "w") as f:
 
             sample_names_alphabetical = sorted(samples.keys())
             samples_alphabetical = [samples[sample_name] for sample_name in sample_names_alphabetical]

@@ -2,7 +2,7 @@
 # FASE RESULTS PLOTTING AND REPORTING
 # TEMPORARILY IMPLEMENTED AS A STANDALONE SCRIPT
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 import os
 import configparser
 from functools import reduce
@@ -18,7 +18,7 @@ REFERENCE_GENOME_GTF_PATH = ("/Users/aasho2/PHD/Bioinformatics/STAR/genomes/GRCm
                              "gencode_M27_primary/gencode.vM27.primary_assembly.annotation.gtf")
 
 BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/hons_PD1KO/sorted"
-BAM_SUFFIX = "_Aligned_Sorted.out.bam"
+BAM_ENDING = "_Aligned_Sorted.out.bam"
 
 FASE_RESULTS_PATH = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4 SplDC2020/transmembrane region.csv"
 
@@ -33,14 +33,14 @@ OUTPUT_DIR = "OUTPUT/Report"
 def _check_inputs_are_valid(
     bam_file_absolute_paths: List[str],
     bam_files_dir: str,
-    bam_suffix: str,
+    bam_ending: str,
     fase_results_path: str,
     output_dir: str,
 ) -> None:
 
     # Check BAM files
     if len(bam_file_absolute_paths) == 0:
-        raise ValueError(f"No BAM files detected in {bam_files_dir} with suffix {bam_suffix}")
+        raise ValueError(f"No BAM files detected in {bam_files_dir} with ending {bam_ending}")
 
     # Check FASE results file
     if not os.path.exists(fase_results_path):
@@ -57,25 +57,25 @@ def flatten_nested_lists(nested_lists: List[List[Any]]) -> List[Any]:
 
 def main(
     bam_files_dir: str,
-    bam_suffix: str,
+    bam_ending: str,
     fase_results_path: str,
     output_dir: str,
-    max_n_plotted: int = 9999
+    max_n_plotted: Union[None, int] = None
 ) -> None:
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
     # Get BAM file paths
-    _suffix_length = len(bam_suffix)
+    _ending_length = len(bam_ending)
     bam_file_absolute_paths = [os.path.join(
         bam_files_dir, p
-    ) for p in os.listdir(bam_files_dir) if p[-_suffix_length:] == bam_suffix]
+    ) for p in os.listdir(bam_files_dir) if p[-_ending_length:] == bam_ending]
 
     # Ensure output_dir is an absolute path
     output_dir_absolute = os.path.abspath(output_dir)
 
     # Proceed only if inputs pass validation
-    _check_inputs_are_valid(bam_file_absolute_paths, bam_files_dir, bam_suffix, fase_results_path, output_dir_absolute)
+    _check_inputs_are_valid(bam_file_absolute_paths, bam_files_dir, bam_ending, fase_results_path, output_dir_absolute)
 
     # Create output directory if required
     if not os.path.isdir(output_dir_absolute):
@@ -84,7 +84,7 @@ def main(
     # Load samples
     samples = {}
     for bam_path in bam_file_absolute_paths:
-        sample = Sample(bam_path, BAM_SUFFIX)
+        sample = Sample(bam_path, BAM_ENDING)
         samples[sample.name] = sample
 
     # ---------------------------------------------------------------------------------------------------------------- #
@@ -98,7 +98,7 @@ def main(
     assert run_name, f"A run name is required (attribute 'name' in section [GENERAL])"
 
     feature_name = run_config["FEATURE"]["match"]
-    assert run_name, f"A feature pattern match is required (attribute 'match' in section [FEATURE])"
+    assert feature_name, f"A feature pattern match is required (attribute 'match' in section [FEATURE])"
 
     sample_groups = {key: val.split(" ") for key, val in run_config["SAMPLES"].items() if val}
 
@@ -133,7 +133,7 @@ def main(
         run_feature_counts(
             FEATURECOUNTS_EXECUTABLE,
             BAM_FILES_DIR,
-            BAM_SUFFIX,
+            BAM_ENDING,
             REFERENCE_GENOME_GTF_PATH,
             gene_counts_path,
             paired_end_reads=PRIMARY_ALIGNMENT_ONLY,
@@ -145,7 +145,7 @@ def main(
 
     raw_gene_counts = get_gene_counts_from_tsv(
         gene_counts_path,
-        bam_suffix=BAM_SUFFIX
+        bam_ending=BAM_ENDING
     )
 
     print("... done")
@@ -174,32 +174,13 @@ def main(
 
     print("Generating figures for report...")
 
-    # plots = {
-    #     fase_result.transcript_id:
-    #     {
-    #         "expression": plot_splice_rate(
-    #             fase_result,
-    #             norm_gene_counts,
-    #             sample_groups,
-    #             group_name_by_sample,
-    #             color_by_group_name
-    #         ),
-    #         "splice": plot_transcript(
-    #             fase_result,
-    #             draw_junctions_with_min_n_occurrences=2,
-    #             show_main_title=False
-    #         )
-    #     }
-    #     for fase_result in fase_results
-    # }
-
     plots: Dict[str, Dict[str, str]] = {}
     _current = 1
-    _total = min(len(fase_results), max_n_plotted)
+    _total = len(fase_results) if max_n_plotted is None else min(len(fase_results), max_n_plotted)
     print()  # Print blank line to be consumed by first one-line-up ansi code
     for fase_result in fase_results:
 
-        if _current > max_n_plotted:
+        if max_n_plotted is not None and _current > max_n_plotted:
             break
 
         print(
@@ -245,7 +226,7 @@ if __name__ == "__main__":
 
     main(
         BAM_FILES_DIR,
-        BAM_SUFFIX,
+        BAM_ENDING,
         FASE_RESULTS_PATH,
         OUTPUT_DIR,
         max_n_plotted=2

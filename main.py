@@ -23,28 +23,31 @@ from src.analysis.core import set_analysis_features, perform_splice_analysis
 # Provide user identity to make entrez queries
 EMAIL = "angus.shoppee@monash.edu"
 
-# NEW IN V0.4: Species from which sequencing data originates
+# NEW IN V0.0.5: Run name
+RUN_NAME = "Test Run"
+
+# NEW IN V0.0.4: Species from which sequencing data originates
 SPECIES = "Mouse"
 # SPECIES = "Human"
 
-# NEW IN V0.4: Path to single-column csv file / Leave empty to default to whole-genome
+# NEW IN V0.0.4: Path to single-column csv file / Leave empty to default to whole-genome
 # NOTE: Currently unused
 GENES_TO_ANALYZE = ""
 
-# REFACTORED IN V0.4: Which annotated features do we want to analyze splice events for?
+# REFACTORED IN V0.0.4: Which annotated features do we want to analyze splice events for?
 # * values: the strings that will be searched for in the genbank feature's qualifiers
 FEATURES_TO_ANALYZE = [
     "transmembrane region"
 ]
 
-# NEW IN V0.4: Indicate whether to only use annotation from the longest annotated transcript per gene
+# NEW IN V0.0.4: Indicate whether to only use annotation from the longest annotated transcript per gene
 ONLY_USE_LONGEST_ANNOTATED_TRANSCRIPT = True
 
-# NEW IN V0.4: Indicate whether to ignore transcripts with duplicate feature annotation
+# NEW IN V0.0.4: Indicate whether to ignore transcripts with duplicate feature annotation
 #              (Overridden by ONLY_USE_LONGEST_ANNOTATED_TRANSCRIPT)
 SKIP_TRANSCRIPTS_WITH_REDUNDANT_FEATURE_ANNOTATION = True
 
-# NEW IN V0.4: Specify whether to only analyze transcripts with a maximum number of n features
+# NEW IN V0.0.4: Specify whether to only analyze transcripts with a maximum number of n features
 #              (set to None or 0 to analyze all transcripts regardless of feature number)
 MAX_N_FEATURES_IN_TRANSCRIPT = 1
 
@@ -64,20 +67,23 @@ BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/MuTu_dabraf_2020/sor
 # BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/PRJNA287649_human_blood_dcs/run_231023/star_output"
 
 # Everything that comes after sample identifier in the bam paths, including file extension
-BAM_SUFFIX = "_Aligned_Sorted.out.bam"
-# BAM_SUFFIX = "_Aligned.sortedByCoord.out.bam"
+BAM_ENDING = "_Aligned_Sorted.out.bam"
+# BAM_ENDING = "_Aligned.sortedByCoord.out.bam"
 
 # Reference gtf file - make sure these are the same assembly your BAMs were aligned to
 REFERENCE_GENOME_GTF_PATH = "/Users/aasho2/PHD/Bioinformatics/STAR/genomes/GRCm39/gencode_M27_primary/gencode.vM27.primary_assembly.annotation.gtf"
 # REFERENCE_GENOME_GTF_PATH = "/Users/aasho2/PHD/Bioinformatics/STAR/genomes/GRCh38/gencode_38_primary/gencode.v38.primary_assembly.annotation.gtf"
 
-# NEW IN V0.4: Number of processes to use for reading from multiple bam files simultaneously during splice analysis
-SPLICE_ANALYSIS_MAX_NUMBER_OF_PROCESSES = 24
+# NEW IN V0.0.4: Number of processes to use for reading from multiple bam files simultaneously during splice analysis
+# SPLICE_ANALYSIS_MAX_NUMBER_OF_PROCESSES = 24
 
-# NEW IN V0.4: Number of threads to use for gtf queries while generating transcript library
-NUMEXPR_MAX_THREADS = 32
+# NEW IN V0.0.4: Number of threads to use for gtf queries while generating transcript library
+# NUMEXPR_MAX_THREADS = 32
 
-# NEW IN V0.4: Indicate to perform_splice_analysis whether to only consider primary alignments
+# V0.0.5: Replaced NUMEXPR_MAX_THREADS and SPLICE_ANALYSIS_MAX_NUMBER_OF_PROCESSES with shared N_THREADS setting
+N_THREADS = 32
+
+# NEW IN V0.0.4: Indicate to perform_splice_analysis whether to only consider primary alignments
 #              No longer passed to featureCounts
 # TODO: Is this always redundant if only considering unique alignments?
 PRIMARY_ALIGNMENT_ONLY = True
@@ -90,23 +96,25 @@ EXPERIMENTAL_ALLOW_JUNCTION_END_OUTSIDE_TRANSCRIPT = False
 # Optional: Choose a biomart mirror
 BIOMART_MIRROR = 'http://asia.ensembl.org'
 
-# NEW IN V0.4
+# NEW IN V0.0.4
 FORCE_REGENERATE_TRANSCRIPT_LIBRARY = False
 FORCE_REDO_ANNOTATE_TRANSCRIPT_LIBRARY = False
 
-# NEW IN V0.4
+# NEW IN V0.0.4
 FORCE_REGENERATE_WHOLE_GENOME_LOOKUP = False
 
-# NEW IN V0.4
+# NEW IN V0.0.4
 FORCE_REGENERATE_GENBANK_FEATURE_XML = False
 DO_NOT_RESUME_PARTIAL_DOWNLOAD_GENBANK = False
 
 
 # ==================================================================================================================== #
 
+
 def main(verbose: bool = False) -> None:
 
     # TODO: Refactor print_if_verbose here and in dependencies to print / print_if_not_silent
+    # TODO: Refactor verbose flag to silent flag
 
     def print_if_verbose(*args: Any):
         if verbose:
@@ -117,15 +125,15 @@ def main(verbose: bool = False) -> None:
     base_dir = os.path.realpath(os.path.dirname(__file__))
 
     # Load config
-    fase_analysis_config = FaseInternalConfig(
+    internal_config = FaseInternalConfig(
         os.path.join(base_dir, "src", "config", "internal.config")
     )
 
     # Validate user settings (not exhaustive)
     # TODO: Complete
-    if SPECIES not in fase_analysis_config.allowed_species:
+    if SPECIES not in internal_config.allowed_species:
         raise ValueError(
-            f"Provided species '{SPECIES}' is not supported. Currently supported species: {fase_analysis_config.allowed_species}"
+            f"Provided species '{SPECIES}' is not supported. Currently supported species: {internal_config.allowed_species}"
         )
 
     # Create data directory for this species if required
@@ -138,7 +146,7 @@ def main(verbose: bool = False) -> None:
     # Create name lookup if required
     if FORCE_REGENERATE_WHOLE_GENOME_LOOKUP or not os.path.exists(name_lookup_path):
         name_lookup = create_and_save_name_lookup(
-            fase_analysis_config.biomart_name_for_species[SPECIES],
+            internal_config.biomart_name_for_species[SPECIES],
             BIOMART_MIRROR,
             name_lookup_path,
             verbose=verbose
@@ -182,7 +190,7 @@ def main(verbose: bool = False) -> None:
                 transcript_library_path,
                 name_lookup,
                 ref_gtf,
-                numexpr_max_threads=NUMEXPR_MAX_THREADS,
+                numexpr_max_threads=N_THREADS,
                 verbose=verbose
             )
             del ref_gtf
@@ -269,32 +277,34 @@ def main(verbose: bool = False) -> None:
             raise ValueError(f"The specified output directory ({OUTPUT_DIR}) already exists as a file.")
         os.makedirs(OUTPUT_DIR)
 
-    _suffix_length = len(BAM_SUFFIX)
+    _ending_length = len(BAM_ENDING)
     bam_file_absolute_paths = [os.path.join(
         BAM_FILES_DIR, p
-    ) for p in os.listdir(BAM_FILES_DIR) if p[-_suffix_length:] == BAM_SUFFIX]
+    ) for p in os.listdir(BAM_FILES_DIR) if p[-_ending_length:] == BAM_ENDING]
 
     if len(bam_file_absolute_paths) == 0:
         raise ValueError(
             "No BAM files were loaded - check that the supplied BAM directory is valid, and that the specified BAM " +
-            f"suffix is correct for these files.\nSpecified BAM suffix: {BAM_SUFFIX}\nDetected BAM files: " +
+            f"ending is correct for these files.\nSpecified BAM ending: {BAM_ENDING}\nDetected BAM files: " +
             f"{bam_file_absolute_paths}"
         )
 
     samples = {}
     for bam_path in bam_file_absolute_paths:
-        sample = Sample(bam_path, BAM_SUFFIX)
+        sample = Sample(bam_path, BAM_ENDING)
         samples[sample.name] = sample
 
     # Run analysis
     perform_splice_analysis(
+        RUN_NAME,
         FEATURES_TO_ANALYZE,
         FEATURE_JUNCTION_OVERLAP_THRESHOLD,
         samples,
         annotated_transcript_library,
         OUTPUT_DIR,
         max_n_features_in_transcript=MAX_N_FEATURES_IN_TRANSCRIPT,
-        max_n_processes=SPLICE_ANALYSIS_MAX_NUMBER_OF_PROCESSES,
+        max_n_processes=N_THREADS - 1,
+        mapq_for_unique_mapping=internal_config.default_mapq_for_unique_mapping,
         primary_alignment_only=PRIMARY_ALIGNMENT_ONLY,
         include_all_junctions_in_output=INCLUDE_ALL_JUNCTIONS_IN_OUTPUT,
         verbose=verbose

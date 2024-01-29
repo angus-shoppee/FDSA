@@ -53,7 +53,7 @@ def get_tmm_cpm_from_gene_counts(
 
 def get_gene_counts_from_tsv(
     file_path: str,
-    bam_suffix: str = "",
+    bam_ending: str = "",
     gene_id_column_index: int = DEFAULT_FEATURE_COUNTS_OUTPUT_GENE_ID_COLUMN_INDEX,
     leftmost_counts_column_index: int = DEFAULT_FEATURE_COUNTS_OUTPUT_LEFTMOST_COUNTS_COLUMN_INDEX
 ) -> FeatureCountsResult:
@@ -70,8 +70,8 @@ def get_gene_counts_from_tsv(
         else:
             header = line_0  # Otherwise, the first line of the file is the header row
 
-        if bam_suffix:
-            header = header.replace(bam_suffix, "")
+        if bam_ending:
+            header = header.replace(bam_ending, "")
 
         header_row = header.replace("\n", "").split("\t")
 
@@ -92,7 +92,7 @@ def get_gene_counts_from_tsv(
 def run_feature_counts(
     feature_counts_executable: str,
     bam_files_dir: str,
-    bam_suffix: str,
+    bam_ending: str,
     reference_gtf_path: str,
     output_path: str,
     paired_end_reads: bool = True,
@@ -101,8 +101,8 @@ def run_feature_counts(
     check_exit_code: bool = True
 ) -> int:
 
-    _suffix_length = len(bam_suffix)
-    bam_file_paths = [p for p in os.listdir(bam_files_dir) if p[-_suffix_length:] == bam_suffix]
+    _ending_length = len(bam_ending)
+    bam_file_paths = [p for p in os.listdir(bam_files_dir) if p[-_ending_length:] == bam_ending]
 
     paired_flag = "-p " if paired_end_reads else ""
     primary_flag = "--primary " if primary_alignment_only else ""
