@@ -5,7 +5,7 @@ import os
 import configparser
 
 
-RANK_BY_ALLOWED_VALUES = ["frequency", "number"]
+RANK_RESULTS_BY_ALLOWED_VALUES = ["frequency", "number"]
 
 
 def flatten_nested_lists(nested_lists: List[List[Any]]) -> List[Any]:
@@ -17,18 +17,21 @@ def parse_bool(value: Union[bool, str]) -> bool:
     if isinstance(value, bool):
         return value
 
-    if value.lower() == "true":
+    # Allow the user to use Yes/No for boolean flags if they prefer
+    if value.lower() == "true" or value.lower() == "yes":
         return True
-    elif value.lower() == "false":
+    elif value.lower() == "false" or value.lower() == "no":
         return False
 
-    raise ValueError(f"Could not parse bool from input value: {value}. Allowed values are True/False.")
+    raise ValueError(f"Could not parse bool from input value: {value}. Allowed values are True/False or Yes/No "
+                     f"(not case-sensitive).")
 
 
 class FaseInternalConfig:
     allowed_species: List[str]
     biomart_name_for_species: Dict[str, str]
     default_mapq_for_unique_mapping: int
+    default_rank_results_by: str
     default_feature_junction_overlap_threshold: float
     default_max_n_features_in_transcript: int
     default_only_use_longest_annotated_transcript: bool
@@ -70,56 +73,65 @@ class FaseInternalConfig:
                 raise ValueError(_e + f"The species \"{species_name}\" specified in allowedSpecies is missing a "
                                       f"corresponding key:value entry in biomartNameForSpecies")
 
-        # [ANALYSIS]
+        # [RUN]
 
         default_mapq_for_unique_mapping = config.get(
-            "ANALYSIS", "defaultMapqForUniqueMapping", fallback=None
+            "RUN", "defaultMapqForUniqueMapping", fallback=None
         )
         if default_mapq_for_unique_mapping is None:
-            raise ValueError(_e + f"Missing mandatory parameter \"defaultMapqForUniqueMapping\" in section ANALYSIS")
+            raise ValueError(_e + f"Missing mandatory parameter \"defaultMapqForUniqueMapping\" in section RUN")
         self.default_mapq_for_unique_mapping = int(default_mapq_for_unique_mapping)
 
+        default_rank_results_by = config.get("REPORT", "defaultRankResultsBy", fallback=None)
+        if default_rank_results_by is None:
+            raise ValueError(_e + f"Missing mandatory parameter \"defaultRankResultsBy\" in section REPORT")
+        if default_rank_results_by not in RANK_RESULTS_BY_ALLOWED_VALUES:
+            raise ValueError(_e + f"Invalid value \"{default_rank_results_by}\" specified for parameter "
+                                  f"\"defaultRankResultsBy\" in section RUN. Allowed options are: "
+                                  f"{RANK_RESULTS_BY_ALLOWED_VALUES}")
+        self.default_rank_results_by = default_rank_results_by
+
         default_feature_junction_overlap_threshold = config.get(
-            "ANALYSIS", "defaultFeatureJunctionOverlapThreshold", fallback=None
+            "RUN", "defaultFeatureJunctionOverlapThreshold", fallback=None
         )
         if default_feature_junction_overlap_threshold is None:
             raise ValueError(_e + f"Missing mandatory parameter \"defaultFeatureJunctionOverlapThreshold\" in section "
-                                  f"ANALYSIS")
+                                  f"RUN")
         self.default_feature_junction_overlap_threshold = float(default_feature_junction_overlap_threshold)
 
         default_max_n_features_in_transcript = config.get(
-            "ANALYSIS", "defaultMaxNFeaturesInTranscript", fallback=None
+            "RUN", "defaultMaxNFeaturesInTranscript", fallback=None
         )
         if default_max_n_features_in_transcript is None:
-            raise ValueError(_e + f"Missing mandatory parameter \"defaultMaxNFeaturesInTranscript\" in section ANALYSIS")
+            raise ValueError(_e + f"Missing mandatory parameter \"defaultMaxNFeaturesInTranscript\" in section RUN")
         self.default_max_n_features_per_transcript = int(default_max_n_features_in_transcript)
 
         default_only_use_longest_annotated_transcript = config.get(
-            "ANALYSIS", "defaultOnlyUseLongestAnnotatedTranscript", fallback=None
+            "RUN", "defaultOnlyUseLongestAnnotatedTranscript", fallback=None
         )
         if default_only_use_longest_annotated_transcript is None:
             raise ValueError(_e + f"Missing mandatory parameter \"defaultOnlyUseLongestAnnotatedTranscript\" in section "
-                                  f"ANALYSIS")
+                                  f"RUN")
         self.default_only_use_longest_annotated_transcript = parse_bool(
             default_only_use_longest_annotated_transcript
         )
 
         default_skip_transcripts_with_redundant_feature_annotation = config.get(
-            "ANALYSIS", "defaultSkipTranscriptsWithRedundantFeatureAnnotation", fallback=None
+            "RUN", "defaultSkipTranscriptsWithRedundantFeatureAnnotation", fallback=None
         )
         if default_skip_transcripts_with_redundant_feature_annotation is None:
             raise ValueError(_e + f"Missing mandatory parameter "
-                                  f"\"defaultSkipTranscriptsWithRedundantFeatureAnnotation\" in section ANALYSIS")
+                                  f"\"defaultSkipTranscriptsWithRedundantFeatureAnnotation\" in section RUN")
         self.default_skip_transcripts_with_redundant_feature_annotation = parse_bool(
             default_skip_transcripts_with_redundant_feature_annotation
         )
 
         default_include_all_junctions_in_output = config.get(
-            "ANALYSIS", "defaultIncludeAllJunctionsInOutput", fallback=None
+            "RUN", "defaultIncludeAllJunctionsInOutput", fallback=None
         )
         if default_include_all_junctions_in_output is None:
             raise ValueError(_e + f"Missing mandatory parameter \"defaultIncludeAllJunctionsInOutput\" in section "
-                                  f"ANALYSIS")
+                                  f"RUN")
         self.default_include_all_junctions_in_output = parse_bool(default_include_all_junctions_in_output)
 
         # [REPORT]
@@ -150,8 +162,161 @@ class FaseInternalConfig:
 
 
 class FaseUserConfig:
+    email: str
+    user_default_generate_report: Union[None, bool]
+    user_default_threads: Union[None, int]
+    user_default_max_n_features_in_transcript: Union[None, int]
+    user_default_only_use_longest_annotated_transcript: Union[None, int]
+    user_default_skip_transcripts_with_redundant_feature_annotation: Union[None, int]
+    user_default_mapq_for_unique_mapping: Union[None, int]
+    user_default_include_all_junctions_in_output: Union[None, bool]
+    user_default_report_rank_results_by: Union[None, str]
+    user_default_report_max_n_plotted: Union[None, int]
+    user_default_report_min_total_n_occurrences_across_all_samples: Union[None, int]  # Chef's kiss variable name
+    user_default_report_min_n_occurrences_in_sample: Union[None, int]
+    user_default_report_occurrences_in_at_least_n_samples: Union[None, int, str]
+    # ^ If * is set as the default for this parameter, the final number will be set at runtime when n samples is known
 
-    pass
+    def __init__(
+        self,
+        user_config_path: str,
+    ) -> None:
+
+        _e = f"Error while parsing user config at {user_config_path}: "
+
+        user_config = configparser.ConfigParser()
+        user_config.read(user_config_path)
+
+        # [USER]
+
+        email = user_config.get("USER", "email", fallback=None)
+        if email is None:
+            raise ValueError(_e + f"Missing mandatory parameter \"email\" in section USER. Please note that this email "
+                                  f"address is used only for external academic API calls during the build process.")
+        # Possible TODO: Validity check on provided email address?
+        self.email = email
+
+        # [DEFAULT RUN]
+
+        user_default_generate_report = user_config.get("DEFAULT RUN", "report", fallback=None)
+        self.user_default_generate_report = None if user_default_generate_report is None else \
+            parse_bool(user_default_generate_report)
+
+        user_default_threads = user_config.get("DEFAULT RUN", "threads", fallback=None)
+        self.user_default_threads = None if user_default_threads is None else int(user_default_threads)
+
+        user_default_max_n_features_in_transcript = user_config.get(
+            "RUN", "maxNumberFeaturesInTranscript", fallback=user_config.get(
+                "RUN", "maxNFeaturesInTranscript", fallback=user_config.get(
+                    "RUN", "maxFeaturesInTranscript", fallback=None
+                )
+            )
+        )
+        self.user_default_max_n_features_in_transcript = None \
+            if user_default_max_n_features_in_transcript is None \
+            else int(user_default_max_n_features_in_transcript)
+
+        user_default_only_use_longest_annotated_transcript = user_config.get(
+            "DEFAULT RUN", "onlyUseLongestAnnotatedTranscript", fallback=None
+        )
+        self.user_default_only_use_longest_annotated_transcript = None \
+            if user_default_only_use_longest_annotated_transcript is None \
+            else parse_bool(user_default_only_use_longest_annotated_transcript)
+
+        user_default_skip_transcripts_with_redundant_feature_annotation = user_config.get(
+            "DEFAULT RUN", "skipTranscriptsWithRedundantFeatureAnnotation", fallback=None
+        )
+        self.user_default_skip_transcripts_with_redundant_feature_annotation = None \
+            if user_default_skip_transcripts_with_redundant_feature_annotation is None \
+            else parse_bool(user_default_skip_transcripts_with_redundant_feature_annotation)
+
+        user_default_mapq_for_unique_mapping = user_config.get("DEFAULT RUN", "mapqForUniqueMapping", fallback=None)
+        self.user_default_mapq_for_unique_mapping = None if user_default_mapq_for_unique_mapping is None \
+            else int(user_default_mapq_for_unique_mapping)
+
+        user_default_include_all_junctions_in_output = user_config.get(
+            "DEFAULT RUN", "includeAllJunctionsInOutput", fallback=None
+        )
+        self.user_default_include_all_junctions_in_output = None \
+            if user_default_include_all_junctions_in_output is None \
+            else parse_bool(user_default_include_all_junctions_in_output)
+
+        # [DEFAULT REPORT]
+
+        user_default_report_rank_results_by = user_config.get(
+            "DEFAULT REPORT", "rankResultsBy", fallback=user_config.get(
+                "DEFAULT REPORT", "rankBy", fallback=None
+            )
+        )
+        self.user_default_report_rank_results_by = None if user_default_report_rank_results_by is None \
+            else user_default_report_rank_results_by
+        if (
+            self.user_default_report_rank_results_by is not None
+            and self.user_default_report_rank_results_by not in RANK_RESULTS_BY_ALLOWED_VALUES
+        ):
+            raise ValueError(_e + f"Invalid value \"{user_default_report_rank_results_by}\" specified for parameter "
+                                  f"\"rankResultsBy\" in section REPORT DEFAULT. Allowed options are: "
+                                  f"{RANK_RESULTS_BY_ALLOWED_VALUES}")
+
+        user_default_report_max_n_plotted = user_config.get(
+            "DEFAULT REPORT", "maxNumberPlotted", fallback=user_config.get(
+                "DEFAULT REPORT", "maxNPlotted", fallback=user_config.get(
+                    "DEFAULT REPORT", "maxPlotted", fallback=None
+                )
+            )
+        )
+        self.user_default_report_max_n_plotted = None if user_default_report_max_n_plotted is None \
+            else int(user_default_report_max_n_plotted)
+
+        user_default_report_min_total_n_occurrences_across_all_samples = user_config.get(
+            "DEFAULT REPORT", "minTotalNumberOccurrencesAcrossAllSamples", fallback=user_config.get(
+                "DEFAULT REPORT", "minTotalNOccurrencesAcrossAllSamples", fallback=user_config.get(
+                    "DEFAULT REPORT", "minTotalOccurrencesAcrossAllSamples", fallback=None
+                )
+            )
+        )
+        self.user_default_report_min_total_n_occurrences_across_all_samples = None \
+            if user_default_report_min_total_n_occurrences_across_all_samples is None \
+            else int(user_default_report_min_total_n_occurrences_across_all_samples)
+
+        user_default_report_min_n_occurrences_in_sample = user_config.get(
+            "DEFAULT REPORT", "minNumberOccurrencesInSample", fallback=user_config.get(
+                "DEFAULT REPORT", "minNOccurrencesInSample", fallback=user_config.get(
+                    "DEFAULT REPORT", "minOccurrencesInSample", fallback=None
+                )
+            )
+        )
+
+        user_default_report_occurrences_in_at_least_n_samples = user_config.get(
+            "DEFAULT REPORT", "occurrencesInAtLeastNSamples", fallback=user_config.get(
+                "DEFAULT REPORT", "inAtLeastNSamples", fallback=None
+            )
+        )
+
+        if any([
+            user_default_report_min_n_occurrences_in_sample is None
+            and user_default_report_occurrences_in_at_least_n_samples is not None,
+            user_default_report_min_n_occurrences_in_sample is not None
+            and user_default_report_occurrences_in_at_least_n_samples is None
+        ]):
+            raise ValueError(_e + f"Parameters minNumberOccurrencesInSample and occurrencesInAtLeastNSamples must be "
+                                  f"used together. Either define both, or exclude both")
+
+        self.user_default_report_min_n_occurrences_in_sample = 0 \
+            if user_default_report_min_n_occurrences_in_sample is None \
+            else int(user_default_report_min_n_occurrences_in_sample)
+        if self.user_default_report_min_n_occurrences_in_sample < 0:
+            raise ValueError(_e + f"The parameter minNumberOccurrencesInSample cannot be less than zero")
+
+        if user_default_report_occurrences_in_at_least_n_samples in ("all", "All", "ALL", "*"):
+            # Special case: Set value to total number of samples
+            self.user_default_report_occurrences_in_at_least_n_samples = "*"
+        else:
+            self.user_default_report_occurrences_in_at_least_n_samples = 0 \
+                if user_default_report_occurrences_in_at_least_n_samples is None \
+                else int(user_default_report_occurrences_in_at_least_n_samples)
+        if self.user_default_report_occurrences_in_at_least_n_samples < 0:
+            raise ValueError(_e + f"The parameter occurrencesInAtLeastNSamples cannot be less than zero")
 
 
 class FaseRunConfig:
@@ -162,12 +327,13 @@ class FaseRunConfig:
     species: str
     genome: str
     n_threads: int
+    rank_results_by: str
     max_n_features_in_transcript: int
     only_use_longest_annotated_transcript: bool
     skip_transcripts_with_redundant_feature_annotation: bool  # overridden by only_use_longest_annotated_transcript=True
     generate_report: bool
     report_max_n_plotted: Union[None, int]
-    report_min_total_number_occurrences_across_all_samples: int
+    report_min_total_n_occurrences_across_all_samples: int
     report_min_n_occurrences_in_sample: int
     report_occurrences_in_at_least_n_samples: int
     primary_alignment_only: bool
@@ -179,7 +345,8 @@ class FaseRunConfig:
     def __init__(
         self,
         run_config_path: str,
-        internal_config: FaseInternalConfig
+        internal_config: FaseInternalConfig,
+        user_config: FaseUserConfig
     ) -> None:
 
         _e = f"Error while parsing run config at {run_config_path}: "
@@ -255,40 +422,68 @@ class FaseRunConfig:
 
         # [RUN] - Optional parameters
 
-        n_threads = run_config.get("RUN", "threads", fallback=1)  # Default to one thread
+        n_threads = run_config.get("RUN", "threads", fallback=(
+            user_config.user_default_threads
+            if user_config.user_default_threads is not None
+            else 1
+        ))  # Default to one thread
         self.n_threads = int(n_threads)
 
         max_n_features_in_transcript = run_config.get(
             "RUN", "maxNumberFeaturesInTranscript", fallback=run_config.get(
                 "RUN", "maxNFeaturesInTranscript", fallback=run_config.get(
-                    "RUN", "maxFeaturesInTranscript", fallback=0  # Default to 0 (interpreted as no limit)
+                    "RUN", "maxFeaturesInTranscript", fallback=(
+                        user_config.user_default_max_n_features_in_transcript
+                        if user_config.user_default_max_n_features_in_transcript is not None
+                        else 0  # Default to 0 (interpreted as no limit)
+                    )
                 )
             )
         )
         self.max_n_features_in_transcript = int(max_n_features_in_transcript)
 
-        generate_report = run_config.get("RUN", "report", fallback=internal_config.default_generate_report)
+        generate_report = run_config.get("RUN", "report", fallback=(
+            user_config.user_default_generate_report
+            if user_config.user_default_generate_report is not None
+            else internal_config.default_generate_report
+        ))
         self.generate_report = parse_bool(generate_report)
 
         mapq_for_unique_mapping = run_config.get(
-            "RUN", "mapqForUniqueMapping", fallback=internal_config.default_mapq_for_unique_mapping
+            "RUN", "mapqForUniqueMapping", fallback=(
+                user_config.user_default_mapq_for_unique_mapping
+                if user_config.user_default_mapq_for_unique_mapping is not None
+                else internal_config.default_mapq_for_unique_mapping
+            )
         )
         self.mapq_for_unique_mapping = int(mapq_for_unique_mapping)
 
         include_all_junctions_in_output = run_config.get(
-            "RUN", "include_all_junctions_in_output", fallback=internal_config.default_include_all_junctions_in_output
+            "RUN", "includeAllJunctionsInOutput", fallback=(
+                user_config.user_default_include_all_junctions_in_output
+                if user_config.user_default_include_all_junctions_in_output is not None
+                else internal_config.default_include_all_junctions_in_output
+            )
         )
         self.include_all_junctions_in_output = parse_bool(include_all_junctions_in_output)
 
         only_use_longest_annotated_transcript = run_config.get(
             "RUN", "onlyUseLongestAnnotatedTranscript",
-            fallback=internal_config.default_only_use_longest_annotated_transcript
+            fallback=(
+                user_config.user_default_only_use_longest_annotated_transcript
+                if user_config.user_default_only_use_longest_annotated_transcript is not None
+                else internal_config.default_only_use_longest_annotated_transcript
+            )
         )
         self.only_use_longest_annotated_transcript = parse_bool(only_use_longest_annotated_transcript)
 
         skip_transcripts_with_redundant_feature_annotation = run_config.get(
             "RUN", "skipTranscriptsWithRedundantFeatureAnnotation",
-            fallback=internal_config.default_skip_transcripts_with_redundant_feature_annotation
+            fallback=(
+                user_config.user_default_skip_transcripts_with_redundant_feature_annotation
+                if user_config.user_default_skip_transcripts_with_redundant_feature_annotation is not None
+                else internal_config.default_skip_transcripts_with_redundant_feature_annotation
+            )
         )
         self.skip_transcripts_with_redundant_feature_annotation = parse_bool(
             skip_transcripts_with_redundant_feature_annotation
@@ -296,35 +491,67 @@ class FaseRunConfig:
 
         # Optional section: [REPORT]
 
-        report_max_plotted = run_config.get(
-            "REPORT", "maxPlotted", fallback=run_config.get(
-                "REPORT", "maxNPlotted", fallback=None  # Default to None (no limit)
-            )
-        )
-        self.report_max_plotted = None if report_max_plotted is None else int(report_max_plotted)
-
-        report_min_total_number_occurrences_across_all_samples = run_config.get(
-            "REPORT", "minTotalNumberOccurrencesAcrossAllSamples", fallback=run_config.get(
-                "REPORT", "minTotalNOccurrencesAcrossAllSamples", fallback=run_config.get(
-                    "REPORT", "minTotalOccurrencesAcrossAllSamples", fallback=1  # Default to 1 (excludes no activity)
+        rank_results_by = run_config.get(
+            "REPORT", "rankResultsBy", fallback=run_config.get(
+                "REPORT", "rankBy", fallback=(
+                    user_config.user_default_report_rank_results_by
+                    if user_config.user_default_report_rank_results_by is not None
+                    else internal_config.default_rank_results_by
                 )
             )
         )
-        self.report_min_total_number_occurrences_across_all_samples = int(
-            report_min_total_number_occurrences_across_all_samples
+        if rank_results_by not in RANK_RESULTS_BY_ALLOWED_VALUES:
+            raise ValueError(_e + f"Invalid value \"{rank_results_by}\" specified for parameter "
+                                  f"\"rankResultsBy\" in section REPORT. Allowed options are: "
+                                  f"{RANK_RESULTS_BY_ALLOWED_VALUES}")
+        self.rank_results_by = rank_results_by
+
+        report_max_n_plotted = run_config.get(
+            "REPORT", "maxNumberPlotted", fallback=run_config.get(
+                "REPORT", "maxNPlotted", fallback=run_config.get(
+                    "REPORT", "maxPlotted", fallback=(
+                        user_config.user_default_report_max_n_plotted  # Default to None (no limit)
+                    )
+                )
+            )
+        )
+        # Allow */all to represent no limit on number of plots (same as omitting the parameter)
+        self.report_max_n_plotted = None if (
+            report_max_n_plotted is None or report_max_n_plotted in ("all", "All", "ALL", "*")
+        ) else int(report_max_n_plotted)
+
+        report_min_total_n_occurrences_across_all_samples = run_config.get(
+            "REPORT", "minTotalNumberOccurrencesAcrossAllSamples", fallback=run_config.get(
+                "REPORT", "minTotalNOccurrencesAcrossAllSamples", fallback=run_config.get(
+                    "REPORT", "minTotalOccurrencesAcrossAllSamples", fallback=(
+                        user_config.user_default_report_min_total_n_occurrences_across_all_samples
+                        if user_config.user_default_report_min_total_n_occurrences_across_all_samples is not None
+                        else 1  # Default to 1 (excludes no activity)
+                    )
+                )
+            )
+        )
+        self.report_min_total_n_occurrences_across_all_samples = int(
+            report_min_total_n_occurrences_across_all_samples
         )
 
         report_min_n_occurrences_in_sample = run_config.get(
             "REPORT", "minNumberOccurrencesInSample", fallback=run_config.get(
                 "REPORT", "minNOccurrencesInSample", fallback=run_config.get(
-                    "REPORT", "minOccurrencesInSample", fallback=None  # Check for paired use, then default to 0
+                    "REPORT", "minOccurrencesInSample", fallback=(
+                        user_config.user_default_report_min_n_occurrences_in_sample
+                        # Default to None - Check for paired use below, then set stored value to 0
+                    )
                 )
             )
         )
 
         report_occurrences_in_at_least_n_samples = run_config.get(
             "REPORT", "occurrencesInAtLeastNSamples", fallback=run_config.get(
-                "REPORT", "inAtLeastNSamples", fallback=None  # Check for paired use, then default to 0
+                "REPORT", "inAtLeastNSamples", fallback=(
+                    user_config.user_default_report_occurrences_in_at_least_n_samples
+                    # Default to None - Check for paired use below, then set stored value to 0
+                )
             )
         )
 
@@ -413,12 +640,14 @@ class FaseRunConfig:
 if __name__ == "__main__":
 
     internal_config_relative_path = "internal.config"
+    user_config_absolute_path = "/Users/aasho2/Projects/FASE_V1/fase_user.config"
 
     frc = FaseRunConfig(
         "/Users/aasho2/Projects/FASE_V1/fase_run.config",
         FaseInternalConfig(
             os.path.join(os.path.dirname(os.path.abspath(__file__)), internal_config_relative_path)
-        )
+        ),
+        FaseUserConfig(user_config_absolute_path)
     )
 
     print("\n".join([f"{a}: {type(getattr(frc, a))} {getattr(frc, a)}" for a in dir(frc) if a[:2] != "__"]))

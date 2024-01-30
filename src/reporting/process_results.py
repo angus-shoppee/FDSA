@@ -96,6 +96,7 @@ class FaseResult:
 def load_fase_results_as_df(
     fase_results_path: str,
     samples: Dict[str, Sample],
+    rank_by: str,
     force_include_gene_names: Union[None, List[str]] = None,
     min_total_number_occurrences_across_all_samples: int = 1,
     min_per_sample_occurrences_number_occurrences: int = 0,
@@ -168,11 +169,19 @@ def load_fase_results_as_df(
         for column_name in frequency_column_names:
             fase_results_df[column_name] = fase_results_df[column_name].astype(float)
 
-        # Order results by avg frequency
-        fase_results_df = fase_results_df.sort_values(
-            by=[cols.AVG_FREQUENCY, cols.AVG_NUMBER],
-            ascending=[False, False]
-        )
+        # Order results by either number or avg frequency, depending on report config
+        if rank_by == "frequency":
+            fase_results_df = fase_results_df.sort_values(
+                by=[cols.AVG_FREQUENCY, cols.AVG_NUMBER],
+                ascending=[False, False]
+            )
+        elif rank_by == "number":
+            fase_results_df = fase_results_df.sort_values(
+                by=[cols.AVG_NUMBER, cols.AVG_FREQUENCY],
+                ascending=[False, False]
+            )
+        else:
+            raise ValueError(f"Invalid value for rank_by specified (\"{rank_by}\"). Options are frequency/number")
 
         return fase_results_df
 
