@@ -30,6 +30,7 @@ def parse_bool(value: Union[bool, str]) -> bool:
 class FaseInternalConfig:
     allowed_species: List[str]
     biomart_name_for_species: Dict[str, str]
+    default_biomart_mirror: str
     default_mapq_for_unique_mapping: int
     default_rank_results_by: str
     default_feature_junction_overlap_threshold: float
@@ -57,7 +58,7 @@ class FaseInternalConfig:
         allowed_species_string = config.get("BUILD", "allowedSpecies", fallback=None)
         if allowed_species_string is None:
             raise ValueError(_e + f"Missing mandatory parameter \"allowedSpecies\" in section BUILD")
-        self.allowed_species = allowed_species_string.split(" ")
+        self.allowed_species = [s.lower() for s in allowed_species_string.split(" ")]
 
         biomart_name_for_species_string = config.get("BUILD", "biomartNameForSpecies", fallback=None)
         if biomart_name_for_species_string is None:
@@ -72,6 +73,11 @@ class FaseInternalConfig:
             if species_name not in self.biomart_name_for_species.keys():
                 raise ValueError(_e + f"The species \"{species_name}\" specified in allowedSpecies is missing a "
                                       f"corresponding key:value entry in biomartNameForSpecies")
+
+        default_biomart_mirror = config.get("BUILD", "defaultBiomartMirror", fallback=None)
+        if default_biomart_mirror is None:
+            raise ValueError(_e + f"Missing mandatory parameter \"defaultBiomartMirror\" in section BUILD")
+        self.default_biomart_mirror = default_biomart_mirror
 
         # [RUN]
 
@@ -163,6 +169,7 @@ class FaseInternalConfig:
 
 class FaseUserConfig:
     email: str
+    user_default_biomart_mirror: Union[None, str]
     user_default_generate_report: Union[None, bool]
     user_default_threads: Union[None, int]
     user_default_max_n_features_in_transcript: Union[None, int]
@@ -189,12 +196,24 @@ class FaseUserConfig:
 
         # [USER]
 
-        email = user_config.get("USER", "email", fallback=None)
+        email = user_config.get(
+            "BUILD", "emailAddress", fallback=user_config.get(
+                "BUILD", "email", fallback=None
+            )
+        )
         if email is None:
-            raise ValueError(_e + f"Missing mandatory parameter \"email\" in section USER. Please note that this email "
-                                  f"address is used only for external academic API calls during the build process.")
+            raise ValueError(_e + f"Missing mandatory parameter \"email\" in section BUILD. Please note that this "
+                                  f"email address is used only for external academic API calls during the build "
+                                  f"process.")
         # Possible TODO: Validity check on provided email address?
         self.email = email
+
+        user_default_biomart_mirror = user_config.get(
+            "BUILD", "biomartMirror", fallback=user_config.get(
+                "BUILD", "biomart", fallback=None
+            )
+        )
+        self.user_default_biomart_mirror = user_default_biomart_mirror
 
         # [DEFAULT RUN]
 
@@ -405,6 +424,7 @@ class FaseRunConfig:
         species = run_config.get("RUN", "species", fallback=None)
         if species is None:
             raise ValueError(_e + f"Missing mandatory parameter \"species\" in section RUN")
+        species = species.lower()
         if species not in internal_config.allowed_species:
             raise ValueError(_e + f"An invalid species ({species}) was specified. "
                                   f"Allowed species: {internal_config.allowed_species}")
