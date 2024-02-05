@@ -42,6 +42,7 @@ class FaseInternalConfig:
     default_generate_report: bool
     default_point_color_in_plot: str
     default_feature_counts_primary_alignment_only: bool
+    # Possible TODO: Generalise default_feature_counts_primary_alignment_only to default_primary_alignment_only
 
     def __init__(self, internal_config_path: str) -> None:
 
@@ -116,8 +117,8 @@ class FaseInternalConfig:
             "RUN", "defaultOnlyUseLongestAnnotatedTranscript", fallback=None
         )
         if default_only_use_longest_annotated_transcript is None:
-            raise ValueError(_e + f"Missing mandatory parameter \"defaultOnlyUseLongestAnnotatedTranscript\" in section "
-                                  f"RUN")
+            raise ValueError(_e + f"Missing mandatory parameter \"defaultOnlyUseLongestAnnotatedTranscript\" in "
+                                  f"section RUN")
         self.default_only_use_longest_annotated_transcript = parse_bool(
             default_only_use_longest_annotated_transcript
         )
@@ -171,12 +172,16 @@ class FaseUserConfig:
     email: str
     user_default_biomart_mirror: Union[None, str]
     user_default_generate_report: Union[None, bool]
-    user_default_threads: Union[None, int]
+    user_default_n_threads: Union[None, int]
     user_default_max_n_features_in_transcript: Union[None, int]
     user_default_only_use_longest_annotated_transcript: Union[None, int]
     user_default_skip_transcripts_with_redundant_feature_annotation: Union[None, int]
+    user_default_feature_junction_overlap_threshold: Union[None, float]
+    user_default_primary_alignment_only: Union[None, bool]
     user_default_mapq_for_unique_mapping: Union[None, int]
     user_default_include_all_junctions_in_output: Union[None, bool]
+    user_default_report_feature_counts_executable: Union[None, str]
+    user_default_report_n_threads = Union[None, int]
     user_default_report_rank_results_by: Union[None, str]
     user_default_report_max_n_plotted: Union[None, int]
     user_default_report_min_total_n_occurrences_across_all_samples: Union[None, int]  # Chef's kiss variable name
@@ -205,7 +210,7 @@ class FaseUserConfig:
             raise ValueError(_e + f"Missing mandatory parameter \"email\" in section BUILD. Please note that this "
                                   f"email address is used only for external academic API calls during the build "
                                   f"process.")
-        # Possible TODO: Validity check on provided email address?
+        # Possible TODO: Validity check on provided email address (or later in main.build)?
         self.email = email
 
         user_default_biomart_mirror = user_config.get(
@@ -221,8 +226,8 @@ class FaseUserConfig:
         self.user_default_generate_report = None if user_default_generate_report is None else \
             parse_bool(user_default_generate_report)
 
-        user_default_threads = user_config.get("DEFAULT RUN", "threads", fallback=None)
-        self.user_default_threads = None if user_default_threads is None else int(user_default_threads)
+        user_default_n_threads = user_config.get("DEFAULT RUN", "threads", fallback=None)
+        self.user_default_n_threads = None if user_default_n_threads is None else int(user_default_n_threads)
 
         user_default_max_n_features_in_transcript = user_config.get(
             "RUN", "maxNumberFeaturesInTranscript", fallback=user_config.get(
@@ -249,6 +254,23 @@ class FaseUserConfig:
             if user_default_skip_transcripts_with_redundant_feature_annotation is None \
             else parse_bool(user_default_skip_transcripts_with_redundant_feature_annotation)
 
+        user_default_feature_junction_overlap_threshold = user_config.get(
+            "RUN", "featureJunctionOverlapThreshold", fallback=user_config.get(
+                "RUN", "overlapThreshold", fallback=None
+            )
+        )
+        self.user_default_feature_junction_overlap_threshold = None \
+            if user_default_feature_junction_overlap_threshold is None \
+            else float(user_default_feature_junction_overlap_threshold)
+
+        user_default_primary_alignment_only = user_config.get(
+            "DEFAULT RUN", "primaryAlignmentOnly", fallback=user_config.get(
+                "DEFAULT RUN", "primaryAlignment", fallback=None
+            )
+        )
+        self.user_default_primary_alignment_only = None if user_default_primary_alignment_only is None \
+            else parse_bool(user_default_primary_alignment_only)
+
         user_default_mapq_for_unique_mapping = user_config.get("DEFAULT RUN", "mapqForUniqueMapping", fallback=None)
         self.user_default_mapq_for_unique_mapping = None if user_default_mapq_for_unique_mapping is None \
             else int(user_default_mapq_for_unique_mapping)
@@ -261,6 +283,22 @@ class FaseUserConfig:
             else parse_bool(user_default_include_all_junctions_in_output)
 
         # [DEFAULT REPORT]
+
+        user_default_report_feature_counts_executable = user_config.get(
+            "DEFAULT REPORT", "featureCountsExecutableLocation", fallback=user_config.get(
+                "DEFAULT REPORT", "featureCountsExecutablePath", fallback=user_config.get(
+                    "DEFAULT REPORT", "featureCountsExecutable", fallback=user_config.get(
+                        "DEFAULT REPORT", "featureCounts", fallback=None
+                    )
+                )
+            )
+        )
+        self.user_default_report_feature_counts_executable = user_default_report_feature_counts_executable
+
+        user_default_report_n_threads = user_config.get(
+            "DEFAULT REPORT", "threads", fallback=self.user_default_n_threads
+        )
+        self.user_default_report_n_threads = user_default_report_n_threads
 
         user_default_report_rank_results_by = user_config.get(
             "DEFAULT REPORT", "rankResultsBy", fallback=user_config.get(
@@ -350,7 +388,11 @@ class FaseRunConfig:
     max_n_features_in_transcript: int
     only_use_longest_annotated_transcript: bool
     skip_transcripts_with_redundant_feature_annotation: bool  # overridden by only_use_longest_annotated_transcript=True
+    feature_junction_overlap_threshold: float
     generate_report: bool
+    report_n_threads: int
+    report_feature_counts_executable: Union[None, str]
+    report_gene_count_matrix: Union[None, str]
     report_max_n_plotted: Union[None, int]
     report_min_total_n_occurrences_across_all_samples: int
     report_min_n_occurrences_in_sample: int
@@ -365,13 +407,16 @@ class FaseRunConfig:
         self,
         run_config_path: str,
         internal_config: FaseInternalConfig,
-        user_config: FaseUserConfig
+        user_config: Union[None, FaseUserConfig]
     ) -> None:
 
         _e = f"Error while parsing run config at {run_config_path}: "
 
         run_config = configparser.ConfigParser()
         run_config.read(run_config_path)
+
+        if user_config is None:
+            user_config = FaseUserConfig(os.path.join("src", "config", ".null_user.config"))
 
         if "RUN" not in run_config:
             raise ValueError(_e + f"Missing mandatory section RUN (run settings)")
@@ -443,8 +488,8 @@ class FaseRunConfig:
         # [RUN] - Optional parameters
 
         n_threads = run_config.get("RUN", "threads", fallback=(
-            user_config.user_default_threads
-            if user_config.user_default_threads is not None
+            user_config.user_default_n_threads
+            if user_config.user_default_n_threads is not None
             else 1
         ))  # Default to one thread
         self.n_threads = int(n_threads)
@@ -468,6 +513,17 @@ class FaseRunConfig:
             else internal_config.default_generate_report
         ))
         self.generate_report = parse_bool(generate_report)
+
+        primary_alignment_only = run_config.get(
+            "RUN", "primaryAlignmentOnly", fallback=run_config.get(
+                "RUN", "primaryAlignment", fallback=(
+                    user_config.user_default_primary_alignment_only
+                    if user_config.user_default_primary_alignment_only is not None
+                    else internal_config.default_feature_counts_primary_alignment_only
+                )
+            )
+        )
+        self.primary_alignment_only = primary_alignment_only
 
         mapq_for_unique_mapping = run_config.get(
             "RUN", "mapqForUniqueMapping", fallback=(
@@ -509,7 +565,42 @@ class FaseRunConfig:
             skip_transcripts_with_redundant_feature_annotation
         )
 
+        feature_junction_overlap_threshold = run_config.get(
+            "RUN", "featureJunctionOverlapThreshold", fallback=run_config.get(
+                "RUN", "overlapThreshold", fallback=(
+                    user_config.user_default_feature_junction_overlap_threshold
+                    if user_config.user_default_feature_junction_overlap_threshold is not None
+                    else internal_config.default_feature_junction_overlap_threshold
+                )
+            )
+        )
+        self.feature_junction_overlap_threshold = float(feature_junction_overlap_threshold)
+
         # Optional section: [REPORT]
+
+        report_n_threads = run_config.get("REPORT", "threads", fallback=user_config.user_default_report_n_threads)
+        self.report_n_threads = report_n_threads
+
+        report_feature_counts_executable = run_config.get(
+            "REPORT", "featureCountsExecutableLocation", fallback=run_config.get(
+                "REPORT", "featureCountsExecutablePath", fallback=run_config.get(
+                    "REPORT", "featureCountsExecutable", fallback=run_config.get(
+                        "REPORT", "featureCounts", fallback=
+                        user_config.user_default_report_feature_counts_executable
+                    )
+                )
+            )
+        )
+        self.report_feature_counts_executable = report_feature_counts_executable
+
+        report_gene_count_matrix = run_config.get(
+            "REPORT", "featureCountsOutput", fallback=run_config.get(
+                "REPORT", "geneCountsMatrix", fallback=run_config.get(
+                    "REPORT", "geneCounts", fallback=None
+                )
+            )
+        )
+        self.report_gene_count_matrix = report_gene_count_matrix
 
         rank_results_by = run_config.get(
             "REPORT", "rankResultsBy", fallback=run_config.get(
@@ -600,6 +691,8 @@ class FaseRunConfig:
 
         if self.generate_report:
 
+            self.check_feature_counts()
+
             # Auto-generated if required: [SAMPLES]
 
             if "SAMPLES" in run_config:
@@ -655,7 +748,20 @@ class FaseRunConfig:
             self.group_name_by_sample_name = None
             self.color_by_group_name = None
 
+    def check_feature_counts(self) -> None:
 
+        if all([
+            self.generate_report,
+            self.report_feature_counts_executable is None,
+            self.report_gene_count_matrix is None
+        ]):
+            raise ValueError(f"Report generation requires that gene counts are either calculated or supplied. "
+                             f"If the geneCounts parameter is not set in the REPORT section of run config "
+                             f"file, then the featureCountsExecutable parameter must be set either in the "
+                             f"REPORT section of run config, or in the DEFAULT REPORT section of user config.")
+
+
+# TODO: REMOVE
 # FOR TESTING - run as standalone
 if __name__ == "__main__":
 

@@ -2,32 +2,17 @@
 # FASE RESULTS PLOTTING AND REPORTING
 # TEMPORARILY IMPLEMENTED AS A STANDALONE SCRIPT
 
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any
 import os
-import configparser
 from functools import reduce
 
+from src.config.parse_config import FaseRunConfig
+from src.analysis.core import name_output_file
 from src.analysis.experiment import Sample
 from src.analysis.counts import run_feature_counts, get_gene_counts_from_tsv, get_tmm_cpm_from_gene_counts
 from src.reporting.process_results import load_fase_results
 from src.reporting.plot import plot_transcript, plot_splice_rate
 from src.reporting.generate_html_report import generate_html_report
-
-
-REFERENCE_GENOME_GTF_PATH = ("/Users/aasho2/PHD/Bioinformatics/STAR/genomes/GRCm39/"
-                             "gencode_M27_primary/gencode.vM27.primary_assembly.annotation.gtf")
-
-BAM_FILES_DIR = "/Users/aasho2/PHD/Bioinformatics/STAR/runs/hons_PD1KO/sorted"
-BAM_ENDING = "_Aligned_Sorted.out.bam"
-
-FASE_RESULTS_PATH = "/Users/aasho2/Projects/FASE_V1/OUTPUT/V0_4 SplDC2020/transmembrane region.csv"
-
-FEATURECOUNTS_EXECUTABLE = "/Users/aasho2/opt/anaconda3/envs/bbmap/bin/featureCounts"
-PRIMARY_ALIGNMENT_ONLY = True
-N_THREADS = 24
-
-RUN_CONFIG_PATH = "/Users/aasho2/Projects/FASE_test/fase_run.config"
-OUTPUT_DIR = "OUTPUT/Report"
 
 
 def _check_inputs_are_valid(
@@ -38,13 +23,15 @@ def _check_inputs_are_valid(
     output_dir: str,
 ) -> None:
 
+    # TODO: Refactor to just take run_config and check attributes (are these checks redundant if __init__ passed?)
+
     # Check BAM files
     if len(bam_file_absolute_paths) == 0:
         raise ValueError(f"No BAM files detected in {bam_files_dir} with ending {bam_ending}")
 
     # Check FASE results file
     if not os.path.exists(fase_results_path):
-        raise FileNotFoundError("The specified FASE results file was not found")
+        raise FileNotFoundError(f"The specified FASE results file was not found: {fase_results_path}")
 
     # Check output directory (but do not create it yet)
     if not os.path.isdir(output_dir) and os.path.exists(output_dir):
@@ -55,27 +42,38 @@ def flatten_nested_lists(nested_lists: List[List[Any]]) -> List[Any]:
     return reduce(lambda a, b: a + b, nested_lists)
 
 
-def main(
-    bam_files_dir: str,
-    bam_ending: str,
-    fase_results_path: str,
-    output_dir: str,
-    max_n_plotted: Union[None, int] = None
+def create_report(
+    run_config: FaseRunConfig
+    # bam_files_dir: str,
+    # bam_ending: str,
+    # fase_results_path: str,
+    # output_dir: str,
+    # max_n_plotted: Union[None, int] = None
 ) -> None:
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
+    output_dir = os.path.join(run_config.output_path, "REPORT")
+    _results_file_name_no_extension = name_output_file(run_config.run_name, run_config.feature_name)
+    fase_results_path = os.path.join(run_config.output_path, f"{_results_file_name_no_extension}.csv")
+
     # Get BAM file paths
-    _ending_length = len(bam_ending)
+    _ending_length = len(run_config.bam_ending)
     bam_file_absolute_paths = [os.path.join(
-        bam_files_dir, p
-    ) for p in os.listdir(bam_files_dir) if p[-_ending_length:] == bam_ending]
+        run_config.input_path, p
+    ) for p in os.listdir(run_config.input_path) if p[-_ending_length:] == run_config.bam_ending]
 
     # Ensure output_dir is an absolute path
     output_dir_absolute = os.path.abspath(output_dir)
 
     # Proceed only if inputs pass validation
-    _check_inputs_are_valid(bam_file_absolute_paths, bam_files_dir, bam_ending, fase_results_path, output_dir_absolute)
+    _check_inputs_are_valid(
+        bam_file_absolute_paths,
+        run_config.input_path,
+        run_config.bam_ending,
+        fase_results_path,
+        output_dir_absolute
+    )
 
     # Create output directory if required
     if not os.path.isdir(output_dir_absolute):
@@ -84,68 +82,34 @@ def main(
     # Load samples
     samples = {}
     for bam_path in bam_file_absolute_paths:
-        sample = Sample(bam_path, BAM_ENDING)
+        sample = Sample(bam_path, run_config.bam_ending)
         samples[sample.name] = sample
 
-    # ---------------------------------------------------------------------------------------------------------------- #
-
-    # Load run config
-    run_config = configparser.ConfigParser()
-    run_config.read(RUN_CONFIG_PATH)
-
-    # TODO: Refactor pointless assertions - missing values will trigger KeyError before reaching assert statement
-    run_name = run_config["GENERAL"]["name"]
-    assert run_name, f"A run name is required (attribute 'name' in section [GENERAL])"
-
-    feature_name = run_config["FEATURE"]["match"]
-    assert feature_name, f"A feature pattern match is required (attribute 'match' in section [FEATURE])"
-
-    sample_groups = {key: val.split(" ") for key, val in run_config["SAMPLES"].items() if val}
-
-    assert all(
-        [sample_name in samples for sample_name in flatten_nested_lists(list(sample_groups.values()))]
-    ), "Sample names in run config do not match sample names parsed from BAM files"
-    assert all(
-        [sample_name in flatten_nested_lists(list(sample_groups.values())) for sample_name in samples]
-    ), "Sample names parsed from BAM files are not all present in the SAMPLES section of run config"
-
-    group_name_by_sample = {}
-    for group_name, sample_names in sample_groups.items():
-        for sample_name in sample_names:
-            group_name_by_sample[sample_name] = group_name
-
-    color_by_group_name = dict(run_config["COLORS"])
-
-    assert all(
-        [group_name in sample_groups.keys() for group_name in color_by_group_name.keys()]
-    ), "A group name is defined in the COLORS section of run config that is not defined in the SAMPLES section"
-    assert all(
-        [group_name in color_by_group_name.keys() for group_name in sample_groups.keys()]
-    ), "A group name is defined in the SAMPLES section of run config that is not defined in the COLORS section"
-
-    # ---------------------------------------------------------------------------------------------------------------- #
-
     # Get TMM CPM
-    gene_counts_path = os.path.join(output_dir_absolute, "gene_counts.tsv")
+    gene_counts_path = run_config.report_gene_count_matrix \
+        if run_config.report_gene_count_matrix is not None \
+        else os.path.join(output_dir_absolute, "gene_counts.tsv")
 
     if not os.path.exists(gene_counts_path):
         print("Running feature counts...")
         run_feature_counts(
-            FEATURECOUNTS_EXECUTABLE,
-            BAM_FILES_DIR,
-            BAM_ENDING,
-            REFERENCE_GENOME_GTF_PATH,
+            run_config.report_feature_counts_executable,
+            run_config.input_path,
+            run_config.bam_ending,
+            run_config.genome,
             gene_counts_path,
-            paired_end_reads=PRIMARY_ALIGNMENT_ONLY,
-            threads=N_THREADS
+            paired_end_reads=run_config.primary_alignment_only,
+            threads=run_config.report_n_threads
         )
         print("... done")
+    else:
+        print("An existing gene count matrix has been supplied.")
 
     print("Reading gene counts...")
 
     raw_gene_counts = get_gene_counts_from_tsv(
         gene_counts_path,
-        bam_ending=BAM_ENDING
+        bam_ending=run_config.bam_ending
     )
 
     print("... done")
@@ -176,11 +140,12 @@ def main(
 
     plots: Dict[str, Dict[str, str]] = {}
     _current = 1
-    _total = len(fase_results) if max_n_plotted is None else min(len(fase_results), max_n_plotted)
+    _total = len(fase_results) if run_config.report_max_n_plotted is None \
+        else min(len(fase_results), run_config.report_max_n_plotted)
     print()  # Print blank line to be consumed by first one-line-up ansi code
     for fase_result in fase_results:
 
-        if max_n_plotted is not None and _current > max_n_plotted:
+        if run_config.report_max_n_plotted is not None and _current > run_config.report_max_n_plotted:
             break
 
         print(
@@ -193,9 +158,9 @@ def main(
             "expression": plot_splice_rate(
                 fase_result,
                 norm_gene_counts,
-                sample_groups,
-                group_name_by_sample,
-                color_by_group_name,
+                run_config.sample_groups,
+                run_config.group_name_by_sample_name,
+                run_config.color_by_group_name,
                 show_main_title=False
             ),
             "splice": plot_transcript(
@@ -210,24 +175,15 @@ def main(
     print("Generating report...")
 
     report_html = generate_html_report(
-        run_name,
-        feature_name,
+        run_config.run_name,
+        run_config.feature_name,
         fase_results,
         plots
     )
 
-    with open(os.path.join(output_dir_absolute, "report.html"), "w") as output_file:
+    with open(os.path.join(
+        output_dir_absolute, f"Report - {name_output_file(run_config.run_name, run_config.feature_name)}.html"
+    ), "w") as output_file:
         output_file.write(report_html)
 
     print("...finished")
-
-
-if __name__ == "__main__":
-
-    main(
-        BAM_FILES_DIR,
-        BAM_ENDING,
-        FASE_RESULTS_PATH,
-        OUTPUT_DIR,
-        max_n_plotted=2
-    )

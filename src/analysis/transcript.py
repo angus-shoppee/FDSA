@@ -293,32 +293,26 @@ class TranscriptLibrary:
         species: str,
         name_lookup: NameLookup,
         ref_gtf: DataFrame,
-        numexpr_max_threads: int = 8,
-        init_verbose: bool = False
+        numexpr_max_threads: int = 8
     ) -> None:
 
         self.species = species
         self.number_of_transcripts = 0
         self._transcripts_by_gene = {}
 
-        def print_if_verbose(s: Any):
-            if init_verbose:
-                print(s)
-
         os.environ["NUMEXPR_MAX_THREADS"] = str(numexpr_max_threads)
 
         gene_names = name_lookup.get_all_gene_names()
 
-        print_if_verbose("Creating transcript library...")
+        print("Creating transcript library...")
         _i = 0
         _t = len(gene_names)
 
         for gene_name in gene_names:
 
-            if init_verbose:
-                if _i % 1000 == 0:
-                    print(f"Progress: ({_i}/{_t})")
-                _i += 1
+            if _i % 1000 == 0:
+                print(f"Progress: ({_i}/{_t})")
+            _i += 1
 
             res = ref_gtf.query(f"gene_name=='{gene_name}'")
             transcripts_slice = res.query(f"feature=='transcript'")
@@ -360,7 +354,7 @@ class TranscriptLibrary:
 
             self._transcripts_by_gene[gene_name] = transcripts
 
-        print_if_verbose("...done\n")
+        print("...done\n")
 
     def get_all_transcripts(self) -> List[TranscriptRecord]:
 
@@ -404,15 +398,13 @@ def create_and_save_transcript_library(
     name_lookup: NameLookup,
     ref_gtf: DataFrame,
     numexpr_max_threads: int = 8,
-    verbose: bool = False
 ) -> TranscriptLibrary:
 
     transcript_library = TranscriptLibrary(
         species,
         name_lookup,
         ref_gtf,
-        numexpr_max_threads=numexpr_max_threads,
-        init_verbose=verbose
+        numexpr_max_threads=numexpr_max_threads
     )
 
     with open(output_path, "wb") as f:
@@ -426,18 +418,13 @@ def annotate_and_save_transcript_library(
     name_lookup: NameLookup,
     gbseq_by_refseq: Dict[str, GBSeq],
     output_path: str,
-    verbose: bool = False
 ) -> TranscriptLibrary:
 
     """"Modifies transcript_library to add GBSeq objects for transcripts with a refseq_mrna ID;
     all transcripts without a refseq_mrna ID are deleted"""
 
-    def print_if_verbose(s: Any):
-        if verbose:
-            print(s)
-
     # Get all transcripts that have a refseq ID
-    print_if_verbose("Applying annotation to transcripts with refseq IDs...")
+    print("Applying annotation to transcripts with refseq IDs...")
     _key_errors, _without_refseq, _no_gbseq, _exon_map_failure, _successes = 0, 0, 0, 0, 0
     for transcript in transcript_library.get_all_transcripts():
         # TODO: Remove this check and its counting as this is now handled previously when creating transcript library
@@ -473,7 +460,7 @@ def annotate_and_save_transcript_library(
             transcript_library.number_of_transcripts -= 1
             _without_refseq += 1
 
-    print_if_verbose(
+    print(
         f"... finished with {_successes} successes; removed {_without_refseq} transcripts without refseq ID, " +
         f"{_key_errors} unmappable due to missing or unrecognised ensembl ID, {_no_gbseq} without annotation, "
         f"{_exon_map_failure} failures to map reference genome exons to gbseq exons\n"

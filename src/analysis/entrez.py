@@ -73,20 +73,15 @@ def download_and_save_feature_annotation_xml(
     user_email: str,
     chunk_size: int = 100,
     max_retry_attempts_per_chunk: int = 5,
-    force_restart_download: bool = False,
-    verbose: bool = False,
+    force_restart_download: bool = False
 ) -> None:
-
-    def print_if_verbose(s: Any):
-        if verbose:
-            print(s)
 
     progress_file_path = os.path.join(os.path.dirname(output_path), ".download_progress.json")
 
     if os.path.exists(progress_file_path) and not force_restart_download:
         # Resume previously started download
         with open(progress_file_path, "r") as progress_file:
-            print_if_verbose("Resuming previously download")
+            print("Resuming previously download")
             progress = json.load(progress_file)
             chunk_size = progress["chunk_size"]  # Override chunk_size to remain consistent
     else:
@@ -130,8 +125,8 @@ def download_and_save_feature_annotation_xml(
             if retry_attempt > max_retry_attempts_per_chunk:
                 raise RuntimeError("Could not download chunk from entrez - max attempts reached")
 
-            print_if_verbose(f"Downloading chunk {current_chunk_no} of {number_of_chunks}")
-            print_if_verbose(f"{chunk[:5]} ...")
+            print(f"Downloading chunk {current_chunk_no} of {number_of_chunks}")
+            print(f"{chunk[:5]} ...")
 
             c = entrezpy.conduit.Conduit(user_email)
 
@@ -169,7 +164,7 @@ def download_and_save_feature_annotation_xml(
 
             except (AttributeError, TypeError, socket_timeout) as e:
                 retry_attempt += 1
-                print_if_verbose(
+                print(
                     f"(Caught exception: {e})\n" +
                     f"Query did not return XML data." +
                     f"Retrying (attempt {retry_attempt} of {max_retry_attempts_per_chunk})"
@@ -212,8 +207,7 @@ def _get_unique_child(
 
 
 def get_gbseq_from_xml(
-    xml_file_path: str,
-    verbose: bool = False
+    xml_file_path: str
 ) -> Dict[str, GBSeq]:
 
     """
@@ -221,17 +215,13 @@ def get_gbseq_from_xml(
     Returns a dictionary of GBSeq objects against refseq IDs.
     """
 
-    def print_if_verbose(s: Any):
-        if verbose:
-            print(s)
-
-    print_if_verbose("Reading feature annotation data from XML file...")
+    print("Reading feature annotation data from XML file...")
 
     tree = cElementTree.parse(xml_file_path)
     root = tree.getroot()
 
-    print_if_verbose("...done\n")
-    print_if_verbose("Creating feature annotation records...")
+    print("...done\n")
+    print("Creating feature annotation records...")
 
     gbseq_by_refseq = {}
     skipped_feature_invalid_region, skipped_feature_missing_gbqual = 0, 0
@@ -240,10 +230,9 @@ def get_gbseq_from_xml(
 
     for gbseq in root:
 
-        if verbose:
-            if _i % 1000 == 0:
-                print(f"Progress: ({_i}/{_t})")
-            _i += 1
+        if _i % 1000 == 0:
+            print(f"Progress: ({_i}/{_t})")
+        _i += 1
 
         refseq_id = _get_unique_child(gbseq, "GBSeq_locus").text
 
@@ -292,7 +281,7 @@ def get_gbseq_from_xml(
             features
         )
 
-    print_if_verbose(
+    print(
         f"...finished creating {len(gbseq_by_refseq)} records " +
         f"({skipped_feature_invalid_region} features skipped due to invalid region, "
         f"{skipped_feature_missing_gbqual} features skipped due to missing GBQualifier)\n"

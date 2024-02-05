@@ -48,12 +48,7 @@ def create_and_save_name_lookup(
     database_name: str,
     host_url: str,
     output_path: str,
-    verbose: bool = False
 ) -> NameLookup:
-
-    def print_if_verbose(s: Any):
-        if verbose:
-            print(s)
 
     biomart_dataset = BiomartDataset(
         name=database_name,
@@ -68,15 +63,15 @@ def create_and_save_name_lookup(
 
     query_filters = {}
 
-    print_if_verbose("Obtaining info from Biomart...")
+    print("Obtaining info from Biomart...")
 
     id_df = biomart_dataset.query(
         attributes=query_attributes,
         filters=query_filters
     )
 
-    print_if_verbose("...done\n")
-    print_if_verbose("Creating lookup object from Biomart data")
+    print("...done\n")
+    print("Creating lookup object from Biomart data")
 
     name_lookup_dict = {
         "refseq": {
@@ -94,10 +89,9 @@ def create_and_save_name_lookup(
 
     for rec in id_df.iterrows():
 
-        if verbose:
-            if _i % 1000 == 0:
-                print(f"Progress: ({_i}/{_t})")
-            _i += 1
+        if _i % 1000 == 0:
+            print(f"Progress: ({_i}/{_t})")
+        _i += 1
 
         name_lookup_dict["refseq"]["ensembl"][rec[1]["RefSeq mRNA ID"]] = str(
             rec[1]["Transcript stable ID version"]
@@ -112,13 +106,13 @@ def create_and_save_name_lookup(
             rec[1]["Gene name"]
         ).replace("nan", "")
 
-    print_if_verbose("...done\n")
-    print_if_verbose("Saving to file...")
+    print("...done\n")
+    print("Saving to file...")
 
     with open(os.path.join(output_path), "w") as f:
         json.dump(name_lookup_dict, f)
 
-    print_if_verbose("...done\n")
+    print("...done\n")
 
     return NameLookup(name_lookup_dict)
 
