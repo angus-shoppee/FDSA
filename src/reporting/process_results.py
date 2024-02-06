@@ -96,7 +96,7 @@ class FaseResult:
 def load_fase_results_as_df(
     fase_results_path: str,
     samples: Dict[str, Sample],
-    rank_by: str,
+    rank_by: str = "frequency",
     force_include_gene_names: Union[None, List[str]] = None,
     min_total_number_occurrences_across_all_samples: int = 1,
     min_per_sample_occurrences_number_occurrences: int = 0,
@@ -222,6 +222,7 @@ def convert_fase_results_df_to_objects(fase_results_df: pd.DataFrame) -> List[Fa
 def load_fase_results(
     fase_results_path: str,
     samples: Dict[str, Sample],
+    rank_by: str = "frequency",
     force_include_gene_names: Union[None, List[str]] = None,
     min_total_number_occurrences_across_all_samples: int = 1,
     min_per_sample_occurrences_number_occurrences: int = 0,
@@ -232,6 +233,7 @@ def load_fase_results(
     fase_results_df = load_fase_results_as_df(
         fase_results_path=fase_results_path,
         samples=samples,
+        rank_by=rank_by,
         force_include_gene_names=force_include_gene_names,
         min_total_number_occurrences_across_all_samples=min_total_number_occurrences_across_all_samples,
         min_per_sample_occurrences_number_occurrences=min_per_sample_occurrences_number_occurrences,

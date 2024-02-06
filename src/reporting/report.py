@@ -126,6 +126,7 @@ def create_report(
     fase_results = load_fase_results(
         fase_results_path,
         samples,
+        rank_by=run_config.rank_results_by
         # min_total_number_occurrences_across_all_samples=999999,
         #     force_include_gene_names = ["Clec9a"]
         #     force_include_gene_names = ["H2-Q7"]
