@@ -428,7 +428,12 @@ def main() -> None:
                 email,
                 threads,
                 internal_config,
-                user_config
+                user_config,
+                force_redo_annotate_transcript_library=build_args.redo_annotation,
+                force_regenerate_whole_genome_lookup= build_args.regenerate_lookup,
+                force_regenerate_transcript_library=build_args.regenerate_transcripts,
+                force_regenerate_genbank_features=build_args.regenerate_features,
+                restart_partial_download=build_args.regenerate_partial_features_download
             )
 
         elif mode_arg.mode in ("run", "report"):

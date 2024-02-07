@@ -98,6 +98,12 @@ def get_build_parser() -> ArgumentParser:
         help="Shorthand for --regenerate-lookup --regenerate-transcripts "
              "--regenerate-features --redo-annotation "
     )
+    build_parser.add_argument(
+        "--regenerate-partial-features-download",
+        action="store_true",
+        help="When combined with the --regenerate-features flag, forces any data partially downloaded data from "
+             "GenBank to be discarded, restarting the download from scratch."
+    )
 
     return build_parser
 
