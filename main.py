@@ -57,7 +57,7 @@ NO_EMAIL_ADDRESS_MESSAGE = ("An email address must be provided in order to make 
 def _confirm_build_overwrite() -> bool:
 
     user_choice = input("This action will overwrite existing build files. Proceed? "
-                        "(enter y/yes to proceed, any other key to exit).")
+                        "(enter y/yes to proceed, any other key to exit). ")
 
     return True if user_choice.lower() in ("y", "yes") else False
 
@@ -479,6 +479,10 @@ def main() -> None:
                 exit()
 
             if mode_arg.mode == "run":
+
+                # Enable report generation if specified in config file and not via command line flag
+                if run_config.generate_report:
+                    generate_report = True
 
                 species_specific_data_dir = os.path.join(base_dir, "data", run_config.species)
 

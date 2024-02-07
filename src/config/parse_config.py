@@ -39,6 +39,7 @@ class FaseInternalConfig:
     default_skip_transcripts_with_redundant_feature_annotation: bool
     # ^ skip_transcripts_with_redundant_feature_annotation is overridden by only_use_longest_annotated_transcript=True
     default_include_all_junctions_in_output: bool
+    default_paired_end_reads: bool
     default_generate_report: bool
     default_point_color_in_plot: str
     default_feature_counts_primary_alignment_only: bool
@@ -140,6 +141,13 @@ class FaseInternalConfig:
             raise ValueError(_e + f"Missing mandatory parameter \"defaultIncludeAllJunctionsInOutput\" in section "
                                   f"RUN")
         self.default_include_all_junctions_in_output = parse_bool(default_include_all_junctions_in_output)
+
+        default_paired_end_reads = config.get(
+            "RUN", "defaultPairedEndReads", fallback=None
+        )
+        if default_paired_end_reads is None:
+            raise ValueError(_e + f"Missing mandatory parameter \"defaultPairedEndReads\" in section RUN")
+        self.default_paired_end_reads = parse_bool(default_paired_end_reads)
 
         # [REPORT]
 
@@ -381,6 +389,8 @@ class FaseRunConfig:
     feature_name: str
     output_path: str
     input_path: str
+    bam_ending: str
+    paired_end_reads: bool
     species: str
     genome: str
     n_threads: int
@@ -409,6 +419,9 @@ class FaseRunConfig:
         internal_config: FaseInternalConfig,
         user_config: Union[None, FaseUserConfig]
     ) -> None:
+
+        if not os.path.exists(run_config_path):
+            raise ValueError(f"The specified file does not exist: {run_config_path}")
 
         _e = f"Error while parsing run config at {run_config_path}: "
 
@@ -465,6 +478,18 @@ class FaseRunConfig:
         if len(sample_names) == 0:
             raise ValueError(_e + f"No BAM files with the specified ending ({bam_ending}) were found in the specified "
                                   f"location: {input_path}")
+
+        # Allow this parameter to be set in REPORT section rather than RUN (since it is technically for report only)
+        paired_end_reads = run_config.get(
+            "RUN", "pairedEndReads", fallback=run_config.get(
+                "RUN", "pairedEnd", fallback=run_config.get(
+                    "REPORT", "pairedEndReads", fallback=run_config.get(
+                        "REPORT", "pairedEnd", fallback=internal_config.default_paired_end_reads
+                    )
+                )
+            )
+        )
+        self.paired_end_reads = parse_bool(paired_end_reads)
 
         species = run_config.get("RUN", "species", fallback=None)
         if species is None:

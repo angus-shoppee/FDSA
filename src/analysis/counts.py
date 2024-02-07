@@ -13,6 +13,9 @@ DEFAULT_FEATURE_COUNTS_OUTPUT_GENE_ID_COLUMN_INDEX = 0
 DEFAULT_FEATURE_COUNTS_OUTPUT_LEFTMOST_COUNTS_COLUMN_INDEX = 6
 
 
+# Possible TODO: Move from src/analysis to src/reporting
+
+
 @dataclass
 class FeatureCountsResult:
     """

@@ -257,6 +257,8 @@ def perform_splice_analysis(
     verbose: bool = True,
 ) -> None:
 
+    # TODO: Remove verbose kwarg
+
     if not 0.0 <= overlap_threshold <= 1.0:
         raise ValueError(f"overlap_threshold must be between 0 and 1. Got: {overlap_threshold}")
     if not os.path.isdir(output_dir):

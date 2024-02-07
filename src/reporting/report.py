@@ -79,6 +79,8 @@ def create_report(
     if not os.path.isdir(output_dir_absolute):
         os.makedirs(output_dir_absolute)
 
+    print("DEBUG: Output dir:", output_dir_absolute)
+
     # Load samples
     samples = {}
     for bam_path in bam_file_absolute_paths:
@@ -98,7 +100,8 @@ def create_report(
             run_config.bam_ending,
             run_config.genome,
             gene_counts_path,
-            paired_end_reads=run_config.primary_alignment_only,
+            paired_end_reads=run_config.paired_end_reads,
+            primary_alignment_only=run_config.primary_alignment_only,
             threads=run_config.report_n_threads
         )
         print("... done")
