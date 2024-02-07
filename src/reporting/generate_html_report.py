@@ -4,6 +4,7 @@ import os
 
 from src.reporting.process_results import FaseResult
 from src.reporting.templates.transcript_section import transcript_section, TranscriptSectionRenderInfo
+from src.reporting.templates.table_of_contents import table_of_contents
 
 
 REPORT_TEMPLATE = "templates/main_report.html"
@@ -46,14 +47,24 @@ def generate_html_report(
         for fase_result in fase_results if plots.get(fase_result.transcript_id, None) is not None
     ]
 
-    toc_html = (
-        "<ul>" +
-        "\n".join([
-            f"""<li><a href="#{render_info.section_id}">{render_info.section_title}</a></li>"""
-            for render_info in all_render_info
-        ]) +
-        "/ul"
+    # toc_html = (
+    #     "<ul>" +
+    #     "\n".join([
+    #         f"""<li><a href="#{render_info.section_id}">{render_info.section_title}</a></li>"""
+    #         for render_info in all_render_info
+    #     ]) +
+    #     "/ul"
+    # )
+    toc_html = table_of_contents(
+        [render_info.section_id for render_info in all_render_info],
+        [render_info.section_title for render_info in all_render_info]
+        # *zip(*[
+        #     (render_info.section_id, render_info.section_title)
+        #     for render_info in all_render_info
+        # ])  # Unpacks into two separate lists
     )
+
+    # fase_intro_html =
 
     sections_html = "\n".join(transcript_section(render_info) for render_info in all_render_info)
 

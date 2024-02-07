@@ -237,7 +237,7 @@ def run(
     annotated_transcript_library = load_transcript_library_from_file(annotated_transcript_library_path)
     print("...done\n")
 
-    print(f"Enabling screening for features containing term(s): \"{', '.join(run_config.feature_name)}\"...")
+    print(f"Enabling screening for features containing term: \"{run_config.feature_name}\"...")
 
     set_analysis_features(
         run_config.feature_name,

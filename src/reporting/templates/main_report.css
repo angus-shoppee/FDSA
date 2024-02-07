@@ -71,3 +71,16 @@ hr {
 .section-title-container {
     padding-top: 1rem;
 }
+
+.section-title-container > * {
+    margin: 0;
+    font-size: 3rem;
+}
+
+.transcript-details-container > * {
+    font-size: 1.8rem;
+}
+
+.transcript-details-container li {
+    font-size: 1.5rem;
+}

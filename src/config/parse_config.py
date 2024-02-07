@@ -445,7 +445,7 @@ class FaseRunConfig:
         if input_path is None:
             raise ValueError(_e + f"Missing mandatory parameter \"input\" (path to folder containing BAM files) in "
                                   f"section RUN")
-        if not os.path.isdir(output_path):
+        if not os.path.isdir(input_path):
             raise ValueError(_e + f"The specified input path is invalid: {input_path}")
         self.input_path = input_path
 
@@ -692,6 +692,10 @@ class FaseRunConfig:
         if self.generate_report:
 
             self.check_feature_counts()
+
+            # Enable case-sensitivity for option names in subsequent (SAMPLES, COLORS) sections
+            run_config.optionxform = str
+            run_config.read(run_config_path)
 
             # Auto-generated if required: [SAMPLES]
 

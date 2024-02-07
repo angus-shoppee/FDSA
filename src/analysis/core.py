@@ -291,7 +291,9 @@ def perform_splice_analysis(
 
     skipped_exon_match_failure = 0
 
-    with open(os.path.join(output_dir, f"{name_output_file(run_name, feature_substring)}.csv"), "w") as f:
+    output_file_path = os.path.join(output_dir, f"{name_output_file(run_name, feature_substring)}.csv")
+    print(f"Saving output to {output_file_path}")
+    with open(output_file_path, "w") as f:
 
         sample_names_alphabetical = sorted(samples.keys())
         samples_alphabetical = [samples[sample_name] for sample_name in sample_names_alphabetical]

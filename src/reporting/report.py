@@ -149,9 +149,12 @@ def create_report(
         if run_config.report_max_n_plotted is not None and _current > run_config.report_max_n_plotted:
             break
 
+        # TODO: Fix so that entire line is overwritten
+        _temp_solution_right_spacing = "          "
         print(
             "\x1b[A" + f"Progress: [{_current}/{_total}] {fase_result.gene_name} / {fase_result.transcript_id} " +
-            f"feature {fase_result.feature_number} of {fase_result.total_features_in_transcript}"
+            f"feature {fase_result.feature_number} of {fase_result.total_features_in_transcript}" +
+            _temp_solution_right_spacing
         )
         _current += 1
 

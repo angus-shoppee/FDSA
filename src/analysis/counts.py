@@ -28,6 +28,8 @@ def get_tmm_cpm_from_gene_counts(
     feature_counts_result: FeatureCountsResult
 ) -> pd.DataFrame:
 
+    # TODO: Implement setting NUMEXPR_MAX_THREADS here via optional threads argument
+
     sample_names_ordered = sorted(
         [(i, sample_name) for (sample_name, i) in feature_counts_result.index_by_sample.items()],
         key=lambda x: x[0]
