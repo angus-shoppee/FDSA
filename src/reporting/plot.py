@@ -228,6 +228,9 @@ def plot_transcript(
 
     n_exons = len(fase_result.exon_positions)
 
+    # TODO: Though an extreme edge case in the context of FASE's intended purpose, this logic does not work for
+    #       transcripts consisting of a single exon - should require strandedness as an explicit argument here
+    #       (splice events should not be relevant for these, unless there is intra-exonic splicing)
     forward_stranded = True
     if len(fase_result.exon_positions) > 1:
         if fase_result.exon_positions[0][0] > fase_result.exon_positions[1][0]:
@@ -276,10 +279,24 @@ def plot_transcript(
     )
 
     for exon_number in range(plot_feature_start_exon, plot_feature_end_exon + 1):
+        # draw_rect_start = plotting_exon_positions[exon_number - 1][0] + plot_feature_start_steps \
+        #     if exon_number == plot_feature_start_exon else plotting_exon_positions[exon_number - 1][0]
+        # draw_rect_end = plotting_exon_positions[exon_number - 1][0] + plot_feature_end_steps \
+        #     if exon_number == plot_feature_end_exon else plotting_exon_positions[exon_number - 1][1]
         draw_rect_start = plotting_exon_positions[exon_number - 1][0] + plot_feature_start_steps \
-            if exon_number == plot_feature_start_exon else plotting_exon_positions[exon_number - 1][0]
+            if exon_number == plot_feature_start_exon else \
+            (
+                plotting_exon_positions[exon_number - 1][0]
+                if forward_stranded
+                else plotting_exon_positions[exon_number - 1][1]
+            )
         draw_rect_end = plotting_exon_positions[exon_number - 1][0] + plot_feature_end_steps \
-            if exon_number == plot_feature_end_exon else plotting_exon_positions[exon_number - 1][1]
+            if exon_number == plot_feature_end_exon else \
+            (
+                plotting_exon_positions[exon_number - 1][1]
+                if forward_stranded
+                else plotting_exon_positions[exon_number - 1][0]
+            )
 
         rects.append([
             [(min(draw_rect_start, draw_rect_end), 1), abs(draw_rect_end - draw_rect_start), 1],  # geometry

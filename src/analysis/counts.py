@@ -2,7 +2,7 @@
 # FEATURECOUNTS DISPATCH AND PARSING GENE COUNT DATA
 
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Union
 import os
 import subprocess
 import pandas as pd
@@ -28,10 +28,15 @@ class FeatureCountsResult:
 
 
 def get_tmm_cpm_from_gene_counts(
-    feature_counts_result: FeatureCountsResult
+    feature_counts_result: FeatureCountsResult,
+    threads: Union[None, int] = None
 ) -> pd.DataFrame:
 
     # TODO: Implement setting NUMEXPR_MAX_THREADS here via optional threads argument
+
+    # Set the NUMEXPR_MAX_THREADS environment variable if a value for the threads argument has been set
+    if threads is not None:
+        os.environ["NUMEXPR_MAX_THREADS"] = str(threads)
 
     sample_names_ordered = sorted(
         [(i, sample_name) for (sample_name, i) in feature_counts_result.index_by_sample.items()],
@@ -105,6 +110,8 @@ def run_feature_counts(
     threads: int = 1,
     check_exit_code: bool = True
 ) -> int:
+
+    # Possible TODO: Clean up any tmp files featureCounts leaves behind (seemingly when exited prematurely)
 
     _ending_length = len(bam_ending)
     bam_file_paths = [p for p in os.listdir(bam_files_dir) if p[-_ending_length:] == bam_ending]

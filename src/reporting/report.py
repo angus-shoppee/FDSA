@@ -119,7 +119,10 @@ def create_report(
 
     print("Applying TMM normalization to gene counts...")
 
-    norm_gene_counts = get_tmm_cpm_from_gene_counts(raw_gene_counts)
+    norm_gene_counts = get_tmm_cpm_from_gene_counts(
+        raw_gene_counts,
+        threads=run_config.n_threads
+    )
 
     print("... done")
 
