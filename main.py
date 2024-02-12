@@ -55,6 +55,8 @@ NO_EMAIL_ADDRESS_MESSAGE = ("An email address must be provided in order to make 
 
 # TODO: Investigate ST3GAL5 splice graph showing two discontinuous feature regions and frequency above 100%
 
+# TODO: Allow gene list as either space delimited text input or path to csv file
+
 
 def _confirm_build_overwrite() -> bool:
 

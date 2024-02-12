@@ -79,8 +79,6 @@ def create_report(
     if not os.path.isdir(output_dir_absolute):
         os.makedirs(output_dir_absolute)
 
-    print("DEBUG: Output dir:", output_dir_absolute)
-
     # Load samples
     samples = {}
     for bam_path in bam_file_absolute_paths:
@@ -175,7 +173,8 @@ def create_report(
             ),
             "splice": plot_transcript(
                 fase_result,
-                draw_junctions_with_min_n_occurrences=2,
+                # TODO: Set as parameter in run config REPORT section
+                draw_junctions_with_min_n_occurrences=1,
                 show_main_title=False
             )
         }
@@ -191,9 +190,12 @@ def create_report(
         plots
     )
 
-    with open(os.path.join(
+    output_path = os.path.join(
         output_dir_absolute, f"Report - {name_output_file(run_config.run_name, run_config.feature_name)}.html"
-    ), "w") as output_file:
+    )
+
+    with open(output_path, "w") as output_file:
         output_file.write(report_html)
 
+    print(f"Report written to {output_path}")
     print("...finished")

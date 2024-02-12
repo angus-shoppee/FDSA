@@ -2,7 +2,7 @@
 # FASE CONFIG & CORE FUNCTIONS
 
 from dataclasses import dataclass
-from typing import Tuple, List, Dict, Any, Union
+from typing import Tuple, List, Dict, Union
 from multiprocessing import Pool
 import os
 import csv
@@ -105,13 +105,20 @@ def calculate_percent_occurrence(
     read_loci: List[Tuple[int, int]]
 ) -> float:
 
+    # Account for the case (f_end - f_start < 0) in reverse stranded genes
+    f_lower_bound = min(f_start, f_end)
+    f_upper_bound = max(f_start, f_end)
+
     n_reads_overlapping_feature = 0
 
     for read_start, read_end in read_loci:
         if any([
-            f_start <= read_start <= f_end,  # Read starts within feature
-            f_start <= read_end <= f_end,  # Read ends within feature
-            read_start <= f_start <= read_end and read_start <= f_end <= read_end  # Entire feature is within read
+            f_lower_bound <= read_start <= f_upper_bound,  # Read starts within feature
+            f_lower_bound <= read_end <= f_upper_bound,  # Read ends within feature
+            (
+                read_start <= f_lower_bound <= read_end
+                and read_start <= f_upper_bound <= read_end
+            )  # Entire feature is within read
         ]):
             n_reads_overlapping_feature += 1
 
@@ -344,11 +351,11 @@ def perform_splice_analysis(
 
             # # START DEBUG BLOCK
             # # if transcripts[0].gene_name not in ("Cacna1d", "Cd74", "Gpr6", "Pkd1"):
-            # # if transcripts[0].gene_name not in ("H2-Ab1",):
-            # #     _progress += len(transcripts)
-            # #     continue
-            # if _progress > 1000:
-            #     break
+            # if transcripts[0].gene_name not in ("ST3GAL5",):
+            #     _progress += len(transcripts)
+            #     continue
+            # # if _progress > 1000:
+            # #     break
             # # print("REGION:", f"{transcript.seqname}:{transcript.start}-{transcript.end}")
             # # END OF DEBUG BLOCK
 
