@@ -53,10 +53,6 @@ NO_EMAIL_ADDRESS_MESSAGE = ("An email address must be provided in order to make 
 
 # NOTE: Cd80 does not appear in output but has feature annotation - why?
 
-# TODO: Investigate ST3GAL5 splice graph showing two discontinuous feature regions and frequency above 100%
-
-# TODO: Allow gene list as either space delimited text input or path to csv file
-
 
 def _confirm_build_overwrite() -> bool:
 
@@ -279,6 +275,7 @@ def run(
         run_config.run_name,
         run_config.feature_name,
         run_config.feature_junction_overlap_threshold,
+        run_config.genes,
         samples,
         annotated_transcript_library,
         run_config.output_path,
@@ -293,6 +290,10 @@ def run(
 def report(
     run_config: FaseRunConfig
 ) -> None:
+
+    # TODO: Allow specifying a name under the [REPORT] section to allow the user to easily create multiple reports
+    #       (different parameters etc.) from the same output data without having to manually rename files to prevent
+    #       overwriting - changing run name does not work as the run name is used to load output data
 
     create_report(run_config)
 

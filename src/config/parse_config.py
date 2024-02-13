@@ -1,6 +1,7 @@
 
 from typing import Union, List, Dict, Any
 from functools import reduce
+import csv
 import os
 import configparser
 
@@ -27,6 +28,9 @@ def parse_bool(value: Union[bool, str]) -> bool:
                      f"(not case-sensitive).")
 
 
+# TODO: Refactor names for default report parameters to be consistently named between internal and user config classes
+
+
 class FaseInternalConfig:
     allowed_species: List[str]
     biomart_name_for_species: Dict[str, str]
@@ -41,6 +45,7 @@ class FaseInternalConfig:
     default_include_all_junctions_in_output: bool
     default_paired_end_reads: bool
     default_generate_report: bool
+    default_draw_junctions_min_count: int
     default_point_color_in_plot: str
     default_feature_counts_primary_alignment_only: bool
     # Possible TODO: Generalise default_feature_counts_primary_alignment_only to default_primary_alignment_only
@@ -175,6 +180,13 @@ class FaseInternalConfig:
             default_feature_counts_primary_alignment_only
         )
 
+        default_draw_junctions_min_count = config.get(
+            "REPORT", "defaultDrawJunctionsMinCount", fallback=None
+        )
+        if default_draw_junctions_min_count is None:
+            raise ValueError(_e + f"Missing mandatory parameter \"defaultDrawJunctionsMinCount\" in section REPORT")
+        self.default_draw_junctions_min_count = int(default_draw_junctions_min_count)
+
 
 class FaseUserConfig:
     email: str
@@ -195,6 +207,7 @@ class FaseUserConfig:
     user_default_report_min_total_n_occurrences_across_all_samples: Union[None, int]  # Chef's kiss variable name
     user_default_report_min_n_occurrences_in_sample: Union[None, int]
     user_default_report_occurrences_in_at_least_n_samples: Union[None, int, str]
+    user_default_report_draw_junctions_min_count: Union[None, int]
     # ^ If * is set as the default for this parameter, the final number will be set at runtime when n samples is known
 
     def __init__(
@@ -383,6 +396,17 @@ class FaseUserConfig:
         if self.user_default_report_occurrences_in_at_least_n_samples < 0:
             raise ValueError(_e + f"The parameter occurrencesInAtLeastNSamples cannot be less than zero")
 
+        user_default_report_draw_junctions_min_count = user_config.get(
+            "DEFAULT REPORT", "drawJunctionsMinCount", fallback=user_config.get(
+                "DEFAULT REPORT", "drawJunctionsMinN", fallback=user_config.get(
+                    "DEFAULT REPORT", "drawJunctionsMin", fallback=None
+                )
+            )
+        )
+        self.user_default_report_draw_junctions_min_count = None \
+            if user_default_report_draw_junctions_min_count is None \
+            else int(user_default_report_draw_junctions_min_count)
+
 
 class FaseRunConfig:
     run_name: str
@@ -393,6 +417,7 @@ class FaseRunConfig:
     paired_end_reads: bool
     species: str
     genome: str
+    genes: Union[None, Dict[str, bool]]  # check genes.get(gene_name, False) for speed improvement over list membership
     n_threads: int
     rank_results_by: str
     max_n_features_in_transcript: int
@@ -400,6 +425,7 @@ class FaseRunConfig:
     skip_transcripts_with_redundant_feature_annotation: bool  # overridden by only_use_longest_annotated_transcript=True
     feature_junction_overlap_threshold: float
     generate_report: bool
+    report_name: str
     report_n_threads: int
     report_feature_counts_executable: Union[None, str]
     report_gene_count_matrix: Union[None, str]
@@ -407,6 +433,7 @@ class FaseRunConfig:
     report_min_total_n_occurrences_across_all_samples: int
     report_min_n_occurrences_in_sample: int
     report_occurrences_in_at_least_n_samples: int
+    report_draw_junctions_min_count: int
     primary_alignment_only: bool
     mapq_for_unique_mapping: int
     sample_groups: Union[None, Dict[str, List[str]]]
@@ -436,7 +463,11 @@ class FaseRunConfig:
 
         # [RUN] - Mandatory parameters
 
-        run_name = run_config.get("RUN", "name", fallback=None)
+        run_name = run_config.get(
+            "RUN", "runName", fallback=run_config.get(
+                "RUN", "name", fallback=None
+            )
+        )
         if run_name is None:
             raise ValueError(_e + f"Missing mandatory parameter \"name\" (name for this run) in section RUN")
         self.run_name = run_name
@@ -509,6 +540,32 @@ class FaseRunConfig:
             raise ValueError(_e + f"Missing mandatory parameter \"genome\" (path to reference genome GTF file) in "
                                   f"section RUN")
         self.genome = genome
+
+        genes = run_config.get(
+            "RUN", "geneList", fallback=run_config.get(
+                "RUN", "geneSet", fallback=run_config.get(
+                    "RUN", "genes", fallback=None
+                )
+            )
+        )
+        # If gene names are supplied (either inline or in a single-column, no-header CSV file), map gene name in
+        # lowercase to True in self.genes for fast checking.
+        # No case sensitivity to avoid issues with lack of consistency in capitalisation within names of human
+        # ORF genes, which are often spelled in partial lowercase
+        if genes is None:
+            self.genes = None
+        elif ".csv" in genes.lower():
+            # Handle input given as path to a CSV file
+            if not os.path.exists(genes):
+                raise ValueError(
+                    "A CSV file was specified for the parameter genes in section RUN, but its path is not valid: " +
+                    genes
+                )
+            with open(genes, "r") as gene_set_file:
+                self.genes = {str(row[0]).lower(): True for row in csv.reader(gene_set_file)}
+        else:
+            # Allow inline gene set to be delimited by either spaces or commas
+            self.genes = {gene_name.lower(): True for gene_name in genes.replace(",", " ").split()}
 
         # [RUN] - Optional parameters
 
@@ -603,6 +660,13 @@ class FaseRunConfig:
 
         # Optional section: [REPORT]
 
+        report_name = run_config.get(
+            "REPORT", "reportName", fallback=run_config.get(
+                "REPORT", "name", fallback=self.run_name  # Use run name if no report name specified
+            )
+        )
+        self.report_name = report_name
+
         report_n_threads = run_config.get("REPORT", "threads", fallback=user_config.user_default_report_n_threads)
         self.report_n_threads = report_n_threads
 
@@ -610,8 +674,7 @@ class FaseRunConfig:
             "REPORT", "featureCountsExecutableLocation", fallback=run_config.get(
                 "REPORT", "featureCountsExecutablePath", fallback=run_config.get(
                     "REPORT", "featureCountsExecutable", fallback=run_config.get(
-                        "REPORT", "featureCounts", fallback=
-                        user_config.user_default_report_feature_counts_executable
+                        "REPORT", "featureCounts", fallback=user_config.user_default_report_feature_counts_executable
                     )
                 )
             )
@@ -713,6 +776,19 @@ class FaseRunConfig:
                 int(report_occurrences_in_at_least_n_samples)
         if self.report_occurrences_in_at_least_n_samples < 0:
             raise ValueError(_e + f"The parameter occurrencesInAtLeastNSamples cannot be less than zero")
+
+        report_draw_junctions_min_count = run_config.get(
+            "REPORT", "drawJunctionsMinCount", fallback=run_config.get(
+                "REPORT", "drawJunctionsMinN", fallback=run_config.get(
+                    "REPORT", "drawJunctionsMin", fallback=(
+                        user_config.user_default_report_draw_junctions_min_count
+                        if user_config.user_default_report_draw_junctions_min_count is not None
+                        else internal_config.default_draw_junctions_min_count
+                    )
+                )
+            )
+        )
+        self.report_draw_junctions_min_count = int(report_draw_junctions_min_count)
 
         if self.generate_report:
 

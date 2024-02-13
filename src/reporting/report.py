@@ -174,7 +174,7 @@ def create_report(
             "splice": plot_transcript(
                 fase_result,
                 # TODO: Set as parameter in run config REPORT section
-                draw_junctions_with_min_n_occurrences=1,
+                draw_junctions_with_min_n_occurrences=run_config.report_draw_junctions_min_count,
                 show_main_title=False
             )
         }
@@ -191,7 +191,7 @@ def create_report(
     )
 
     output_path = os.path.join(
-        output_dir_absolute, f"Report - {name_output_file(run_config.run_name, run_config.feature_name)}.html"
+        output_dir_absolute, f"Report - {name_output_file(run_config.report_name, run_config.feature_name)}.html"
     )
 
     with open(output_path, "w") as output_file:

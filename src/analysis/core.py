@@ -251,6 +251,7 @@ def perform_splice_analysis(
     run_name: str,
     feature_substring: str,
     overlap_threshold: float,
+    genes: Union[None, Dict[str, bool]],
     samples: Dict[str, Sample],
     transcript_library: TranscriptLibrary,
     output_dir: str,
@@ -260,8 +261,7 @@ def perform_splice_analysis(
     min_total_n_junctions_to_use_multiprocessing: int = 10_000,
     mapq_for_unique_mapping: int = DEFAULT_MAPQ_FOR_UNIQUE_MAPPING,
     primary_alignment_only: bool = False,
-    include_all_junctions_in_output: bool = True,
-    verbose: bool = True,
+    include_all_junctions_in_output: bool = True
 ) -> None:
 
     # TODO: Remove verbose kwarg
@@ -289,12 +289,14 @@ def perform_splice_analysis(
     #       get_splice_junctions_from_sample --> call get_splice_analysis_result_for_sample for each feature
     #       (will require refactoring get_splice_analysis_result_for_sample to accept junctions rather than sample)
 
-    if verbose:
-        if max_n_features_in_transcript:
-            print(
-                f"Limiting analysis to transcripts containing up to {max_n_features_in_transcript} of the same "
-                f"feature of interest\n"
-            )
+    if genes is not None:
+        print(f"Using provided gene set of {len(genes)} gene names\n")
+
+    if max_n_features_in_transcript:
+        print(
+            f"Limiting analysis to transcripts containing up to {max_n_features_in_transcript} of the same "
+            f"feature of interest\n"
+        )
 
     print(f"Performing splice analysis for term \"{feature_substring}\"...")
 
@@ -302,6 +304,8 @@ def perform_splice_analysis(
 
     output_file_path = os.path.join(output_dir, f"{name_output_file(run_name, feature_substring)}.csv")
     print(f"Saving output to {output_file_path}")
+    print()  # Print blank line to be consumed by first one-line-up ansi code
+
     with open(output_file_path, "w") as f:
 
         sample_names_alphabetical = sorted(samples.keys())
@@ -338,11 +342,20 @@ def perform_splice_analysis(
 
             transcripts = list(transcripts_by_id.values())
 
-            if verbose:
-                for _progress_plus_i in [_progress + i for i in range(len(transcripts))]:
-                    if _progress_plus_i % 1000 == 0:
-                        print(f"Progress: {_progress_plus_i}/{transcript_library.number_of_transcripts}")
+            for _progress_plus_i in [_progress + i for i in range(len(transcripts))]:
+                if _progress_plus_i % 1000 == 0:
+                    print(
+                        "\x1b[A" +
+                        f"Progress: {int(100 * _progress_plus_i / transcript_library.number_of_transcripts)}%"
+                    )
 
+            # Skip if gene set is defined and gene name is not in gene set
+            if genes is not None:
+                if not genes.get(transcripts[0].gene_name.lower(), False):
+                    _progress += len(transcripts)
+                    continue
+
+            # Skip if no relevant feature annotation is present
             if not any(
                 [feature_substring in transcript.gbseq.get_analysis_features().keys() for transcript in transcripts]
             ):
@@ -577,6 +590,8 @@ def perform_splice_analysis(
                         )
 
                 _progress += 1
+
+    print("\x1b[A" + "Progress: 100%")
 
     _analysis_finish_ms = time.time_ns() / 1_000_000
     _analysis_runtime_minutes = (_analysis_finish_ms - _analysis_start_ms) / (1000 * 60)
