@@ -343,7 +343,7 @@ def perform_splice_analysis(
             transcripts = list(transcripts_by_id.values())
 
             for _progress_plus_i in [_progress + i for i in range(len(transcripts))]:
-                if _progress_plus_i % 1000 == 0:
+                if _progress_plus_i % 100 == 0:
                     print(
                         "\x1b[A" +
                         f"Progress: {int(100 * _progress_plus_i / transcript_library.number_of_transcripts)}%"

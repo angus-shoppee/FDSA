@@ -25,7 +25,7 @@ def generate_html_report(
 
     all_render_info = [
         TranscriptSectionRenderInfo(
-            section_id=f"transcript-{fase_result.transcript_id}",
+            section_id=f"transcript-{fase_result.transcript_id}-{fase_result.feature_number}",
             section_title=f"{fase_result.gene_name} " +
                           f"({fase_result.feature_number} of {fase_result.total_features_in_transcript})",
             gene_name=fase_result.gene_name,
@@ -34,10 +34,16 @@ def generate_html_report(
             feature_name=feature_name,
             feature_no=fase_result.feature_number,
             n_features=fase_result.total_features_in_transcript,
-            expression_plot_uri=svg_scheme+plots[fase_result.transcript_id]["expression"],
-            splice_plot_uri=svg_scheme+plots[fase_result.transcript_id]["splice"]
+            expression_plot_uri=svg_scheme+plots[
+                f"{fase_result.transcript_id}-{fase_result.feature_number}"
+            ]["expression"],
+            splice_plot_uri=svg_scheme+plots[
+                f"{fase_result.transcript_id}-{fase_result.feature_number}"
+            ]["splice"]
         )
-        for fase_result in fase_results if plots.get(fase_result.transcript_id, None) is not None
+        for fase_result in fase_results if plots.get(
+            f"{fase_result.transcript_id}-{fase_result.feature_number}", None
+        ) is not None
     ]
 
     toc_html = table_of_contents(

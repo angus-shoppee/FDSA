@@ -193,7 +193,7 @@ def create_report(
         )
         _current += 1
 
-        plots[fase_result.transcript_id] = {
+        plots[f"{fase_result.transcript_id}-{fase_result.feature_number}"] = {
             "expression": plot_splice_rate(
                 fase_result,
                 norm_gene_counts,
