@@ -291,10 +291,6 @@ def report(
     run_config: FaseRunConfig
 ) -> None:
 
-    # TODO: Allow specifying a name under the [REPORT] section to allow the user to easily create multiple reports
-    #       (different parameters etc.) from the same output data without having to manually rename files to prevent
-    #       overwriting - changing run name does not work as the run name is used to load output data
-
     create_report(run_config)
 
 
@@ -435,13 +431,15 @@ def main() -> None:
                 internal_config,
                 user_config,
                 force_redo_annotate_transcript_library=build_args.redo_annotation,
-                force_regenerate_whole_genome_lookup= build_args.regenerate_lookup,
+                force_regenerate_whole_genome_lookup=build_args.regenerate_lookup,
                 force_regenerate_transcript_library=build_args.regenerate_transcripts,
                 force_regenerate_genbank_features=build_args.regenerate_features,
                 restart_partial_download=build_args.regenerate_partial_features_download
             )
 
         elif mode_arg.mode in ("run", "report"):
+
+            # TODO: Implement --no-report flag
 
             generate_report = False
 

@@ -2,7 +2,7 @@
 # TRANSCRIPT DATA STRUCTURES & ASSOCIATED FUNCTIONS
 
 from dataclasses import dataclass
-from typing import List, Dict, Union, Any
+from typing import List, Dict, Union
 from pandas import DataFrame
 import os
 import pickle

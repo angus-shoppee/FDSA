@@ -363,7 +363,6 @@ def perform_splice_analysis(
                 continue
 
             # # START DEBUG BLOCK
-            # # if transcripts[0].gene_name not in ("Cacna1d", "Cd74", "Gpr6", "Pkd1"):
             # if transcripts[0].gene_name not in ("ST3GAL5",):
             #     _progress += len(transcripts)
             #     continue

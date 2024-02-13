@@ -436,9 +436,9 @@ class FaseRunConfig:
     report_draw_junctions_min_count: int
     primary_alignment_only: bool
     mapq_for_unique_mapping: int
-    sample_groups: Union[None, Dict[str, List[str]]]
-    group_name_by_sample_name: Union[None, Dict[str, str]]  # Interpolated, not defined by the user
-    color_by_group_name: Union[None, Dict[str, str]]
+    sample_groups: Dict[str, List[str]]
+    group_name_by_sample_name: Dict[str, str]  # Interpolated, not defined by the user
+    color_by_group_name: Dict[str, str]
 
     def __init__(
         self,
@@ -790,68 +790,68 @@ class FaseRunConfig:
         )
         self.report_draw_junctions_min_count = int(report_draw_junctions_min_count)
 
-        if self.generate_report:
+        # if self.generate_report:
 
-            self.check_feature_counts()
+        self.check_feature_counts()
 
-            # Enable case-sensitivity for option names in subsequent (SAMPLES, COLORS) sections
-            run_config.optionxform = str
-            run_config.read(run_config_path)
+        # Enable case-sensitivity for option names in subsequent (SAMPLES, COLORS) sections
+        run_config.optionxform = str
+        run_config.read(run_config_path)
 
-            # Auto-generated if required: [SAMPLES]
+        # Auto-generated if required: [SAMPLES]
 
-            if "SAMPLES" in run_config:
-                sample_groups = {
-                    key: value.split(" ")
-                    for key, value in run_config.items("SAMPLES") if value
-                }
-                _flattened_sample_groups_values = flatten_nested_lists(list(sample_groups.values()))
-                if not all([
-                    sample_name in sample_names
-                    for sample_name in _flattened_sample_groups_values
-                ]):
-                    raise ValueError(_e + "Sample names in run config do not match sample names parsed from BAM files")
-                if not all([
-                    sample_name in _flattened_sample_groups_values
-                    for sample_name in sample_names
-                ]):
-                    raise ValueError(_e + f"Sample names parsed from BAM files are not all present in the SAMPLES "
-                                          f"section of run config. Each sample name must be assigned to a group.")
-            else:
-                sample_groups = {"all": sample_names}
-            self.sample_groups = sample_groups
-
-            group_name_by_sample_name = {}
-            for group_name, sample_names in sample_groups.items():
-                for sample_name in sample_names:
-                    group_name_by_sample_name[sample_name] = group_name
-            self.group_name_by_sample_name = group_name_by_sample_name
-
-            # Auto-generated if required: [COLORS]
-
-            # Allow "COLOURS" as alternative spelling
-            if "COLOURS" in run_config:
-                colors_alt_spelling_section_contents = run_config.items("COLOURS")
-                run_config.add_section("COLORS")
-                for key, value in colors_alt_spelling_section_contents:
-                    run_config.set("COLORS", key, value)
-                run_config.remove_section("COLOURS")
-
-            # Use defined values if both COLORS and SAMPLES sections are present, otherwise auto-generate
-            if "COLORS" in run_config and "SAMPLES" in run_config:
-                color_by_group_name = dict(run_config.items("COLORS"))
-            else:
-                color_by_group_name = {
-                    group_name: internal_config.default_point_color_in_plot
-                    for group_name in sample_groups.keys()
-                }
-            self.color_by_group_name = color_by_group_name
-
+        if "SAMPLES" in run_config:
+            sample_groups = {
+                key: value.split(" ")
+                for key, value in run_config.items("SAMPLES") if value
+            }
+            _flattened_sample_groups_values = flatten_nested_lists(list(sample_groups.values()))
+            if not all([
+                sample_name in sample_names
+                for sample_name in _flattened_sample_groups_values
+            ]):
+                raise ValueError(_e + "Sample names in run config do not match sample names parsed from BAM files")
+            if not all([
+                sample_name in _flattened_sample_groups_values
+                for sample_name in sample_names
+            ]):
+                raise ValueError(_e + f"Sample names parsed from BAM files are not all present in the SAMPLES "
+                                      f"section of run config. Each sample name must be assigned to a group.")
         else:
+            sample_groups = {"All": sample_names}
+        self.sample_groups = sample_groups
 
-            self.sample_groups = None
-            self.group_name_by_sample_name = None
-            self.color_by_group_name = None
+        group_name_by_sample_name = {}
+        for group_name, sample_names in sample_groups.items():
+            for sample_name in sample_names:
+                group_name_by_sample_name[sample_name] = group_name
+        self.group_name_by_sample_name = group_name_by_sample_name
+
+        # Auto-generated if required: [COLORS]
+
+        # Allow "COLOURS" as alternative spelling
+        if "COLOURS" in run_config:
+            colors_alt_spelling_section_contents = run_config.items("COLOURS")
+            run_config.add_section("COLORS")
+            for key, value in colors_alt_spelling_section_contents:
+                run_config.set("COLORS", key, value)
+            run_config.remove_section("COLOURS")
+
+        # Use defined values if both COLORS and SAMPLES sections are present, otherwise auto-generate
+        if "COLORS" in run_config and "SAMPLES" in run_config:
+            color_by_group_name = dict(run_config.items("COLORS"))
+        else:
+            color_by_group_name = {
+                group_name: internal_config.default_point_color_in_plot
+                for group_name in sample_groups.keys()
+            }
+        self.color_by_group_name = color_by_group_name
+
+        # else:
+        #
+        #     self.sample_groups = None
+        #     self.group_name_by_sample_name = None
+        #     self.color_by_group_name = None
 
     def check_feature_counts(self) -> None:
 

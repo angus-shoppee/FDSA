@@ -213,8 +213,10 @@ def convert_fase_results_df_to_objects(fase_results_df: pd.DataFrame) -> List[Fa
     return [
         FaseResult(
             *[row[col_i] for col_i in range(len(_zipped_info_columns[0]))],
-            {_frequency_column_names[freq_i].replace(FASE_RESULT_FREQUENCY_COLUMN_PREFIX, ""): frequency
-             for freq_i, frequency in enumerate(_zipped_frequency_columns[row_i])}
+            {
+                _frequency_column_names[freq_i].replace(FASE_RESULT_FREQUENCY_COLUMN_PREFIX, ""): frequency
+                for freq_i, frequency in enumerate(_zipped_frequency_columns[row_i])
+            }
         ) for row_i, row in enumerate(_zipped_info_columns)
     ]
 

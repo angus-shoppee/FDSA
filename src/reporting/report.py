@@ -104,7 +104,7 @@ def create_report(
         )
         print("... done")
     else:
-        print("An existing gene count matrix has been supplied.")
+        print("An existing gene count matrix has been supplied.\n")
 
     print("Reading gene counts...")
 
