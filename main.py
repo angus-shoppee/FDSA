@@ -25,7 +25,7 @@ PROGRAM_DESCRIPTION = "Feature-directed Analysis of Splice Events (FASE)"
 FASE_BUILD_COMMAND_USAGE = ("fase build RUN_CONFIG_PATH (or) "
                             "fase build --species SPECIES_NAME --genome REFERENCE_GENOME_GTF_PATH")
 
-FASE_RUN_COMMAND_USAGE = "fase run [-r/--report] RUN_CONFIG_PATH"
+FASE_RUN_COMMAND_USAGE = "fase run [--report] [--no-report] RUN_CONFIG_PATH"
 
 FASE_REPORT_COMMAND_USAGE = "fase report RUN_CONFIG_PATH"
 
@@ -486,6 +486,10 @@ def main() -> None:
                 # Enable report generation if specified in config file and not via command line flag
                 if run_config.generate_report:
                     generate_report = True
+
+                # The --no-report flag will override behaviour specified elsewhere
+                if args.no_report:
+                    generate_report = False
 
                 species_specific_data_dir = os.path.join(base_dir, "data", run_config.species)
 

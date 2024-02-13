@@ -595,7 +595,7 @@ def perform_splice_analysis(
     _analysis_finish_ms = time.time_ns() / 1_000_000
     _analysis_runtime_minutes = (_analysis_finish_ms - _analysis_start_ms) / (1000 * 60)
 
-    print(f"TIME: Completed in {_analysis_runtime_minutes} minutes")
+    print(f"TIME: Completed in {round(_analysis_runtime_minutes, 2)} minutes")
 
     print(
         f"...finished ({skipped_exon_match_failure} features skipped either due to failed matching between "

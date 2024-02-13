@@ -123,10 +123,14 @@ def get_run_parser() -> ArgumentParser:
         )
     )
     run_parser.add_argument(
-        "-r",
         "--report",
         action="store_true",
         help="Generates a visual report for the output of FASE's analysis upon completion."
+    )
+    run_parser.add_argument(
+        "--no-report",
+        action="store_true",
+        help="Disables automatic report generation, overriding default behaviour and behaviour set in run config."
     )
 
     return run_parser
