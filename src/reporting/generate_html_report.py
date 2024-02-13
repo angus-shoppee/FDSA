@@ -12,6 +12,8 @@ REPORT_CSS = "templates/main_report.css"
 
 SVG_SCHEME = "data:image/svg+xml;base64,"
 
+JUMP_TO_RESULTS_TABLE_ID = "results_table_container"
+
 
 def generate_html_report(
     run_name: str,
@@ -39,6 +41,7 @@ def generate_html_report(
     ]
 
     toc_html = table_of_contents(
+        JUMP_TO_RESULTS_TABLE_ID,
         [render_info.section_id for render_info in all_render_info],
         [render_info.section_title for render_info in all_render_info]
     )

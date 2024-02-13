@@ -45,6 +45,7 @@ class FaseInternalConfig:
     default_include_all_junctions_in_output: bool
     default_paired_end_reads: bool
     default_generate_report: bool
+    default_save_normalized_gene_counts: bool
     default_draw_junctions_min_count: int
     default_point_color_in_plot: str
     default_feature_counts_primary_alignment_only: bool
@@ -163,6 +164,13 @@ class FaseInternalConfig:
             raise ValueError(_e + f"Missing mandatory parameter \"defaultGenerateReport\" in section REPORT")
         self.default_generate_report = parse_bool(default_generate_report)
 
+        default_save_normalized_gene_counts = config.get(
+            "REPORT", "defaultSaveNormalizedGeneCounts", fallback=None
+        )
+        if default_save_normalized_gene_counts is None:
+            raise ValueError(_e + f"Missing mandatory parameter \"defaultSaveNormalizedGeneCounts\" in section REPORT")
+        self.default_save_normalized_gene_counts = parse_bool(default_save_normalized_gene_counts)
+
         default_point_color_in_plot = config.get(
             "REPORT", "defaultPointColorInPlot", fallback=True
         )
@@ -201,6 +209,7 @@ class FaseUserConfig:
     user_default_mapq_for_unique_mapping: Union[None, int]
     user_default_include_all_junctions_in_output: Union[None, bool]
     user_default_report_feature_counts_executable: Union[None, str]
+    user_default_report_save_normalized_gene_counts: Union[None, bool]
     user_default_report_n_threads = Union[None, int]
     user_default_report_rank_results_by: Union[None, str]
     user_default_report_max_n_plotted: Union[None, int]
@@ -316,6 +325,15 @@ class FaseUserConfig:
         )
         self.user_default_report_feature_counts_executable = user_default_report_feature_counts_executable
 
+        user_default_report_save_normalized_gene_counts = user_config.get(
+            "DEFAULT REPORT", "saveNormalizedGeneCounts", fallback=user_config.get(
+                "DEFAULT REPORT", "saveNormGeneCounts", fallback=None
+            )
+        )
+        self.user_default_report_save_normalized_gene_counts = None \
+            if user_default_report_save_normalized_gene_counts is None \
+            else parse_bool(user_default_report_save_normalized_gene_counts)
+
         user_default_report_n_threads = user_config.get(
             "DEFAULT REPORT", "threads", fallback=self.user_default_n_threads
         )
@@ -428,6 +446,7 @@ class FaseRunConfig:
     report_name: str
     report_n_threads: int
     report_feature_counts_executable: Union[None, str]
+    report_save_normalized_gene_counts: bool
     report_gene_count_matrix: Union[None, str]
     report_max_n_plotted: Union[None, int]
     report_min_total_n_occurrences_across_all_samples: int
@@ -681,6 +700,17 @@ class FaseRunConfig:
         )
         self.report_feature_counts_executable = report_feature_counts_executable
 
+        report_save_normalized_gene_counts = run_config.get(
+            "REPORT", "saveNormalizedGeneCounts", fallback=run_config.get(
+                "REPORT", "saveNormGeneCounts", fallback=(
+                    user_config.user_default_report_save_normalized_gene_counts
+                    if user_config.user_default_report_save_normalized_gene_counts is not None
+                    else internal_config.default_save_normalized_gene_counts
+                )
+            )
+        )
+        self.report_save_normalized_gene_counts = parse_bool(report_save_normalized_gene_counts)
+
         report_gene_count_matrix = run_config.get(
             "REPORT", "featureCountsOutput", fallback=run_config.get(
                 "REPORT", "geneCountsMatrix", fallback=run_config.get(
@@ -864,21 +894,3 @@ class FaseRunConfig:
                              f"If the geneCounts parameter is not set in the REPORT section of run config "
                              f"file, then the featureCountsExecutable parameter must be set either in the "
                              f"REPORT section of run config, or in the DEFAULT REPORT section of user config.")
-
-
-# TODO: REMOVE
-# FOR TESTING - run as standalone
-if __name__ == "__main__":
-
-    internal_config_relative_path = "internal.config"
-    user_config_absolute_path = "/Users/aasho2/Projects/FASE_V1/fase_user.config"
-
-    frc = FaseRunConfig(
-        "/Users/aasho2/Projects/FASE_V1/fase_run.config",
-        FaseInternalConfig(
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), internal_config_relative_path)
-        ),
-        FaseUserConfig(user_config_absolute_path)
-    )
-
-    print("\n".join([f"{a}: {type(getattr(frc, a))} {getattr(frc, a)}" for a in dir(frc) if a[:2] != "__"]))

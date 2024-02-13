@@ -4,6 +4,7 @@
 
 from typing import List, Dict, Any
 import os
+from pandas import read_csv as pd_read_csv
 from functools import reduce
 
 from src.config.parse_config import FaseRunConfig
@@ -13,6 +14,10 @@ from src.analysis.counts import run_feature_counts, get_gene_counts_from_tsv, ge
 from src.reporting.process_results import load_fase_results
 from src.reporting.plot import plot_transcript, plot_splice_rate
 from src.reporting.generate_html_report import generate_html_report
+
+
+GENE_COUNTS_DEFAULT_FILE_NAME = "gene_counts.tsv"
+TMM_NORM_GENE_COUNTS_DEFAULT_FILE_NAME = "tmm_norm_gene_counts.tsv"
 
 
 def _check_inputs_are_valid(
@@ -88,7 +93,7 @@ def create_report(
     # Get TMM CPM
     gene_counts_path = run_config.report_gene_count_matrix \
         if run_config.report_gene_count_matrix is not None \
-        else os.path.join(output_dir_absolute, "gene_counts.tsv")
+        else os.path.join(output_dir_absolute, GENE_COUNTS_DEFAULT_FILE_NAME)
 
     if not os.path.exists(gene_counts_path):
         print("Running feature counts...")
@@ -106,23 +111,49 @@ def create_report(
     else:
         print("An existing gene count matrix has been supplied.\n")
 
-    print("Reading gene counts...")
+    tmm_norm_gene_counts_path = os.path.join(output_dir_absolute, TMM_NORM_GENE_COUNTS_DEFAULT_FILE_NAME)
 
-    raw_gene_counts = get_gene_counts_from_tsv(
-        gene_counts_path,
-        bam_ending=run_config.bam_ending
-    )
+    # Load TMM norm counts if saved, otherwise read raw counts and perform normalization
+    if os.path.isfile(tmm_norm_gene_counts_path):
 
-    print("... done")
+        print("Reading TMM normalized gene counts...")
 
-    print("Applying TMM normalization to gene counts...")
+        norm_gene_counts = pd_read_csv(
+            tmm_norm_gene_counts_path,
+            sep="\t"
+        )
+        norm_gene_counts.set_index("Geneid", inplace=True)
 
-    norm_gene_counts = get_tmm_cpm_from_gene_counts(
-        raw_gene_counts,
-        threads=run_config.n_threads
-    )
+        print("...done")
 
-    print("... done")
+    else:
+
+        print("Reading gene counts...")
+
+        raw_gene_counts = get_gene_counts_from_tsv(
+            gene_counts_path,
+            bam_ending=run_config.bam_ending
+        )
+
+        print("... done")
+
+        print("Applying TMM normalization to gene counts...")
+
+        norm_gene_counts = get_tmm_cpm_from_gene_counts(
+            raw_gene_counts,
+            threads=run_config.n_threads
+        )
+
+        # Write TMM norm CPM to file if specified to do so in config
+        if run_config.report_save_normalized_gene_counts:
+            norm_gene_counts["Geneid"] = norm_gene_counts.index
+            norm_gene_counts.to_csv(
+                tmm_norm_gene_counts_path,
+                sep="\t",
+                index=False
+            )
+
+        print("... done")
 
     # ---------------------------------------------------------------------------------------------------------------- #
 

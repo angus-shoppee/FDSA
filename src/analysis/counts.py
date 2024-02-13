@@ -15,6 +15,8 @@ DEFAULT_FEATURE_COUNTS_OUTPUT_LEFTMOST_COUNTS_COLUMN_INDEX = 6
 
 # Possible TODO: Move from src/analysis to src/reporting
 
+# TODO: Remove the FeatureCountsResult class and use pd.DataFrame as FeatureCountsResult is now only an intermediary
+
 
 @dataclass
 class FeatureCountsResult:
@@ -29,7 +31,7 @@ class FeatureCountsResult:
 
 def get_tmm_cpm_from_gene_counts(
     feature_counts_result: FeatureCountsResult,
-    threads: Union[None, int] = None
+    threads: Union[None, int] = None,
 ) -> pd.DataFrame:
 
     # TODO: Implement setting NUMEXPR_MAX_THREADS here via optional threads argument
@@ -55,7 +57,6 @@ def get_tmm_cpm_from_gene_counts(
     )
 
     norm_factors = conorm.tmm_norm_factors(counts)
-
     tmm_cpm = conorm.cpm(counts, norm_factors=norm_factors)
 
     return tmm_cpm
