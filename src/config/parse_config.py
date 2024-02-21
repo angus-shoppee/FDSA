@@ -858,7 +858,7 @@ class FaseRunConfig:
         if "SAMPLES" in run_config:
             _non_redundant_keys = _remove_lowercase_duplicates(run_config.options("SAMPLES"))
             sample_groups = {
-                key: value.split(" ")
+                key: [s.strip() for s in value.split(",")]
                 for key, value in run_config.items("SAMPLES") if all([
                     value,
                     key in _non_redundant_keys
@@ -869,13 +869,18 @@ class FaseRunConfig:
                 sample_name in sample_names
                 for sample_name in _flattened_sample_groups_values
             ]):
-                raise ValueError(_e + "Sample names in run config do not match sample names parsed from BAM files")
+                raise ValueError(_e + f"Sample names in run config do not match sample names parsed from BAM files.\n\n"
+                                      f"Sample names parsed from config file: {_flattened_sample_groups_values}\n"
+                                      f"Sample names parsed from BAM files: {sample_names}")
             if not all([
                 sample_name in _flattened_sample_groups_values
                 for sample_name in sample_names
             ]):
                 raise ValueError(_e + f"Sample names parsed from BAM files are not all present in the SAMPLES "
-                                      f"section of run config. Each sample name must be assigned to a group.")
+                                      f"section of run config. Each sample name must be assigned to a group.\n\n"
+                                      f"Sample names parsed from config file: {_flattened_sample_groups_values}\n"
+                                      f"Sample names parsed from BAM files: {sample_names}"
+                                 )
         else:
             sample_groups = {"All": sample_names}
         self.sample_groups = sample_groups
