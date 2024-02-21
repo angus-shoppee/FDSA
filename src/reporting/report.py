@@ -158,10 +158,14 @@ def create_report(
     # ---------------------------------------------------------------------------------------------------------------- #
 
     # Load FASE results
+    # TODO: Implement force_include_gene_names as an argument here
     fase_results = load_fase_results(
         fase_results_path,
         samples,
-        rank_by=run_config.rank_results_by
+        rank_by=run_config.rank_results_by,
+        min_total_number_occurrences_across_all_samples=run_config.report_min_total_n_occurrences_across_all_samples,
+        min_per_sample_occurrences_number_occurrences=run_config.report_min_n_occurrences_in_sample,
+        min_per_sample_occurrences_in_at_least_n_samples=run_config.report_occurrences_in_at_least_n_samples,
         # min_total_number_occurrences_across_all_samples=999999,
         #     force_include_gene_names = ["Clec9a"]
         #     force_include_gene_names = ["H2-Q7"]
