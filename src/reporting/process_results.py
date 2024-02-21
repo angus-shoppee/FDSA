@@ -257,13 +257,27 @@ def parse_junction_locus_by_id_from_string(
     return junction_locus_by_id
 
 
+def _get_sample_name_and_junction_string(s: str) -> Tuple[str, str]:
+
+    components = [component.strip() for component in s.split(":")]
+    components_length = len(components)
+
+    if components_length > 2 or components_length < 1:
+        raise ValueError(f"Failed to process junction string: {s}")
+
+    junction_string = "" if components_length == 1 else components[1]
+
+    return components[0], junction_string
+
+
 def parse_junctions_from_string(
     junction_dump_string: str,
     junction_locus_by_id: Dict[str, str]
 ) -> Dict[str, List[QuantifiedSpliceJunctionLocus]]:
-    junction_string_by_sample_name = {components[0]: components[1] for components in [
-        s.split(": ") for s in junction_dump_string.split(" | ")
-    ] if len(components) == 2}
+
+    junction_string_by_sample_name = {sample_name: junction_string for sample_name, junction_string in [
+        _get_sample_name_and_junction_string(s) for s in junction_dump_string.split(" | ")
+    ]}
 
     junctions_by_sample_name = {sample_name: [] for sample_name in junction_string_by_sample_name.keys()}
     for sample_name, junction_string in junction_string_by_sample_name.items():

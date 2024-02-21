@@ -171,6 +171,8 @@ def create_report(
         # force_include_gene_names=["Tnfrsf9", "Cd69"]
         #     force_include_gene_names = ["Pdcd1", "Cd274", "Pdcd1lg2"]
     )
+    # for fase_result in fase_results:
+    #     print("[DEBUG]", len(fase_result.all.keys()), len(fase_result.overlapping.keys()))
 
     print("Generating figures for report...")
 
@@ -225,8 +227,9 @@ def create_report(
     print("Generating report...")
 
     report_html = generate_html_report(
-        run_config.run_name,
-        run_config.feature_name,
+        # run_config.run_name,
+        # run_config.feature_name,
+        run_config,
         fase_results,
         plots
     )
