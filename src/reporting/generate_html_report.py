@@ -1,5 +1,5 @@
 
-from typing import List, Dict
+from typing import List, Dict, Union
 import os
 
 from src.reporting.process_results import FaseResult
@@ -15,6 +15,19 @@ SVG_SCHEME = "data:image/svg+xml;base64,"
 JUMP_TO_RESULTS_TABLE_ID = "results_table_container"
 
 
+def _get_results_row(fase_result: FaseResult) -> List[Union[str, int, float]]:
+
+    numbers = [
+        sum([junction.n for junction in junctions])
+        for junctions in fase_result.overlapping.values()
+    ]
+    frequencies = list(fase_result.frequencies.values())
+
+    return [
+        fase_result.gene_name, fase_result.feature_number, fase_result.total_features_in_transcript
+    ] + numbers + frequencies
+
+
 def generate_html_report(
     run_name: str,
     feature_name: str,
@@ -23,7 +36,21 @@ def generate_html_report(
     svg_scheme: str = SVG_SCHEME
 ) -> str:
 
-    all_render_info = [
+    results_table_header = [
+        "Gene name", "Feature #", "Total features"
+    ] + list(fase_results[0].overlapping.keys()) + [
+        f"% {sample_name}"
+        for sample_name in fase_results[0].frequencies.keys()
+    ]
+    results_table_data = [
+        _get_results_row(fase_result)
+        for fase_result in fase_results
+    ]
+
+    print(results_table_header)
+    print(results_table_data)
+
+    all_section_render_info = [
         TranscriptSectionRenderInfo(
             section_id=f"transcript-{fase_result.transcript_id}-{fase_result.feature_number}",
             section_title=f"{fase_result.gene_name} " +
@@ -48,11 +75,11 @@ def generate_html_report(
 
     toc_html = table_of_contents(
         JUMP_TO_RESULTS_TABLE_ID,
-        [render_info.section_id for render_info in all_render_info],
-        [render_info.section_title for render_info in all_render_info]
+        [render_info.section_id for render_info in all_section_render_info],
+        [render_info.section_title for render_info in all_section_render_info]
     )
 
-    sections_html = "\n".join(transcript_section(render_info) for render_info in all_render_info)
+    sections_html = "\n".join(transcript_section(render_info) for render_info in all_section_render_info)
 
     with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), REPORT_TEMPLATE), "r") as f:
         template = f.read()

@@ -193,6 +193,15 @@ def create_report(
         )
         _current += 1
 
+        if run_config.report_transcript_plot_max_samples_per_group is not None:
+            limit_transcript_plots_to_samples = flatten_nested_lists([
+                sample_names[:run_config.report_transcript_plot_max_samples_per_group]  # Slice each group to max n
+                # sample_names
+                for sample_names in run_config.sample_groups.values()
+            ])
+        else:
+            limit_transcript_plots_to_samples = None
+
         plots[f"{fase_result.transcript_id}-{fase_result.feature_number}"] = {
             "expression": plot_splice_rate(
                 fase_result,
@@ -206,7 +215,8 @@ def create_report(
                 fase_result,
                 # TODO: Set as parameter in run config REPORT section
                 draw_junctions_with_min_n_occurrences=run_config.report_draw_junctions_min_count,
-                show_main_title=False
+                show_main_title=False,
+                limit_to_samples=limit_transcript_plots_to_samples
             )
         }
 

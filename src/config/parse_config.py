@@ -9,6 +9,21 @@ import configparser
 RANK_RESULTS_BY_ALLOWED_VALUES = ["frequency", "number"]
 
 
+def _remove_lowercase_duplicates(values: List[str]) -> List[str]:
+
+    # Ugly function to help bypass configparser duplicating options and their corresponding values when case
+    # Sensitivity is disabled (desired behaviour here is to retain only the mixed case option if applicable)
+
+    all_lowercase = [value for value in values if value == value.lower()]
+    lowercase_with_pair = [lowercase_value for lowercase_value in all_lowercase if len([
+        value for value in values if value.lower() == lowercase_value
+    ]) > 1]
+    modified_values = values.copy()
+    for value in lowercase_with_pair:
+        modified_values.remove(value)
+    return modified_values
+
+
 def flatten_nested_lists(nested_lists: List[List[Any]]) -> List[Any]:
     return reduce(lambda a, b: a + b, nested_lists)
 
@@ -453,6 +468,7 @@ class FaseRunConfig:
     report_min_n_occurrences_in_sample: int
     report_occurrences_in_at_least_n_samples: int
     report_draw_junctions_min_count: int
+    report_transcript_plot_max_samples_per_group: Union[None, int]
     primary_alignment_only: bool
     mapq_for_unique_mapping: int
     sample_groups: Dict[str, List[str]]
@@ -820,8 +836,17 @@ class FaseRunConfig:
         )
         self.report_draw_junctions_min_count = int(report_draw_junctions_min_count)
 
-        # if self.generate_report:
+        report_transcript_plot_max_samples_per_group = run_config.get(
+            "REPORT", "transcriptPlotMaxNSamplesPerGroup", fallback=run_config.get(
+                "REPORT", "transcriptPlotMaxSamplesPerGroup", fallback=None
+            )
+        )
+        if report_transcript_plot_max_samples_per_group in (None, "*", "ALL", "All", "all"):
+            self.report_transcript_plot_max_samples_per_group = None
+        else:
+            self.report_transcript_plot_max_samples_per_group = int(report_transcript_plot_max_samples_per_group)
 
+        # Ensure valid parameters are set to enable featureCounts to run if report is enabled
         self.check_feature_counts()
 
         # Enable case-sensitivity for option names in subsequent (SAMPLES, COLORS) sections
@@ -831,9 +856,13 @@ class FaseRunConfig:
         # Auto-generated if required: [SAMPLES]
 
         if "SAMPLES" in run_config:
+            _non_redundant_keys = _remove_lowercase_duplicates(run_config.options("SAMPLES"))
             sample_groups = {
                 key: value.split(" ")
-                for key, value in run_config.items("SAMPLES") if value
+                for key, value in run_config.items("SAMPLES") if all([
+                    value,
+                    key in _non_redundant_keys
+                ])
             }
             _flattened_sample_groups_values = flatten_nested_lists(list(sample_groups.values()))
             if not all([

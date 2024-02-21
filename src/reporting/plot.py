@@ -222,9 +222,13 @@ class PlotJunction:
 def plot_transcript(
     fase_result: FaseResult,
     draw_junctions_with_min_n_occurrences: int = 1,
-    show_main_title: bool = True
+    show_main_title: bool = True,
+    limit_to_samples: Union[None, List[str]] = None
 ) -> str:
-    n_samples = len(fase_result.all.keys())
+
+    samples_to_plot = limit_to_samples if limit_to_samples is not None else fase_result.all.keys()
+
+    n_samples = len(samples_to_plot)
 
     n_exons = len(fase_result.exon_positions)
 
@@ -315,7 +319,7 @@ def plot_transcript(
 
     subplot_elements = {i: dict() for i in range(n_samples)}
 
-    for plot_index, sample_name in enumerate(fase_result.all.keys()):
+    for plot_index, sample_name in enumerate(samples_to_plot):
 
         connections, curves, connection_annotations, curve_annotations = [], [], [], []
 
