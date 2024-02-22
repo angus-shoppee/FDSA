@@ -1,9 +1,10 @@
 
-from typing import List, Dict, Union
+from typing import List, Dict
 import os
 
 from src.config.parse_config import FaseRunConfig
 from src.reporting.process_results import FaseResult
+from src.reporting.templates.results_table import results_table
 from src.reporting.templates.transcript_section import transcript_section, TranscriptSectionRenderInfo
 from src.reporting.templates.table_of_contents import table_of_contents
 
@@ -13,24 +14,7 @@ REPORT_CSS = "templates/main_report.css"
 
 SVG_SCHEME = "data:image/svg+xml;base64,"
 
-JUMP_TO_RESULTS_TABLE_ID = "results_table_container"
-
-
-def _get_results_row(fase_result: FaseResult) -> List[Union[str, int, float]]:
-
-    numbers = [
-        sum([junction.n for junction in junctions])
-        for junctions in fase_result.overlapping.values()
-    ]
-    frequencies = list(fase_result.frequencies.values())
-
-    average_number = sum(numbers) / len(numbers)
-    average_frequency = sum(frequencies) / len(frequencies)
-
-    return [
-        fase_result.gene_name, fase_result.feature_number, fase_result.total_features_in_transcript,
-        average_number, average_frequency
-    ] + numbers + frequencies
+JUMP_TO_RESULTS_TABLE_ID = "results-table-section"
 
 
 def generate_html_report(
@@ -42,19 +26,7 @@ def generate_html_report(
     svg_scheme: str = SVG_SCHEME
 ) -> str:
 
-    results_table_header = [
-        "Gene name", "Feature #", "Total features", "Avg. N", "Avg. %"
-    ] + list(fase_results[0].overlapping.keys()) + [
-        f"% {sample_name}"
-        for sample_name in fase_results[0].frequencies.keys()
-    ]
-    results_table_data = [
-        _get_results_row(fase_result)
-        for fase_result in fase_results
-    ]
-
-    # print(results_table_header)
-    # print(results_table_data)
+    results_table_html = results_table(run_config, fase_results)
 
     all_section_render_info = [
         TranscriptSectionRenderInfo(
@@ -94,9 +66,9 @@ def generate_html_report(
         style = "<style>\n" + f.read() + "\n</style>"
 
     return template.format(
-        run_name=run_config.run_name,
+        report_name=run_config.report_name,
         style=style,
         toc_html=toc_html,
-        # results_table_html=results_table_html,
+        results_table_html=results_table_html,
         sections_html=sections_html
     )

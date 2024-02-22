@@ -1,17 +1,18 @@
 
 :root {
+    --body-padding-size: 10px;
     --sidebar-width: 260px;
+    --background-color: #ffffff;
 }
 
 body {
-    --padding-size: 10px;
     font-family: Arial, sans-serif;
     margin: 0;
     padding: var(--padding-size);
     display: flex;
     flex-flow: row nowrap;
-    width: calc(100vw - 2 * var(--padding-size));
-    height: calc(100vh - 2 * var(--padding-size));
+    width: calc(100vw - 2 * var(--body-padding-size));
+    height: calc(100vh - 2 * var(--body-padding-size));
 }
 
 h2 {
@@ -52,6 +53,7 @@ hr {
     overflow-y: scroll;
 }
 
+
 .transcript-section {
     display: flex;
     flex-flow: column nowrap;
@@ -84,3 +86,4 @@ hr {
 .transcript-details-container li {
     font-size: 1.5rem;
 }
+
