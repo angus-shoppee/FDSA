@@ -4,7 +4,7 @@
     height: calc(100vh - 2 * var(--body-padding-size));
     display: flex;
     flex-flow: column nowrap;
-    /*padding-bottom: 10px;*/
+    padding-bottom: 20px;
 }
 
 .results-table-container {
@@ -41,4 +41,12 @@
     left: 0;
     z-index: 2;
     background-color: var(--background-color);
+}
+
+.results-table-section h1 {
+    font-size: 3rem;
+}
+
+.results-table-section {
+    font-size: 1.2rem;
 }

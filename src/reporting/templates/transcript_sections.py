@@ -7,7 +7,8 @@ from src.config.parse_config import FaseRunConfig
 from src.reporting.process_results import FaseResult
 
 
-TRANSCRIPT_SECTION_TEMPLATE = "transcript_section.html"
+TRANSCRIPT_SECTIONS_TEMPLATE = "transcript_sections.html"
+TRANSCRIPT_SECTION_UNIT_TEMPLATE = "transcript_section_unit.html"
 TRANSCRIPT_SECTIONS_CSS = "transcript_sections.css"
 
 
@@ -25,12 +26,12 @@ class TranscriptSectionRenderInfo:
     splice_plot_uri: str
 
 
-def transcript_section(render_info: TranscriptSectionRenderInfo) -> str:
+def transcript_unit_section(
+    html_template: str,
+    render_info: TranscriptSectionRenderInfo
+) -> str:
 
-    with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), TRANSCRIPT_SECTION_TEMPLATE), "r") as f:
-        template = f.read()
-
-    return template.format(**vars(render_info))
+    return html_template.format(**vars(render_info))
 
 
 def transcript_sections(
@@ -66,6 +67,20 @@ def transcript_sections(
     with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), TRANSCRIPT_SECTIONS_CSS), "r") as f:
         style = "<style>\n" + f.read() + "\n</style>"
 
-    sections_html = style + "\n".join([transcript_section(render_info) for render_info in all_section_render_info])
+    with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), TRANSCRIPT_SECTIONS_TEMPLATE), "r") as f:
+        template = f.read()
+
+    with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), TRANSCRIPT_SECTION_UNIT_TEMPLATE), "r") as f:
+        section_unit_template = f.read()
+
+    sections_html = (
+        template.format(
+            style=style,
+            transcript_unit_sections="\n".join([
+                transcript_unit_section(section_unit_template, render_info)
+                for render_info in all_section_render_info
+            ])
+        )
+    )
 
     return sections_html, all_section_render_info

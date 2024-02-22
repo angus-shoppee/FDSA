@@ -73,7 +73,7 @@ class GBSeq:
     refseq_id: str
     features: List[GBFeature]
     exons: List[RefseqExon]
-    _analysis_features: dict
+    _analysis_features: Dict[str, List[RefseqExonFeature]]
 
     def __init__(
             self,

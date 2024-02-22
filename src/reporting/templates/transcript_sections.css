@@ -1,4 +1,8 @@
 
+.transcript-sections-intro h1 {
+    font-size: 3rem;
+}
+
 .transcript-section {
     display: flex;
     flex-flow: column nowrap;
@@ -21,7 +25,7 @@
 
 .section-title-container > * {
     margin: 0;
-    font-size: 3rem;
+    font-size: 2.5rem;
 }
 
 .transcript-details-container > * {
@@ -29,5 +33,5 @@
 }
 
 .transcript-details-container li {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
 }
