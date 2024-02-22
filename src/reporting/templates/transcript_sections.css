@@ -1,0 +1,33 @@
+
+.transcript-section {
+    display: flex;
+    flex-flow: column nowrap;
+    align-items: center;
+}
+
+.transcript-section img {
+    max-width: 90%;
+    padding-bottom: 50px;
+    padding-top: 50px;
+}
+
+.section-title-container, .transcript-details-container {
+    width: 90%;
+}
+
+.section-title-container {
+    padding-top: 1rem;
+}
+
+.section-title-container > * {
+    margin: 0;
+    font-size: 3rem;
+}
+
+.transcript-details-container > * {
+    font-size: 1.8rem;
+}
+
+.transcript-details-container li {
+    font-size: 1.5rem;
+}

@@ -5,7 +5,7 @@ import os
 from src.config.parse_config import FaseRunConfig
 from src.reporting.process_results import FaseResult
 from src.reporting.templates.results_table import results_table
-from src.reporting.templates.transcript_section import transcript_section, TranscriptSectionRenderInfo
+from src.reporting.templates.transcript_sections import transcript_sections
 from src.reporting.templates.table_of_contents import table_of_contents
 
 
@@ -28,36 +28,18 @@ def generate_html_report(
 
     results_table_html = results_table(run_config, fase_results)
 
-    all_section_render_info = [
-        TranscriptSectionRenderInfo(
-            section_id=f"transcript-{fase_result.transcript_id}-{fase_result.feature_number}",
-            section_title=f"{fase_result.gene_name} " +
-                          f"({fase_result.feature_number} of {fase_result.total_features_in_transcript})",
-            gene_name=fase_result.gene_name,
-            transcript_id=fase_result.transcript_id,
-            n_exons=len(fase_result.exon_positions),
-            feature_name=run_config.feature_name,
-            feature_no=fase_result.feature_number,
-            n_features=fase_result.total_features_in_transcript,
-            expression_plot_uri=svg_scheme+plots[
-                f"{fase_result.transcript_id}-{fase_result.feature_number}"
-            ]["expression"],
-            splice_plot_uri=svg_scheme+plots[
-                f"{fase_result.transcript_id}-{fase_result.feature_number}"
-            ]["splice"]
-        )
-        for fase_result in fase_results if plots.get(
-            f"{fase_result.transcript_id}-{fase_result.feature_number}", None
-        ) is not None
-    ]
+    sections_html, all_section_render_info = transcript_sections(
+        run_config,
+        fase_results,
+        plots,
+        svg_scheme
+    )
 
     toc_html = table_of_contents(
         JUMP_TO_RESULTS_TABLE_ID,
         [render_info.section_id for render_info in all_section_render_info],
         [render_info.section_title for render_info in all_section_render_info]
     )
-
-    sections_html = "\n".join(transcript_section(render_info) for render_info in all_section_render_info)
 
     with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), REPORT_TEMPLATE), "r") as f:
         template = f.read()
