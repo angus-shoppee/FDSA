@@ -47,10 +47,10 @@ class GBFeature:
     quals: List[GBQual]
 
     def __init__(
-            self,
-            feature_key: str,
-            feature_location: str,
-            feature_quals: List[GBQual]
+        self,
+        feature_key: str,
+        feature_location: str,
+        feature_quals: List[GBQual]
     ):
         self.key = feature_key
         self.start = int(feature_location) if ".." not in feature_location else int(feature_location.split("..")[0])
@@ -76,22 +76,25 @@ class GBSeq:
     _analysis_features: Dict[str, List[RefseqExonFeature]]
 
     def __init__(
-            self,
-            refseq_id: str,
-            features: List[GBFeature]
+        self,
+        refseq_id: str,
+        features: List[GBFeature]
     ):
         self.refseq_id = refseq_id
         self.features = features
         self._analysis_features = {}
 
-        self.exons = [RefseqExon(
-            start=feature.start,
-            end=feature.end
-        ) for feature in self.features if feature.key == "exon"]
+        self.exons = [
+            RefseqExon(
+                start=feature.start,
+                end=feature.end
+            )
+            for feature in self.features if feature.key == "exon"
+        ]
 
     def get_features_by_key(
-            self,
-            key: str
+        self,
+        key: str
     ) -> List[GBFeature]:
         return [feature for feature in self.features if feature.key == key]
 
@@ -99,9 +102,9 @@ class GBSeq:
         return self._analysis_features
 
     def set_analysis_feature(
-            self,
-            feature_id: str,
-            gbfeature: GBFeature
+        self,
+        feature_id: str,
+        gbfeature: GBFeature
     ) -> None:
 
         # Create feature list if it doesn't exist yet

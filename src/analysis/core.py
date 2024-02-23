@@ -90,18 +90,18 @@ def set_analysis_features(
                     transcript.gbseq.set_analysis_feature(feature_substring, gbfeature)
 
 
-def calculate_optc(
-    n_occurrences: int,
+def calculate_eptc(
+    n_events: int,
     n_counts: int
 ) -> float:
 
-    return 0.0 if not all((n_occurrences, n_counts)) else float((n_occurrences * 1000) / n_counts)
+    return 0.0 if not all((n_events, n_counts)) else float((n_events * 1000) / n_counts)
 
 
-def calculate_percent_occurrence(
+def calculate_percent_detection(
     f_start: int,
     f_end: int,
-    n_occurrences: int,
+    n_events: int,
     read_loci: List[Tuple[int, int]]
 ) -> float:
 
@@ -123,8 +123,8 @@ def calculate_percent_occurrence(
             n_reads_overlapping_feature += 1
 
     return 0.0 if not all(
-        (n_occurrences, n_reads_overlapping_feature)
-    ) else (n_occurrences * 100) / n_reads_overlapping_feature
+        (n_events, n_reads_overlapping_feature)
+    ) else (n_events * 100) / n_reads_overlapping_feature
 
 
 @dataclass
@@ -168,8 +168,8 @@ def calculate_exonic_overlap(
 @dataclass
 class OverlappingJunctionsInfo:
     sample_name: str
-    number_occurrences: int
-    frequency_occurrences: float
+    number_events: int
+    frequency_events: float
     junctions_loci: str
 
 
@@ -185,7 +185,7 @@ def get_splice_analysis_result_for_sample(
     experimental_allow_junction_end_outside_transcript: bool = False
 ) -> OverlappingJunctionsInfo:
 
-    number_occurrences = 0
+    number_events = 0
 
     overlapping_j_buffer = f""
 
@@ -208,24 +208,24 @@ def get_splice_analysis_result_for_sample(
             (junction.start, junction.end)
         )
 
-        # Add n unique to tally of occurrences if overlap exceeds user-defined threshold
+        # Add n unique to tally of events if overlap exceeds user-defined threshold
         if overlap.fraction >= overlap_threshold:
             overlapping_j_buffer += f"{junction.n_unique}*[{junction.start}-{junction.end}] "
 
-            number_occurrences += junction.n_unique
+            number_events += junction.n_unique
 
     # Calculate frequency as percent occurrence (splice junctions occur in N% of reads containing part of the feature)
-    frequency_occurrences = calculate_percent_occurrence(
+    frequency_events = calculate_percent_detection(
         f_start_genomic,
         f_end_genomic,
-        number_occurrences,
+        number_events,
         read_loci
     )
 
     return OverlappingJunctionsInfo(
         sample.name,
-        number_occurrences,
-        frequency_occurrences,
+        number_events,
+        frequency_events,
         overlapping_j_buffer
     )
 
@@ -506,8 +506,8 @@ def perform_splice_analysis(
                         feature_region = f"{f_start_genomic}-{f_end_genomic}"
                         exon_positions = " ".join([f"{e.start}-{e.end}" for e in transcript.exons])
 
-                        raw_number_occurrences = {}  # Dict[str, int]
-                        frequency_occurrences = {}  # Dict[str, float]
+                        raw_number_events = {}  # Dict[str, int]
+                        frequency_events = {}  # Dict[str, float]
 
                         if all([
                             pool is not None,
@@ -540,8 +540,8 @@ def perform_splice_analysis(
                             ) for sample in samples_alphabetical]
 
                         for result in results:
-                            raw_number_occurrences[result.sample_name] = result.number_occurrences
-                            frequency_occurrences[result.sample_name] = result.frequency_occurrences
+                            raw_number_events[result.sample_name] = result.number_events
+                            frequency_events[result.sample_name] = result.frequency_events
 
                         overlapping_junctions_loci = " | ".join(
                             [f"{result.sample_name}: {result.junctions_loci}" for result in results]
@@ -553,11 +553,11 @@ def perform_splice_analysis(
 
                         # Write to output (one row per feature per transcript)
                         out_n = [
-                            raw_number_occurrences[sample_name] for sample_name in sample_names_alphabetical
+                            raw_number_events[sample_name] for sample_name in sample_names_alphabetical
                         ]
                         out_freq = [
                             "{:.2f}".format(
-                                frequency_occurrences[sample_name]
+                                frequency_events[sample_name]
                             ) for sample_name in sample_names_alphabetical
                         ]
                         out_csv.writerow(
@@ -576,7 +576,7 @@ def perform_splice_analysis(
                             ([junction_definition, all_junctions_loci] if include_all_junctions_in_output else []) +
                             [overlapping_junctions_loci] +
                             ["{:.2f}".format(mean(out_n))] +
-                            ["{:.2f}".format(mean(frequency_occurrences.values()))] +
+                            ["{:.2f}".format(mean(frequency_events.values()))] +
                             out_n +
                             out_freq
                         )
