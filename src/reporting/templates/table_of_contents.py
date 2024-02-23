@@ -8,6 +8,7 @@ TABLE_OF_CONTENTS_TEMPLATE = "table_of_contents.html"
 
 def table_of_contents(
     results_table_id: str,
+    transcripts_sections_intro_id: str,
     transcript_section_ids: List[str],
     transcript_section_titles: List[str]
 ) -> str:
@@ -23,5 +24,6 @@ def table_of_contents(
 
     return template.format(
         results_table_id=results_table_id,
+        transcripts_sections_intro_id=transcripts_sections_intro_id,
         transcript_entries=transcript_entries
     )

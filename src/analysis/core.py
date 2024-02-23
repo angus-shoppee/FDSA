@@ -319,6 +319,7 @@ def perform_splice_analysis(
             cols.STRAND,
             cols.TRANSCRIPT_START,
             cols.EXON_POSITIONS,
+            cols.FEATURE_QUALIFIERS,
             cols.FEATURE_REGION,
             cols.N_FEATURES_IN_TRANSCRIPT,
             cols.FEATURE_NUMBER,
@@ -569,6 +570,7 @@ def perform_splice_analysis(
                                 transcript.strand,
                                 transcript.start,
                                 exon_positions,
+                                feature.qualifiers,
                                 feature_region,
                                 n_features_in_transcript,
                                 feature_index + 1

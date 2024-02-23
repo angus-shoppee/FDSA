@@ -20,6 +20,7 @@ def get_unique_child(elem, child_name):
 class RefseqExonFeature:
     start: int
     end: int
+    qualifiers: str
 
 
 class RefseqExon:
@@ -58,8 +59,8 @@ class GBFeature:
         self.quals = feature_quals
 
     def has_qual_value_containing(
-            self,
-            value_substring: str
+        self,
+        value_substring: str
     ) -> bool:
         for qual in self.quals:
             if not qual.value:
@@ -67,6 +68,10 @@ class GBFeature:
             if value_substring in qual.value:
                 return True
         return False
+
+    def get_qual_values(self):
+
+        return " / ".join([qual.value for qual in self.quals])
 
 
 class GBSeq:
@@ -107,6 +112,8 @@ class GBSeq:
         gbfeature: GBFeature
     ) -> None:
 
+        # print(f"Adding: {feature_id}, quals: {gbfeature.quals}")
+
         # Create feature list if it doesn't exist yet
         if feature_id not in self._analysis_features.keys():
             self._analysis_features[feature_id] = []
@@ -115,6 +122,7 @@ class GBSeq:
         self._analysis_features[feature_id].append(
             RefseqExonFeature(
                 start=gbfeature.start,
-                end=gbfeature.end
+                end=gbfeature.end,
+                qualifiers=gbfeature.get_qual_values()
             )
         )

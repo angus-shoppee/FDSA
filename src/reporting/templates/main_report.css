@@ -51,4 +51,5 @@ hr {
     width: calc(100% - var(--sidebar-width));
     overflow-x: scroll;
     overflow-y: scroll;
+    font-size: 1.2rem;
 }

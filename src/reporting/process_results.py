@@ -40,6 +40,7 @@ class FaseResult:
     gene_id: str
     gene_name: str
     exon_positions: List[Tuple[int, int]]
+    feature_qualifiers: str
     feature_region: Tuple[int, int]
     feature_number: int
     total_features_in_transcript: int
@@ -54,6 +55,7 @@ class FaseResult:
         gene_id: str,
         gene_name: str,
         exon_positions_string: str,
+        feature_qualifiers: str,
         feature_region_string: str,
         feature_number: int,
         total_features_in_transcript: int,
@@ -70,6 +72,8 @@ class FaseResult:
 
         _positions = [position.split("-") for position in exon_positions_string.split(" ")]
         self.exon_positions = [(int(position[0]), int(position[1])) for position in _positions if len(position) == 2]
+
+        self.feature_qualifiers = feature_qualifiers
 
         _feature_region = feature_region_string.split("-")
         self.feature_region = (
@@ -194,6 +198,7 @@ def convert_fase_results_df_to_objects(fase_results_df: pd.DataFrame) -> List[Fa
         fase_results_df[cols.GENE_ID],
         fase_results_df[cols.GENE_NAME],
         fase_results_df[cols.EXON_POSITIONS],
+        fase_results_df[cols.FEATURE_QUALIFIERS],
         fase_results_df[cols.FEATURE_REGION],
         fase_results_df[cols.FEATURE_NUMBER],
         fase_results_df[cols.N_FEATURES_IN_TRANSCRIPT],

@@ -15,6 +15,7 @@ REPORT_CSS = "templates/main_report.css"
 SVG_SCHEME = "data:image/svg+xml;base64,"
 
 JUMP_TO_RESULTS_TABLE_ID = "results-table-section"
+JUMP_TO_TRANSCRIPTS_ID = "transcript-sections-intro"
 
 
 def generate_html_report(
@@ -37,6 +38,7 @@ def generate_html_report(
 
     toc_html = table_of_contents(
         JUMP_TO_RESULTS_TABLE_ID,
+        JUMP_TO_TRANSCRIPTS_ID,
         [render_info.section_id for render_info in all_section_render_info],
         [render_info.section_title for render_info in all_section_render_info]
     )

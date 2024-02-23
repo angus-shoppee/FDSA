@@ -11,6 +11,10 @@ TRANSCRIPT_SECTIONS_TEMPLATE = "transcript_sections.html"
 TRANSCRIPT_SECTION_UNIT_TEMPLATE = "transcript_section_unit.html"
 TRANSCRIPT_SECTIONS_CSS = "transcript_sections.css"
 
+MAX_PLOTTED_TEXT = """
+    As specified in report config, the number of transcripts to visualise has been limited to {max_plotted}.
+"""
+
 
 @dataclass
 class TranscriptSectionRenderInfo:
@@ -20,6 +24,7 @@ class TranscriptSectionRenderInfo:
     transcript_id: str
     n_exons: int
     feature_name: str
+    feature_qualifiers: str
     feature_no: int
     n_features: int
     expression_plot_uri: str
@@ -50,6 +55,7 @@ def transcript_sections(
             transcript_id=fase_result.transcript_id,
             n_exons=len(fase_result.exon_positions),
             feature_name=run_config.feature_name,
+            feature_qualifiers=fase_result.feature_qualifiers,
             feature_no=fase_result.feature_number,
             n_features=fase_result.total_features_in_transcript,
             expression_plot_uri=svg_scheme + plots[
@@ -64,6 +70,10 @@ def transcript_sections(
         ) is not None
     ]
 
+    max_plotted_text = "" if run_config.report_max_n_plotted is None else MAX_PLOTTED_TEXT.format(
+        max_plotted=run_config.report_max_n_plotted
+    )
+
     with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), TRANSCRIPT_SECTIONS_CSS), "r") as f:
         style = "<style>\n" + f.read() + "\n</style>"
 
@@ -76,6 +86,8 @@ def transcript_sections(
     sections_html = (
         template.format(
             style=style,
+            rank_by=run_config.rank_results_by,
+            max_plotted_text=max_plotted_text,
             transcript_unit_sections="\n".join([
                 transcript_unit_section(section_unit_template, render_info)
                 for render_info in all_section_render_info

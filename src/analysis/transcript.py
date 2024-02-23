@@ -22,8 +22,8 @@ class ExonRecord:
 
 
 def get_exons_from_gtf(
-        t_id: str,
-        gtf: DataFrame
+    t_id: str,
+    gtf: DataFrame
 ) -> List[ExonRecord]:
 
     gtf_transcript_id = list(gtf['transcript_id'])
@@ -51,8 +51,8 @@ def get_exons_from_gtf(
 
 
 def create_exon_map_to_gbseq(
-        transcript_exons: List[ExonRecord],
-        gbseq_exons: List[RefseqExon]
+    transcript_exons: List[ExonRecord],
+    gbseq_exons: List[RefseqExon]
 ) -> Dict[str, int]:
 
     exon_map = {}
@@ -472,7 +472,7 @@ def annotate_and_save_transcript_library(
     return transcript_library
 
 
-def load_transcript_library_from_file(path):
+def load_transcript_library_from_file(path: str):
 
     with open(path, "rb") as f:
 

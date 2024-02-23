@@ -3,6 +3,10 @@
     font-size: 3rem;
 }
 
+.transcript-sections-intro {
+    padding-bottom: 1rem;
+}
+
 .transcript-section {
     display: flex;
     flex-flow: column nowrap;
@@ -20,7 +24,7 @@
 }
 
 .section-title-container {
-    padding-top: 1rem;
+    padding-top: 2rem;
 }
 
 .section-title-container > * {
