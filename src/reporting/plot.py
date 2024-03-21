@@ -543,14 +543,16 @@ def plot_splice_rate(
     sample_groups: Dict[str, List[str]],
     group_name_by_sample: Dict[str, str],
     color_by_group_name: Dict[str, str],
+    shape_by_group_name: Dict[str, str],
     show_main_title: bool = True
 ) -> str:
 
-    x, y, color, labels = [], [], [], []
+    x, y, color, shape, labels = [], [], [], [], []
     for sample_name, frequency in fase_result.frequencies.items():
         y.append(frequency)
         x.append(norm_gene_counts.loc[fase_result.gene_id][sample_name])
         color.append(color_by_group_name[group_name_by_sample[sample_name]])
+        shape.append(shape_by_group_name[group_name_by_sample[sample_name]])
         labels.append(group_name_by_sample[sample_name])
 
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -560,6 +562,7 @@ def plot_splice_rate(
             x[i],
             y[i],
             c=color[i],
+            marker=shape[i],
             label=labels[i],
             s=100
         )

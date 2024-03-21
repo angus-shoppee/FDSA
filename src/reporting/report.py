@@ -215,6 +215,7 @@ def create_report(
                 run_config.sample_groups,
                 run_config.group_name_by_sample_name,
                 run_config.color_by_group_name,
+                run_config.shape_by_group_name,
                 show_main_title=False
             ),
             "splice": plot_transcript(

@@ -5,6 +5,8 @@ import csv
 import os
 import configparser
 
+from src.config.marker_aliases import convert_marker_alias
+
 
 RANK_RESULTS_BY_ALLOWED_VALUES = ["frequency", "number"]
 
@@ -67,6 +69,7 @@ class FaseInternalConfig:
     default_save_normalized_gene_counts: bool
     default_draw_junctions_min_count: int
     default_point_color_in_plot: str
+    default_point_shape_in_plot: str
     default_feature_counts_primary_alignment_only: bool
     # Possible TODO: Generalise default_feature_counts_primary_alignment_only to default_primary_alignment_only
 
@@ -191,11 +194,18 @@ class FaseInternalConfig:
         self.default_save_normalized_gene_counts = parse_bool(default_save_normalized_gene_counts)
 
         default_point_color_in_plot = config.get(
-            "REPORT", "defaultPointColorInPlot", fallback=True
+            "REPORT", "defaultPointColorInPlot", fallback=None
         )
         if default_point_color_in_plot is None:
             raise ValueError(_e + f"Missing mandatory parameter \"defaultPointColorInPlot\" in section REPORT")
         self.default_point_color_in_plot = default_point_color_in_plot
+
+        default_point_shape_in_plot = config.get(
+            "REPORT", "defaultPointShapeInPlot", fallback=None
+        )
+        if default_point_shape_in_plot is None:
+            raise ValueError(_e + f"Missing mandatory parameter \"defaultPointShapeInPlot\" in section REPORT")
+        self.default_point_shape_in_plot = convert_marker_alias(default_point_shape_in_plot)
 
         default_feature_counts_primary_alignment_only = config.get(
             "REPORT", "defaultFeatureCountsPrimaryAlignmentOnly", fallback=None
@@ -490,6 +500,7 @@ class FaseRunConfig:
     sample_groups: Dict[str, List[str]]
     group_name_by_sample_name: Dict[str, str]  # Interpolated, not defined by the user
     color_by_group_name: Dict[str, str]
+    shape_by_group_name: Dict[str, str]
 
     def __init__(
         self,
@@ -931,11 +942,15 @@ class FaseRunConfig:
             }
         self.color_by_group_name = color_by_group_name
 
-        # else:
-        #
-        #     self.sample_groups = None
-        #     self.group_name_by_sample_name = None
-        #     self.color_by_group_name = None
+        # Auto-generated if required: [SHAPES]
+        if "SHAPES" in run_config and "SAMPLES" in run_config:
+            shape_by_group_name = {k: convert_marker_alias(remove_quotes(v)) for k, v in run_config.items("SHAPES")}
+        else:
+            shape_by_group_name = {
+                group_name: internal_config.default_point_shape_in_plot
+                for group_name in sample_groups.keys()
+            }
+        self.shape_by_group_name = shape_by_group_name
 
     def __setattr__(self, name, value):
         # If attribute is a string, strip all quotation marks before applying
