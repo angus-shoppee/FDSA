@@ -24,6 +24,10 @@ def _remove_lowercase_duplicates(values: List[str]) -> List[str]:
     return modified_values
 
 
+def remove_quotes(value: str) -> str:
+    return value.replace("\"", "").replace("\'", "")
+
+
 def flatten_nested_lists(nested_lists: List[List[Any]]) -> List[Any]:
     return reduce(lambda a, b: a + b, nested_lists)
 
@@ -209,6 +213,12 @@ class FaseInternalConfig:
         if default_draw_junctions_min_count is None:
             raise ValueError(_e + f"Missing mandatory parameter \"defaultDrawJunctionsMinCount\" in section REPORT")
         self.default_draw_junctions_min_count = int(default_draw_junctions_min_count)
+
+    def __setattr__(self, name, value):
+        # If attribute is a string, strip all quotation marks before applying
+        if isinstance(value, str):
+            value = remove_quotes(value)
+        super().__setattr__(name, value)
 
 
 class FaseUserConfig:
@@ -440,6 +450,12 @@ class FaseUserConfig:
             if user_default_report_draw_junctions_min_count is None \
             else int(user_default_report_draw_junctions_min_count)
 
+    def __setattr__(self, name, value):
+        # If attribute is a string, strip all quotation marks before applying
+        if isinstance(value, str):
+            value = remove_quotes(value)
+        super().__setattr__(name, value)
+
 
 class FaseRunConfig:
     run_name: str
@@ -524,9 +540,9 @@ class FaseRunConfig:
         if input_path is None:
             raise ValueError(_e + f"Missing mandatory parameter \"input\" (path to folder containing BAM files) in "
                                   f"section RUN")
-        if not os.path.isdir(input_path):
-            raise ValueError(_e + f"The specified input path is invalid: {input_path}")
         self.input_path = input_path
+        if not os.path.isdir(self.input_path):
+            raise ValueError(_e + f"The specified input path is invalid: {self.input_path}")
 
         bam_ending = run_config.get("RUN", "bamEnding", fallback=run_config.get("RUN", "ending", fallback=None))
         if bam_ending is None:
@@ -534,16 +550,16 @@ class FaseRunConfig:
         self.bam_ending = bam_ending
 
         # Get BAM file names in specified input folder for validation and auto-generation of [SAMPLES] section
-        _ending_length = len(bam_ending)
+        _ending_length = len(self.bam_ending)
         bam_file_absolute_paths = [os.path.join(
-            input_path, p
-        ) for p in os.listdir(input_path) if p[-_ending_length:] == bam_ending]
+            self.input_path, p
+        ) for p in os.listdir(self.input_path) if p[-_ending_length:] == self.bam_ending]
         sample_names = [
-            (os.path.basename(p)).replace(bam_ending, "") for p in bam_file_absolute_paths
+            (os.path.basename(p)).replace(self.bam_ending, "") for p in bam_file_absolute_paths
         ]
         if len(sample_names) == 0:
-            raise ValueError(_e + f"No BAM files with the specified ending ({bam_ending}) were found in the specified "
-                                  f"location: {input_path}")
+            raise ValueError(_e + f"No BAM files with the specified ending ({self.bam_ending}) were found in the "
+                                  f"specified location: {self.input_path}")
 
         # Allow this parameter to be set in REPORT section rather than RUN (since it is technically for report only)
         paired_end_reads = run_config.get(
@@ -561,10 +577,10 @@ class FaseRunConfig:
         if species is None:
             raise ValueError(_e + f"Missing mandatory parameter \"species\" in section RUN")
         species = species.lower()
-        if species not in internal_config.allowed_species:
-            raise ValueError(_e + f"An invalid species ({species}) was specified. "
-                                  f"Allowed species: {internal_config.allowed_species}")
         self.species = species
+        if self.species not in internal_config.allowed_species:
+            raise ValueError(_e + f"An invalid species ({self.species}) was specified. "
+                                  f"Allowed species: {internal_config.allowed_species}")
 
         genome = run_config.get(
             "RUN", "genome", fallback=run_config.get(
@@ -622,7 +638,10 @@ class FaseRunConfig:
                 )
             )
         )
-        self.max_n_features_in_transcript = int(max_n_features_in_transcript)
+        if max_n_features_in_transcript in ("*", "ANY", "Any", "any", "ALL", "All", "all"):
+            self.max_n_features_in_transcript = 0
+        else:
+            self.max_n_features_in_transcript = int(max_n_features_in_transcript)
 
         generate_report = run_config.get("RUN", "report", fallback=(
             user_config.user_default_generate_report
@@ -745,11 +764,11 @@ class FaseRunConfig:
                 )
             )
         )
-        if rank_results_by not in RANK_RESULTS_BY_ALLOWED_VALUES:
-            raise ValueError(_e + f"Invalid value \"{rank_results_by}\" specified for parameter "
+        self.rank_results_by = rank_results_by
+        if self.rank_results_by not in RANK_RESULTS_BY_ALLOWED_VALUES:
+            raise ValueError(_e + f"Invalid value \"{self.rank_results_by}\" specified for parameter "
                                   f"\"rankResultsBy\" in section REPORT. Allowed options are: "
                                   f"{RANK_RESULTS_BY_ALLOWED_VALUES}")
-        self.rank_results_by = rank_results_by
 
         report_max_n_plotted = run_config.get(
             "REPORT", "maxNumberPlotted", fallback=run_config.get(
@@ -858,7 +877,7 @@ class FaseRunConfig:
         if "SAMPLES" in run_config:
             _non_redundant_keys = _remove_lowercase_duplicates(run_config.options("SAMPLES"))
             sample_groups = {
-                key: [s.strip() for s in value.split(",")]
+                key: [remove_quotes(s.strip()) for s in value.split(",")]
                 for key, value in run_config.items("SAMPLES") if all([
                     value,
                     key in _non_redundant_keys
@@ -903,7 +922,8 @@ class FaseRunConfig:
 
         # Use defined values if both COLORS and SAMPLES sections are present, otherwise auto-generate
         if "COLORS" in run_config and "SAMPLES" in run_config:
-            color_by_group_name = dict(run_config.items("COLORS"))
+            # color_by_group_name = dict(run_config.items("COLORS"))
+            color_by_group_name = {k: remove_quotes(v) for k, v in run_config.items("COLORS")}
         else:
             color_by_group_name = {
                 group_name: internal_config.default_point_color_in_plot
@@ -916,6 +936,12 @@ class FaseRunConfig:
         #     self.sample_groups = None
         #     self.group_name_by_sample_name = None
         #     self.color_by_group_name = None
+
+    def __setattr__(self, name, value):
+        # If attribute is a string, strip all quotation marks before applying
+        if isinstance(value, str):
+            value = remove_quotes(value)
+        super().__setattr__(name, value)
 
     def check_feature_counts(self) -> None:
 

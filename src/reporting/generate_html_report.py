@@ -51,6 +51,7 @@ def generate_html_report(
 
     return template.format(
         report_name=run_config.report_name,
+        feature_name=run_config.feature_name,
         style=style,
         toc_html=toc_html,
         results_table_html=results_table_html,

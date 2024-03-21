@@ -18,22 +18,25 @@
 }
 
 .results-table {
-    box-sizing: border-box;
     display: block;
     table-layout: auto;
     width: 100%;
     height: 100%;
+    border-spacing: 0;
+    border-collapse: separate;
 }
 
 .results-table tr > * {
+    margin: 0;
     padding: 0.5rem;
 }
 
 .results-table th {
     position: sticky;
-    left: 0;
+    top: 0;
     z-index: 1;
     background-color: var(--background-color);
+    border-top: 1px solid grey;
 }
 
 .results-table .gene-name-column {
@@ -41,6 +44,21 @@
     left: 0;
     z-index: 2;
     background-color: var(--background-color);
+    border-left: 1px solid grey;
+}
+
+.results-table th.gene-name-column {
+    z-index: 3;
+}
+
+.results-table :is(th, .gene-name-column) {
+    background-color: #eeeeee;
+    border-right: 1px solid grey;
+    border-bottom: 1px solid grey;
+}
+.results-table :not(th, .gene-name-column) {
+    border-right: 1px solid grey;
+    border-bottom: 1px solid grey;
 }
 
 .results-table-section h1 {

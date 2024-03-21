@@ -11,9 +11,10 @@ TRANSCRIPT_SECTIONS_TEMPLATE = "transcript_sections.html"
 TRANSCRIPT_SECTION_UNIT_TEMPLATE = "transcript_section_unit.html"
 TRANSCRIPT_SECTIONS_CSS = "transcript_sections.css"
 
-MAX_PLOTTED_TEXT = """
-    As specified in report config, the number of transcripts to visualise has been limited to {max_plotted}.
-"""
+MAX_PLOTTED_TEXT = """ The number of transcripts to visualise has been limited to {max_plotted}."""
+MAX_PER_GROUP_TEXT = """ The number of splice plots per experimental group has been limited to {max_per_group}."""
+JUNCTION_LIMIT_TEXT = """ Splice plots have been limited to show non-feature-overlapping junctions with a minimum 
+                          of {junction_limit} occurrences."""
 
 
 @dataclass
@@ -70,9 +71,14 @@ def transcript_sections(
         ) is not None
     ]
 
-    max_plotted_text = "" if run_config.report_max_n_plotted is None else MAX_PLOTTED_TEXT.format(
-        max_plotted=run_config.report_max_n_plotted
-    )
+    max_plotted_text = "" if run_config.report_max_n_plotted is None else \
+        MAX_PLOTTED_TEXT.format(max_plotted=run_config.report_max_n_plotted)
+
+    max_per_group_text = "" if run_config.report_transcript_plot_max_samples_per_group is None else \
+        MAX_PER_GROUP_TEXT.format(max_per_group=run_config.report_transcript_plot_max_samples_per_group)
+
+    junction_limit_text = "" if run_config.report_draw_junctions_min_count in (0, 1) else \
+        JUNCTION_LIMIT_TEXT.format(junction_limit=run_config.report_draw_junctions_min_count)
 
     with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), TRANSCRIPT_SECTIONS_CSS), "r") as f:
         style = "<style>\n" + f.read() + "\n</style>"
@@ -88,6 +94,8 @@ def transcript_sections(
             style=style,
             rank_by=run_config.rank_results_by,
             max_plotted_text=max_plotted_text,
+            max_per_group_text=max_per_group_text,
+            junction_limit_text=junction_limit_text,
             transcript_unit_sections="\n".join([
                 transcript_unit_section(section_unit_template, render_info)
                 for render_info in all_section_render_info

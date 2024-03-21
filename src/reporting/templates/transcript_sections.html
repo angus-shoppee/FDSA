@@ -1,11 +1,25 @@
 {style}
 <section class="transcript-sections-intro" id="transcript-sections-intro">
     <h1>Transcripts - Visualization of Splice Activity</h1>
+    <strong>Overview</strong>
     <p>
         Summary information and visualisation for individual transcripts are given below. The sidebar may be used to
         navigate directly to transcripts by clicking on a given name under the "Transcripts" section.
         <br><br>
-        Transcripts are ordered by splice event {rank_by}. {max_plotted_text}
+        Transcripts are ordered by splice event {rank_by}.{max_plotted_text}{max_per_group_text}{junction_limit_text}
+    </p>
+    <strong>Interpreting figures</strong>
+    <p>
+        Two figures are given for each transcript feature. The first compares gene expression against splice event
+        detection rate. Gene expression (X axis) is calculated as counts per million (CPM) normalized using the
+        Trimmed Mean of M-values (TMM) method. Splice event detection rate (Y axis) is calculated as the percentage
+        of RNA sequencing reads encompassing or overlapping the feature that contain a splice junction that encompasses
+        or overlaps the feature.
+        <br><br>
+        The second figure depicts all detected splice junctions in each individual sample. Each exon is depicted as a
+        box, labeled by exon number. Canonical splicing between adjacent exons is depicted with horizontal lines
+        connecting boxes. Splicing between non-adjacent exons and/or involving alternative donor or acceptor sites is
+        depicted with looping connections. Each splice junction is labelled with its number of occurrences.
     </p>
 </section>
 {transcript_unit_sections}
