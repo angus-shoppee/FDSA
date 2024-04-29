@@ -476,7 +476,7 @@ class FaseRunConfig:
     paired_end_reads: bool
     species: str
     genome: str
-    genes: Union[None, Dict[str, bool]]  # check genes.get(gene_name, False) for speed improvement over list membership
+    genes: Union[None, Dict[str, bool]]  # Check .genes.get(gene_name, False) for speed improvement over list membership
     n_threads: int
     rank_results_by: str
     max_n_features_in_transcript: int
@@ -485,6 +485,7 @@ class FaseRunConfig:
     feature_junction_overlap_threshold: float
     generate_report: bool
     report_name: str
+    report_genes: Union[None, Dict[str, bool]]  # As with .genes, check .report_genes.get(gene_name, False)
     report_n_threads: int
     report_feature_counts_executable: Union[None, str]
     report_save_normalized_gene_counts: bool
@@ -627,7 +628,7 @@ class FaseRunConfig:
                 self.genes = {str(row[0]).lower(): True for row in csv.reader(gene_set_file)}
         else:
             # Allow inline gene set to be delimited by either spaces or commas
-            self.genes = {gene_name.lower(): True for gene_name in genes.replace(",", " ").split()}
+            self.genes = {remove_quotes(gene_name).lower(): True for gene_name in genes.replace(",", " ").split()}
 
         # [RUN] - Optional parameters
 
@@ -731,6 +732,32 @@ class FaseRunConfig:
             )
         )
         self.report_name = report_name
+
+        report_genes = run_config.get(
+            "REPORT", "geneList", fallback=run_config.get(
+                "REPORT", "geneSet", fallback=run_config.get(
+                    "REPORT", "genes", fallback=None
+                )
+            )
+        )
+        # Same process as for .genes
+        if report_genes is None:
+            self.report_genes = None
+        elif ".csv" in report_genes.lower():
+            # Handle input given as path to a CSV file
+            if not os.path.exists(report_genes):
+                raise ValueError(
+                    "A CSV file was specified for the parameter genes in section RUN, but its path is not valid: " +
+                    report_genes
+                )
+            with open(report_genes, "r") as gene_set_file:
+                self.report_genes = {str(row[0]).lower(): True for row in csv.reader(gene_set_file)}
+        else:
+            # Allow inline gene set to be delimited by either spaces or commas
+            self.report_genes = {
+                remove_quotes(gene_name).lower(): True
+                for gene_name in report_genes.replace(",", " ").split()
+            }
 
         report_n_threads = run_config.get("REPORT", "threads", fallback=user_config.user_default_report_n_threads)
         self.report_n_threads = report_n_threads

@@ -233,7 +233,7 @@ def run(
         return
 
     # Load annotated transcript library
-    print("Loading transcript library...")
+    print(f"Loading {run_config.species} transcript library...")
     annotated_transcript_library = load_transcript_library_from_file(annotated_transcript_library_path)
     print("...done\n")
 

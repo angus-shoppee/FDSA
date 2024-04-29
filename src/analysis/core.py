@@ -279,7 +279,7 @@ def perform_splice_analysis(
 
     if n_processes > 1:
         pool = Pool(processes=n_processes)
-        print(f"Created worker pool with {n_processes} processes for BAM file processing\n")
+        print(f"Created worker pool with {n_processes} processes for BAM file parsing\n")
     else:
         pool = None
 

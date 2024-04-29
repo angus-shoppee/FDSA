@@ -163,20 +163,11 @@ def create_report(
         fase_results_path,
         samples,
         rank_by=run_config.rank_results_by,
+        force_gene_names=None if run_config.report_genes is None else list(run_config.report_genes.keys()),
         min_total_number_occurrences_across_all_samples=run_config.report_min_total_n_occurrences_across_all_samples,
         min_per_sample_occurrences_number_occurrences=run_config.report_min_n_occurrences_in_sample,
-        min_per_sample_occurrences_in_at_least_n_samples=run_config.report_occurrences_in_at_least_n_samples,
-        # min_total_number_occurrences_across_all_samples=999999,
-        #     force_include_gene_names = ["Clec9a"]
-        #     force_include_gene_names = ["H2-Q7"]
-        #     force_include_gene_names = ["Cd86"]
-        #     force_include_gene_names = ["Treml4"]
-        #     force_include_gene_names = ["Ifnar2", "Ifnlr1"]
-        # force_include_gene_names=["Tnfrsf9", "Cd69"]
-        #     force_include_gene_names = ["Pdcd1", "Cd274", "Pdcd1lg2"]
+        min_per_sample_occurrences_in_at_least_n_samples=run_config.report_occurrences_in_at_least_n_samples
     )
-    # for fase_result in fase_results:
-    #     print("[DEBUG]", len(fase_result.all.keys()), len(fase_result.overlapping.keys()))
 
     print("Generating figures for report...")
 
@@ -220,7 +211,6 @@ def create_report(
             ),
             "splice": plot_transcript(
                 fase_result,
-                # TODO: Set as parameter in run config REPORT section
                 draw_junctions_with_min_n_occurrences=run_config.report_draw_junctions_min_count,
                 show_main_title=False,
                 limit_to_samples=limit_transcript_plots_to_samples
@@ -232,8 +222,6 @@ def create_report(
     print("Generating report...")
 
     report_html = generate_html_report(
-        # run_config.run_name,
-        # run_config.feature_name,
         run_config,
         fase_results,
         plots

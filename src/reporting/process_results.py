@@ -101,15 +101,15 @@ def load_fase_results_as_df(
     fase_results_path: str,
     samples: Dict[str, Sample],
     rank_by: str = "frequency",
-    force_include_gene_names: Union[None, List[str]] = None,
+    force_gene_names: Union[None, List[str]] = None,
     min_total_number_occurrences_across_all_samples: int = 1,
     min_per_sample_occurrences_number_occurrences: int = 0,
     min_per_sample_occurrences_in_at_least_n_samples: int = 0,
     fase_result_frequency_column_prefix: str = FASE_RESULT_FREQUENCY_COLUMN_PREFIX
 ) -> pd.DataFrame:
 
-    if force_include_gene_names is None:
-        force_include_gene_names = list()
+    if force_gene_names is None:
+        force_gene_names = list()
 
     with open(fase_results_path, "r") as f:
 
@@ -144,8 +144,13 @@ def load_fase_results_as_df(
                 f"Column names in FASE output: {header}"
             )
 
-        fase_results_df = pd.DataFrame(
-            [row for row in results if row[gene_name_column_index] in force_include_gene_names or all([
+        if force_gene_names:
+
+            rows_to_import = [row for row in results if row[gene_name_column_index].lower() in force_gene_names]
+
+        else:
+
+            rows_to_import = [row for row in results if all([
                 sum(
                     [int(n) for n in row[raw_number_column_indexes[0]:frequency_column_indexes[0]]]
                 ) >= min_total_number_occurrences_across_all_samples,
@@ -153,9 +158,25 @@ def load_fase_results_as_df(
                     [True for n in row[raw_number_column_indexes[0]:frequency_column_indexes[0]] if
                      int(n) >= min_per_sample_occurrences_number_occurrences]
                 ) >= min_per_sample_occurrences_in_at_least_n_samples
-            ])],
+            ])]
+
+        fase_results_df = pd.DataFrame(
+            rows_to_import,
             columns=header
         )
+
+        # fase_results_df = pd.DataFrame(
+        #     [row for row in results if row[gene_name_column_index] in force_gene_names or all([
+        #         sum(
+        #             [int(n) for n in row[raw_number_column_indexes[0]:frequency_column_indexes[0]]]
+        #         ) >= min_total_number_occurrences_across_all_samples,
+        #         len(
+        #             [True for n in row[raw_number_column_indexes[0]:frequency_column_indexes[0]] if
+        #              int(n) >= min_per_sample_occurrences_number_occurrences]
+        #         ) >= min_per_sample_occurrences_in_at_least_n_samples
+        #     ])],
+        #     columns=header
+        # )
 
         if len(fase_results_df) == 0:
             raise ValueError("No results were loaded - check that specified criteria are not too stringent")
@@ -230,7 +251,7 @@ def load_fase_results(
     fase_results_path: str,
     samples: Dict[str, Sample],
     rank_by: str = "frequency",
-    force_include_gene_names: Union[None, List[str]] = None,
+    force_gene_names: Union[None, List[str]] = None,
     min_total_number_occurrences_across_all_samples: int = 1,
     min_per_sample_occurrences_number_occurrences: int = 0,
     min_per_sample_occurrences_in_at_least_n_samples: int = 0,
@@ -241,7 +262,7 @@ def load_fase_results(
         fase_results_path=fase_results_path,
         samples=samples,
         rank_by=rank_by,
-        force_include_gene_names=force_include_gene_names,
+        force_gene_names=force_gene_names,
         min_total_number_occurrences_across_all_samples=min_total_number_occurrences_across_all_samples,
         min_per_sample_occurrences_number_occurrences=min_per_sample_occurrences_number_occurrences,
         min_per_sample_occurrences_in_at_least_n_samples=min_per_sample_occurrences_in_at_least_n_samples,
