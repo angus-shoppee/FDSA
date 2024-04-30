@@ -72,6 +72,8 @@ class FaseInternalConfig:
     default_point_shape_in_plot: str
     default_feature_counts_primary_alignment_only: bool
     # Possible TODO: Generalise default_feature_counts_primary_alignment_only to default_primary_alignment_only
+    default_generate_filtered_bam_files: bool
+    default_filter_unique_mapping_only: bool
 
     def __init__(self, internal_config_path: str) -> None:
 
@@ -224,6 +226,22 @@ class FaseInternalConfig:
             raise ValueError(_e + f"Missing mandatory parameter \"defaultDrawJunctionsMinCount\" in section REPORT")
         self.default_draw_junctions_min_count = int(default_draw_junctions_min_count)
 
+        # [FILTER]
+
+        default_filter_bam_files = config.get(
+            "FILTER", "defaultFilterBamFiles", fallback=None
+        )
+        if default_filter_bam_files is None:
+            raise ValueError(_e + f"Missing mandatory parameter \"defaultFilterBamFiles\" in section FILTER")
+        self.default_generate_filtered_bam_files = parse_bool(default_filter_bam_files)
+
+        default_filter_unique_mapping_only = config.get(
+            "FILTER", "defaultUniqueMappingOnly", fallback=None
+        )
+        if default_filter_unique_mapping_only is None:
+            raise ValueError(_e + f"Missing mandatory parameter \"defaultUniqueMappingOnly\" in section FILTER")
+        self.default_filter_unique_mapping_only = parse_bool(default_filter_unique_mapping_only)
+
     def __setattr__(self, name, value):
         # If attribute is a string, strip all quotation marks before applying
         if isinstance(value, str):
@@ -235,6 +253,7 @@ class FaseUserConfig:
     email: str
     user_default_biomart_mirror: Union[None, str]
     user_default_generate_report: Union[None, bool]
+    user_default_generate_filtered_bam_files: Union[None, bool]
     user_default_n_threads: Union[None, int]
     user_default_max_n_features_in_transcript: Union[None, int]
     user_default_only_use_longest_annotated_transcript: Union[None, int]
@@ -251,8 +270,13 @@ class FaseUserConfig:
     user_default_report_min_total_n_occurrences_across_all_samples: Union[None, int]  # Chef's kiss variable name
     user_default_report_min_n_occurrences_in_sample: Union[None, int]
     user_default_report_occurrences_in_at_least_n_samples: Union[None, int, str]
-    user_default_report_draw_junctions_min_count: Union[None, int]
     # ^ If * is set as the default for this parameter, the final number will be set at runtime when n samples is known
+    user_default_report_draw_junctions_min_count: Union[None, int]
+    user_default_filter_samtools_executable: Union[None, str]
+    user_default_filter_unique_mapping_only: Union[None, bool]
+    user_default_filter_min_total_n_occurrences_across_all_samples: Union[None, int]
+    user_default_filter_min_n_occurrences_in_sample: Union[None, int]
+    user_default_filter_occurrences_in_at_least_n_samples: Union[None, int, str]
 
     def __init__(
         self,
@@ -290,6 +314,12 @@ class FaseUserConfig:
         user_default_generate_report = user_config.get("DEFAULT RUN", "report", fallback=None)
         self.user_default_generate_report = None if user_default_generate_report is None else \
             parse_bool(user_default_generate_report)
+
+        user_default_generate_filtered_bam_files = user_config.get(
+            "DEFAULT RUN", "filterBamFiles", fallback=None
+        )
+        self.user_default_generate_filtered_bam_files = None if user_default_generate_filtered_bam_files is None else \
+            parse_bool(user_default_generate_filtered_bam_files)
 
         user_default_n_threads = user_config.get("DEFAULT RUN", "threads", fallback=None)
         self.user_default_n_threads = None if user_default_n_threads is None else int(user_default_n_threads)
@@ -460,6 +490,77 @@ class FaseUserConfig:
             if user_default_report_draw_junctions_min_count is None \
             else int(user_default_report_draw_junctions_min_count)
 
+        # [DEFAULT FILTER]
+
+        user_default_filter_samtools_executable = user_config.get(
+            "DEFAULT FILTER", "samtoolsExecutableLocation", fallback=user_config.get(
+                "DEFAULT FILTER", "samtoolsExecutablePath", fallback=user_config.get(
+                    "DEFAULT FILTER", "samtoolsExecutable", fallback=None
+                )
+            )
+        )
+        self.user_default_filter_samtools_executable = user_default_filter_samtools_executable
+
+        user_default_filter_unique_mapping_only = user_config.get(
+            "DEFAULT FILTER", "uniqueMappingOnly", fallback=user_config.get(
+                "DEFAULT FILTER", "uniqueMapping", fallback=user_config.get(
+                    "DEFAULT FILTER", "unique", fallback=None
+                )
+            )
+        )
+        self.user_default_filter_unique_mapping_only = None if user_default_filter_unique_mapping_only is None else \
+            parse_bool(user_default_filter_unique_mapping_only)
+
+        user_default_filter_min_total_n_occurrences_across_all_samples = user_config.get(
+            "DEFAULT FILTER", "minTotalNumberOccurrencesAcrossAllSamples", fallback=user_config.get(
+                "DEFAULT FILTER", "minTotalNOccurrencesAcrossAllSamples", fallback=user_config.get(
+                    "DEFAULT FILTER", "minTotalOccurrencesAcrossAllSamples", fallback=None
+                )
+            )
+        )
+        self.user_default_filter_min_total_n_occurrences_across_all_samples = None \
+            if user_default_filter_min_total_n_occurrences_across_all_samples is None \
+            else int(user_default_filter_min_total_n_occurrences_across_all_samples)
+
+        user_default_filter_min_n_occurrences_in_sample = user_config.get(
+            "DEFAULT FILTER", "minNumberOccurrencesInSample", fallback=user_config.get(
+                "DEFAULT FILTER", "minNOccurrencesInSample", fallback=user_config.get(
+                    "DEFAULT FILTER", "minOccurrencesInSample", fallback=None
+                )
+            )
+        )
+
+        user_default_filter_occurrences_in_at_least_n_samples = user_config.get(
+            "DEFAULT FILTER", "occurrencesInAtLeastNSamples", fallback=user_config.get(
+                "DEFAULT FILTER", "inAtLeastNSamples", fallback=None
+            )
+        )
+
+        if any([
+            user_default_filter_min_n_occurrences_in_sample is None
+            and user_default_filter_occurrences_in_at_least_n_samples is not None,
+            user_default_filter_min_n_occurrences_in_sample is not None
+            and user_default_filter_occurrences_in_at_least_n_samples is None
+        ]):
+            raise ValueError(_e + f"Parameters minNumberOccurrencesInSample and occurrencesInAtLeastNSamples must be "
+                                  f"used together. Either define both, or exclude both")
+
+        self.user_default_filter_min_n_occurrences_in_sample = 0 \
+            if user_default_filter_min_n_occurrences_in_sample is None \
+            else int(user_default_filter_min_n_occurrences_in_sample)
+        if self.user_default_filter_min_n_occurrences_in_sample < 0:
+            raise ValueError(_e + f"The parameter minNumberOccurrencesInSample cannot be less than zero")
+
+        if user_default_filter_occurrences_in_at_least_n_samples in ("all", "All", "ALL", "*"):
+            # Special case: Set value to total number of samples
+            self.user_default_filter_occurrences_in_at_least_n_samples = "*"
+        else:
+            self.user_default_filter_occurrences_in_at_least_n_samples = 0 \
+                if user_default_filter_occurrences_in_at_least_n_samples is None \
+                else int(user_default_filter_occurrences_in_at_least_n_samples)
+        if self.user_default_filter_occurrences_in_at_least_n_samples < 0:
+            raise ValueError(_e + f"The parameter occurrencesInAtLeastNSamples cannot be less than zero")
+
     def __setattr__(self, name, value):
         # If attribute is a string, strip all quotation marks before applying
         if isinstance(value, str):
@@ -483,7 +584,10 @@ class FaseRunConfig:
     only_use_longest_annotated_transcript: bool
     skip_transcripts_with_redundant_feature_annotation: bool  # overridden by only_use_longest_annotated_transcript=True
     feature_junction_overlap_threshold: float
+    primary_alignment_only: bool
+    mapq_for_unique_mapping: int
     generate_report: bool
+    generate_filtered_bam_files: bool
     report_name: str
     report_genes: Union[None, Dict[str, bool]]  # As with .genes, check .report_genes.get(gene_name, False)
     report_n_threads: int
@@ -496,8 +600,11 @@ class FaseRunConfig:
     report_occurrences_in_at_least_n_samples: int
     report_draw_junctions_min_count: int
     report_transcript_plot_max_samples_per_group: Union[None, int]
-    primary_alignment_only: bool
-    mapq_for_unique_mapping: int
+    filter_samtools_executable: Union[None, str]
+    filter_unique_mapping_only: bool
+    filter_min_total_n_occurrences_across_all_samples: int
+    filter_min_n_occurrences_in_sample: int
+    filter_occurrences_in_at_least_n_samples: int
     sample_groups: Dict[str, List[str]]
     group_name_by_sample_name: Dict[str, str]  # Interpolated, not defined by the user
     color_by_group_name: Dict[str, str]
@@ -661,6 +768,13 @@ class FaseRunConfig:
             else internal_config.default_generate_report
         ))
         self.generate_report = parse_bool(generate_report)
+
+        generate_filtered_bam_files = run_config.get("RUN", "filterBamFiles", fallback=(
+            user_config.user_default_generate_filtered_bam_files
+            if user_config.user_default_generate_filtered_bam_files is not None
+            else internal_config.default_generate_filtered_bam_files
+        ))
+        self.generate_filtered_bam_files = parse_bool(generate_filtered_bam_files)
 
         primary_alignment_only = run_config.get(
             "RUN", "primaryAlignmentOnly", fallback=run_config.get(
@@ -906,6 +1020,93 @@ class FaseRunConfig:
         # Ensure valid parameters are set to enable featureCounts to run if report is enabled
         self.check_feature_counts()
 
+        # Optional section: [FILTER]
+
+        filter_samtools_executable = run_config.get(
+            "FILTER", "samtoolsExecutableLocation", fallback=run_config.get(
+                "FILTER", "samtoolsExecutablePath", fallback=run_config.get(
+                    "FILTER", "samtoolsExecutable", fallback=user_config.user_default_filter_samtools_executable
+                )
+            )
+        )
+        self.filter_samtools_executable = filter_samtools_executable
+
+        # Ensure samtools executable has been provided if filterBamFiles is enabled
+        self.check_samtools()
+
+        filter_unique_mapping_only = run_config.get(
+            "FILTER", "uniqueMappingOnly", fallback=run_config.get(
+                "FILTER", "uniqueMapping", fallback=run_config.get(
+                    "FILTER", "unique", fallback=(
+                        user_config.user_default_filter_unique_mapping_only
+                        if user_config.user_default_filter_unique_mapping_only is not None
+                        else internal_config.default_filter_unique_mapping_only
+                    )
+                )
+            )
+        )
+        self.filter_unique_mapping_only = parse_bool(filter_unique_mapping_only)
+
+        filter_min_total_n_occurrences_across_all_samples = run_config.get(
+            "FILTER", "minTotalNumberOccurrencesAcrossAllSamples", fallback=run_config.get(
+                "FILTER", "minTotalNOccurrencesAcrossAllSamples", fallback=run_config.get(
+                    "FILTER", "minTotalOccurrencesAcrossAllSamples", fallback=(
+                        user_config.user_default_filter_min_total_n_occurrences_across_all_samples
+                        if user_config.user_default_filter_min_total_n_occurrences_across_all_samples is not None
+                        else 1  # Default to 1 (excludes no activity)
+                    )
+                )
+            )
+        )
+        self.filter_min_total_n_occurrences_across_all_samples = int(
+            filter_min_total_n_occurrences_across_all_samples
+        )
+
+        filter_min_n_occurrences_in_sample = run_config.get(
+            "FILTER", "minNumberOccurrencesInSample", fallback=run_config.get(
+                "FILTER", "minNOccurrencesInSample", fallback=run_config.get(
+                    "FILTER", "minOccurrencesInSample", fallback=(
+                        user_config.user_default_filter_min_n_occurrences_in_sample
+                        # Default to None - Check for paired use below, then set stored value to 0
+                    )
+                )
+            )
+        )
+
+        filter_occurrences_in_at_least_n_samples = run_config.get(
+            "FILTER", "occurrencesInAtLeastNSamples", fallback=run_config.get(
+                "FILTER", "inAtLeastNSamples", fallback=(
+                    user_config.user_default_filter_occurrences_in_at_least_n_samples
+                    # Default to None - Check for paired use below, then set stored value to 0
+                )
+            )
+        )
+
+        # Disallow using either filter_min_n_occurrences_in_sample or filter_occurrences_in_at_least_n_samples
+        # alone, without both being set
+        if any([
+            filter_min_n_occurrences_in_sample is None and filter_occurrences_in_at_least_n_samples is not None,
+            filter_min_n_occurrences_in_sample is not None and filter_occurrences_in_at_least_n_samples is None,
+        ]):
+            raise ValueError(_e + f"Parameters minNumberOccurrencesInSample and occurrencesInAtLeastNSamples must be "
+                                  f"used together. Either define both, or exclude both")
+
+        self.filter_min_n_occurrences_in_sample = 0 if filter_min_n_occurrences_in_sample is None else \
+            int(filter_min_n_occurrences_in_sample)
+
+        if self.filter_min_n_occurrences_in_sample < 0:
+            raise ValueError(_e + f"The parameter minNumberOccurrencesInSample cannot be less than zero")
+
+        if filter_occurrences_in_at_least_n_samples in ("all", "All", "ALL", "*"):
+            # Special case: Set value to total number of samples
+            self.filter_occurrences_in_at_least_n_samples = len(sample_names)
+        else:
+            self.filter_occurrences_in_at_least_n_samples = 0 if filter_occurrences_in_at_least_n_samples is None else \
+                int(filter_occurrences_in_at_least_n_samples)
+
+        if self.filter_occurrences_in_at_least_n_samples < 0:
+            raise ValueError(_e + f"The parameter occurrencesInAtLeastNSamples cannot be less than zero")
+
         # Enable case-sensitivity for option names in subsequent (SAMPLES, COLORS) sections
         run_config.optionxform = str
         run_config.read(run_config_path)
@@ -996,3 +1197,11 @@ class FaseRunConfig:
                              f"If the geneCounts parameter is not set in the REPORT section of run config "
                              f"file, then the featureCountsExecutable parameter must be set either in the "
                              f"REPORT section of run config, or in the DEFAULT REPORT section of user config.")
+
+    def check_samtools(self) -> None:
+
+        if self.generate_filtered_bam_files and self.filter_samtools_executable is None:
+            raise ValueError(f"Generation of filtered BAM files requires samtools. "
+                             f"If the filterBamFiles option has been enabled, then the samtoolsExecutable parameter "
+                             f"must be set either in the FILTER section of run config, or in the DEFAULT FILTER "
+                             f"section of user config.")

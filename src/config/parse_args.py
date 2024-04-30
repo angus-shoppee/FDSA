@@ -12,14 +12,16 @@ def get_mode_parser(program_description: str) -> ArgumentParser:
     mode_parser.add_argument(
         "mode",
         type=str,
-        choices=["user", "build", "run", "report"],
+        choices=["user", "build", "run", "report", "filter"],
         help="\n".join([
             "user - (Required only once) Sets the user config file containing build information and optional default "
             "parameters.",
             "build - (Required once per species, before first run) Parses transcripts from the provided reference "
             "genome GTF, downloads feature annotation data, and links the two to enable directed splice analysis.",
             "run - Performs splice analysis according to parameters set in the specified run config file.",
-            "report - Generates a graphical report from the output of \"fase run\"."
+            "report - Generates a graphical report from the output of \"fase run\".",
+            "filter - Generates filtered BAM files containing only reads aligned to genes that have splice events in "
+            "the output of \"fase run\" (thresholds are configurable via the [FILTER] section in run config)."
         ])
     )
 
@@ -115,7 +117,7 @@ def get_run_parser() -> ArgumentParser:
     run_parser.add_argument(
         "run_config_path",
         nargs="?",
-        default=None,  # Allow no value so missing value error can be manually handled below
+        default=None,  # Allow no value so missing value error can be manually handled
         type=str,
         help=(
             "Path to a run config file containing a [RUN] section with the mandatory \"name\" (run name), \"feature\", "
@@ -132,18 +134,31 @@ def get_run_parser() -> ArgumentParser:
         action="store_true",
         help="Disables automatic report generation, overriding default behaviour and behaviour set in run config."
     )
+    run_parser.add_argument(
+        "--filter",
+        action="store_true",
+        help=(
+            "Generates filtered BAM files containing only reads aligning to genes that have splice events in FASE's "
+            "output upon completion."
+        )
+    )
+    run_parser.add_argument(
+        "--no-filter",
+        action="store_true",
+        help="Disables filtered BAM file generation, overriding default behaviour and behaviour set in run config."
+    )
 
     return run_parser
 
 
 def get_report_parser() -> ArgumentParser:
 
-    run_parser = ArgumentParser()
+    report_parser = ArgumentParser()
 
-    run_parser.add_argument(
+    report_parser.add_argument(
         "run_config_path",
         nargs="?",
-        default=None,  # Allow no value so missing value error can be manually handled below
+        default=None,  # Allow no value so missing value error can be manually handled
         type=str,
         help=(
             "Path to a run config file containing a valid [RUN] section (see \"fase run --help\") and optional "
@@ -152,4 +167,23 @@ def get_report_parser() -> ArgumentParser:
         )
     )
 
-    return run_parser
+    return report_parser
+
+
+def get_filter_parser() -> ArgumentParser:
+
+    filter_parser = ArgumentParser()
+
+    filter_parser.add_argument(
+        "run_config_path",
+        nargs="?",
+        default=None,  # Allow no value so missing value error can be manually handled
+        type=str,
+        help=(
+            "Path to a run config file containing a valid [RUN] section (see \"fase run --help\") and optional "
+            "[FILTER] section."
+            ""
+        )
+    )
+
+    return filter_parser

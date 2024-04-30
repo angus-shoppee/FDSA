@@ -39,6 +39,8 @@ class FaseResult:
     transcript_id: str
     gene_id: str
     gene_name: str
+    chromosome: str
+    strand: str
     exon_positions: List[Tuple[int, int]]
     feature_qualifiers: str
     feature_region: Tuple[int, int]
@@ -54,6 +56,8 @@ class FaseResult:
         transcript_id: str,
         gene_id: str,
         gene_name: str,
+        chromosome: str,
+        strand: str,
         exon_positions_string: str,
         feature_qualifiers: str,
         feature_region_string: str,
@@ -69,6 +73,8 @@ class FaseResult:
         self.transcript_id = transcript_id
         self.gene_id = gene_id
         self.gene_name = gene_name
+        self.chromosome = chromosome
+        self.strand = strand
 
         _positions = [position.split("-") for position in exon_positions_string.split(" ")]
         self.exon_positions = [(int(position[0]), int(position[1])) for position in _positions if len(position) == 2]
@@ -212,12 +218,13 @@ def load_fase_results_as_df(
 
 
 def convert_fase_results_df_to_objects(fase_results_df: pd.DataFrame) -> List[FaseResult]:
-    # TODO: Rename variables to remove unnecessary prefixed underscores
 
-    _zipped_info_columns = list(zip(
+    zipped_info_columns = list(zip(
         fase_results_df[cols.TRANSCRIPT_ID],
         fase_results_df[cols.GENE_ID],
         fase_results_df[cols.GENE_NAME],
+        fase_results_df[cols.CHROMOSOME],
+        fase_results_df[cols.STRAND],
         fase_results_df[cols.EXON_POSITIONS],
         fase_results_df[cols.FEATURE_QUALIFIERS],
         fase_results_df[cols.FEATURE_REGION],
@@ -228,22 +235,22 @@ def convert_fase_results_df_to_objects(fase_results_df: pd.DataFrame) -> List[Fa
         fase_results_df[cols.OVERLAPPING_JUNCTIONS]
     ))
 
-    _frequency_column_names = fase_results_df.columns[
+    frequency_column_names = fase_results_df.columns[
         fase_results_df.columns.str.contains(FASE_RESULT_FREQUENCY_COLUMN_PREFIX)]
 
-    _zipped_frequency_columns = list(zip(
-        *[fase_results_df[column_name] for column_name in _frequency_column_names]
+    zipped_frequency_columns = list(zip(
+        *[fase_results_df[column_name] for column_name in frequency_column_names]
     ))
 
     # TODO: Investigate type warning (expected str got dict)
     return [
         FaseResult(
-            *[row[col_i] for col_i in range(len(_zipped_info_columns[0]))],
+            *[row[col_i] for col_i in range(len(zipped_info_columns[0]))],
             {
-                _frequency_column_names[freq_i].replace(FASE_RESULT_FREQUENCY_COLUMN_PREFIX, ""): frequency
-                for freq_i, frequency in enumerate(_zipped_frequency_columns[row_i])
+                frequency_column_names[freq_i].replace(FASE_RESULT_FREQUENCY_COLUMN_PREFIX, ""): frequency
+                for freq_i, frequency in enumerate(zipped_frequency_columns[row_i])
             }
-        ) for row_i, row in enumerate(_zipped_info_columns)
+        ) for row_i, row in enumerate(zipped_info_columns)
     ]
 
 

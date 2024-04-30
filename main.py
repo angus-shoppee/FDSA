@@ -5,7 +5,9 @@ import argparse
 from sys import argv
 from gtfparse import read_gtf
 
-from src.config.parse_args import get_mode_parser, get_build_parser, get_run_parser, get_report_parser
+from src.config.parse_args import (
+    get_mode_parser, get_build_parser, get_run_parser, get_report_parser, get_filter_parser
+)
 from src.config.parse_config import FaseInternalConfig, FaseUserConfig, FaseRunConfig
 from src.analysis.transcript import (
     create_and_save_transcript_library, annotate_and_save_transcript_library, load_transcript_library_from_file
@@ -15,6 +17,7 @@ from src.analysis.biomart import create_and_save_name_lookup, load_name_lookup_f
 from src.analysis.experiment import Sample
 from src.analysis.core import set_analysis_features, perform_splice_analysis
 from src.reporting.report import create_report
+from src.downstream.filter import generate_filtered_bam_files
 
 
 # ==================================================================================================================== #
@@ -28,6 +31,8 @@ FASE_BUILD_COMMAND_USAGE = ("fase build RUN_CONFIG_PATH (or) "
 FASE_RUN_COMMAND_USAGE = "fase run [--report] [--no-report] RUN_CONFIG_PATH"
 
 FASE_REPORT_COMMAND_USAGE = "fase report RUN_CONFIG_PATH"
+
+FASE_FILTER_COMMAND_USAGE = "fase filter RUN_CONFIG_PATH"
 
 BUILD_NOT_COMPLETED_MESSAGE = ("Annotated transcript library has not yet been built for this species. Please complete "
                                "the build process using \"fase build [species]\"")
@@ -294,6 +299,13 @@ def report(
     create_report(run_config)
 
 
+def filter_bam_files(
+    run_config: FaseRunConfig
+) -> None:
+
+    generate_filtered_bam_files(run_config)
+
+
 def main() -> None:
 
     # TODO: Auto-generated usage at top line of arg parser help text is incorrect for modes, need override
@@ -437,19 +449,24 @@ def main() -> None:
                 restart_partial_download=build_args.regenerate_partial_features_download
             )
 
-        elif mode_arg.mode in ("run", "report"):
+        elif mode_arg.mode in ("run", "report", "filter"):
 
             # TODO: Implement --no-report flag
 
             generate_report = False
+            generate_filtered_bam_files = False
 
             if mode_arg.mode == "run":
                 parser = get_run_parser()
                 usage = FASE_RUN_COMMAND_USAGE
-            else:
+            elif mode_arg.mode == "report":
                 generate_report = True
                 parser = get_report_parser()
                 usage = FASE_REPORT_COMMAND_USAGE
+            else:
+                generate_filtered_bam_files = True
+                parser = get_filter_parser()
+                usage = FASE_FILTER_COMMAND_USAGE
 
             if any([arg in subsequent_args for arg in ("-h", "--help")]):
                 parser.print_help()
@@ -473,10 +490,15 @@ def main() -> None:
                     internal_config,
                     user_config
                 )
-                if mode_arg.mode == "run" and args.report:
-                    generate_report = True
-                    run_config.generate_report = True
-                    run_config.check_feature_counts()  # Ensure either featureCountsExecutable or geneCounts is set
+                if mode_arg.mode == "run":
+                    if args.report:
+                        generate_report = True
+                        run_config.generate_report = True
+                        run_config.check_feature_counts()  # Ensure either featureCountsExecutable or geneCounts is set
+                    if args.filter:
+                        generate_filtered_bam_files = True
+                        run_config.generate_filtered_bam_files = True
+                        run_config.check_samtools()  # Ensure samtoolsExecutable is set
             except ValueError as e:
                 print(CONFIG_FILE_FORMATTING_ERROR_MESSAGE + "\n" + str(e))
                 exit()
@@ -491,6 +513,14 @@ def main() -> None:
                 if args.no_report:
                     generate_report = False
 
+                # Enable BAM file filtering if specified in config file and not via command line flag
+                if run_config.generate_filtered_bam_files:
+                    generate_filtered_bam_files = True
+
+                # The --no-filter flag will override behaviour specified elsewhere
+                if args.no_filter:
+                    generate_filtered_bam_files = False
+
                 species_specific_data_dir = os.path.join(base_dir, "data", run_config.species)
 
                 # Execute run
@@ -503,6 +533,10 @@ def main() -> None:
             if generate_report:
 
                 report(run_config)
+
+            if generate_filtered_bam_files:
+
+                filter_bam_files(run_config)
 
 
 if __name__ == "__main__":
