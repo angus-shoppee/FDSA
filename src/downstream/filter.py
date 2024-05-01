@@ -77,6 +77,22 @@ def generate_filtered_bam_files(
         min_per_sample_occurrences_in_at_least_n_samples=run_config.filter_occurrences_in_at_least_n_samples
     )
 
+    # REMOVED: Running samtools view once with a BED file specifying multiple regions is far slower (why?) than
+    #          running individually for each region, despite producing the same output
+
+    # # Create BED file specifying regions
+    #
+    # bed_file_path = os.path.join(output_dir, "regions.bed")
+    #
+    # with open(bed_file_path, "w") as bed_file:
+    #
+    #     for result in fase_results:
+    #
+    #         span = get_gene_start_and_end(result.exon_positions)
+    #         # genomic_region = f"{result.chromosome}:{span[0]}-{span[1]}"
+    #
+    #         bed_file.write(f"{result.chromosome}\t{span[0]}\t{span[1]}\n")
+
     print("Generating filtered BAM files...")
 
     _right_padding = "            "
@@ -87,19 +103,44 @@ def generate_filtered_bam_files(
         print(f"Extracting reads from: {sample.name}{sample.bam_ending}")
         print()  # Include blank line to be consumed by first one-line-up ansi code
 
-        sam_out_path = os.path.join(output_dir, f"{sample.name}{sample.bam_ending.replace('.bam', '.sam')}")
+        unsorted_sam_out_path = os.path.join(
+            output_dir,
+            f"{sample.name}{sample.bam_ending.replace(run_config.bam_ending, '.temp.sam')}"
+        )
 
-        mapq_specifier = f" --min-MQ {run_config.mapq_for_unique_mapping}" \
-            if run_config.filter_unique_mapping_only else ""  # Leading space if not blank
+        with open(unsorted_sam_out_path, "w") as out_file:
 
-        with open(sam_out_path, "w") as out_file:
+            # REMOVED: BED file method
+
+            # split_cmd = [
+            #     samtools, "view",
+            #     # "-b",
+            #     "--with-header",
+            #     "--target-file", bed_file_path,
+            #     sample.bam_path
+            # ]
+            #
+            # print("[DEBUG] Trying:")
+            # print(" ".join(split_cmd))
+            #
+            # process = subprocess.run(
+            #     split_cmd,
+            #     cwd=output_dir,
+            #     encoding="utf8",
+            #     check=check_exit_code,
+            #     stdout=out_file
+            # )
+
+            # END BED file method
 
             # First, extract the header
 
-            full_cmd = f"{samtools} view {sample.bam_path} --header-only"
+            split_cmd = [
+                samtools, "view", sample.bam_path, "--header-only"
+            ]
 
             process = subprocess.run(
-                full_cmd.split(" "),
+                split_cmd,
                 cwd=output_dir,
                 encoding="utf8",
                 check=check_exit_code,
@@ -109,48 +150,90 @@ def generate_filtered_bam_files(
             # Then, write reads to output SAM file for each qualifying gene
 
             for i, result in enumerate(fase_results):
+
                 print("\x1b[A" + f"[{i + 1} / {_n_results}] {result.gene_name}" + _right_padding)
 
                 span = get_gene_start_and_end(result.exon_positions)
                 genomic_region = f"{result.chromosome}:{span[0]}-{span[1]}"
 
-                out_file.write("\n")  # Add a newline to separate appended content
-
                 if result.strand == "+":
-                    strand_specifier = f"--exclude-flags {SAM_FLAG_REVERSE_STRAND}"
+                    strand_specifier = ["--exclude-flags", str(SAM_FLAG_REVERSE_STRAND)]
                 elif result.strand == "-":
-                    strand_specifier = f"--require-flags {SAM_FLAG_REVERSE_STRAND}"
+                    strand_specifier = ["--require-flags", str(SAM_FLAG_REVERSE_STRAND)]
                 else:
                     raise ValueError(f"Encountered FASE output for gene {result.gene_name} with invalid strand "
                                      f"(\"{result.strand}\"). Expected either \"+\" or \"-\"")
 
-                # Lack of space between {strand_specifier} and {mapq_specifier} is intentional
-                full_cmd = f"{samtools} view {sample.bam_path} {genomic_region} {strand_specifier}{mapq_specifier}"
+                # split_cmd = [
+                #     samtools, "view", sample.bam_path, genomic_region
+                # ] + strand_specifier
+                split_cmd = [
+                    samtools, "view", sample.bam_path, genomic_region
+                ]
+
+                # NOTE: Strand selection has been removed for now - unsure whether mate reads were handled correctly
+
+                if run_config.filter_unique_mapping_only:
+                    split_cmd += ["--min-MQ", str(run_config.mapq_for_unique_mapping)]
 
                 process = subprocess.run(
-                    full_cmd.split(" "),
+                    split_cmd,
                     cwd=output_dir,
                     encoding="utf8",
                     check=check_exit_code,
-                    stdout=out_file
+                    stdout=subprocess.PIPE
                 )
+
+                if process.stdout:
+
+                    out_file.write(process.stdout)
 
             # Allow file to close before proceeding to final step
 
-        # Finally, sort output and return to BAM format
+        # Sort reads and output as BAM file
 
-        # TODO: Enable "--output-fmt BAM" when finished testing
+        sorted_out_path = unsorted_sam_out_path.replace(".temp.sam", run_config.bam_ending)
+        # sorted_out_path = unsorted_sam_out_path.replace(".temp.sam", run_config.bam_ending).replace(".bam", ".sam")
 
-        # full_cmd = f"{samtools} sort --output-fmt BAM --threads {run_config.n_threads} {sam_out_path}"
-        full_cmd = f"{samtools} sort --threads {run_config.n_threads} {sam_out_path}"
+        print("Sorting...")
+
+        split_cmd = [
+            samtools, "sort",
+            "--output-fmt", "BAM",
+            "--threads", str(run_config.n_threads),
+            "-o", sorted_out_path,
+            unsorted_sam_out_path
+        ]
 
         process = subprocess.run(
-            full_cmd.split(" "),
+            split_cmd,
+            cwd=output_dir,
+            encoding="utf8",
+            check=check_exit_code,
+            stderr=subprocess.DEVNULL
+        )
+
+        print("... done")
+
+        # Index the final BAM file
+
+        print("Indexing...")
+
+        split_cmd = [
+            samtools, "index",
+            sorted_out_path
+        ]
+
+        process = subprocess.run(
+            split_cmd,
             cwd=output_dir,
             encoding="utf8",
             check=check_exit_code
         )
 
-    print("... done\n")
+        print("... done")
 
-    pass
+        # Delete unsorted temp file
+        os.remove(unsorted_sam_out_path)
+
+    print("... finished\n")
