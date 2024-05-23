@@ -1,4 +1,5 @@
 
+from typing import Union
 import gc
 import os
 import argparse
@@ -6,7 +7,7 @@ from sys import argv
 from gtfparse import read_gtf
 
 from src.config.parse_args import (
-    get_mode_parser, get_build_parser, get_run_parser, get_report_parser, get_filter_parser
+    get_mode_parser, get_build_parser, get_run_parser, get_report_parser, get_filter_parser, get_quant_parser
 )
 from src.config.parse_config import FaseInternalConfig, FaseUserConfig, FaseRunConfig
 from src.analysis.transcript import (
@@ -15,9 +16,10 @@ from src.analysis.transcript import (
 from src.analysis.entrez import download_and_save_feature_annotation_xml, get_gbseq_from_xml
 from src.analysis.biomart import create_and_save_name_lookup, load_name_lookup_from_file
 from src.analysis.experiment import Sample
-from src.analysis.core import set_analysis_features, perform_splice_analysis
+from src.analysis.core import set_analysis_features, perform_splice_analysis, name_output_file
 from src.reporting.report import create_report
-from src.downstream.filter import generate_filtered_bam_files
+from src.downstream.filter import generate_filtered_bam_files, FILTERED_BAM_FILES_DEFAULT_DIRECTORY_NAME
+from src.downstream.quant import quantify_isoforms
 
 
 # ==================================================================================================================== #
@@ -25,7 +27,7 @@ from src.downstream.filter import generate_filtered_bam_files
 
 PROGRAM_DESCRIPTION = "Feature-directed Analysis of Splice Events (FASE)"
 
-FASE_BUILD_COMMAND_USAGE = ("fase build RUN_CONFIG_PATH (or) "
+FASE_BUILD_COMMAND_USAGE = ("fase build RUN_CONFIG_PATH\n(or)\n"
                             "fase build --species SPECIES_NAME --genome REFERENCE_GENOME_GTF_PATH")
 
 FASE_RUN_COMMAND_USAGE = "fase run [--report] [--no-report] RUN_CONFIG_PATH"
@@ -33,6 +35,10 @@ FASE_RUN_COMMAND_USAGE = "fase run [--report] [--no-report] RUN_CONFIG_PATH"
 FASE_REPORT_COMMAND_USAGE = "fase report RUN_CONFIG_PATH"
 
 FASE_FILTER_COMMAND_USAGE = "fase filter RUN_CONFIG_PATH"
+
+FASE_QUANT_COMMAND_USAGE = ("fase quant RUN_CONFIG_PATH [-g REFERENCE_GENOME_PATH] [-i FILTERED_BAM_DIRECTORY] "
+                            "[-o OUTPUT_DIRECTORY]\n(or)\n"
+                            "fase quant -g REFERENCE_GENOME_PATH -i FILTERED_BAM_DIRECTORY -o OUTPUT_DIRECTORY")
 
 BUILD_NOT_COMPLETED_MESSAGE = ("Annotated transcript library has not yet been built for this species. Please complete "
                                "the build process using \"fase build [species]\"")
@@ -306,6 +312,87 @@ def filter_bam_files(
     generate_filtered_bam_files(run_config)
 
 
+def quant(
+    run_config: Union[FaseRunConfig, None],
+    user_config: Union[FaseUserConfig, None] = None,
+    stringtie_executable_path: Union[str, None] = None,
+    prep_de_script_path: Union[str, None] = None,
+    gtf_path: Union[str, None] = None,
+    filtered_bam_dir: Union[str, None] = None,
+    output_dir: Union[str, None] = None,
+    threads: Union[int, None] = None  # Allow None to indicate that value should be loaded from run config
+) -> None:
+
+    # Can be run either stand-alone (all kwargs required), or with a run config, allowing overrides by defining kwargs
+
+    # Ensure all parameters have been set if both run config and user config are omitted
+    if run_config is None:
+
+        if any([gtf_path is None, filtered_bam_dir is None, output_dir is None]):
+            raise ValueError("If a run config is not supplied, then all of the gtf_path, filtered_bam_dir, and "
+                             "output_dir parameters must be set.")
+
+        if user_config is None and any([
+            stringtie_executable_path is None,
+            prep_de_script_path is None
+        ]):
+
+            raise ValueError(f"Paths to the stringtie executable and prepDE.py3 script are required. These "
+                             f"must either be set using command line arguments, or defined in either the "
+                             f"[QUANT] section of run config or the [DEFAULT QUANT] section of user config. "
+                             f"No user config was found - consider creating one (see fase user --help for "
+                             f"more information).")
+
+    if run_config is None:
+
+        _stringtie_executable_path = stringtie_executable_path if stringtie_executable_path is not None \
+            else user_config.user_default_quant_stringtie_executable_path
+        _prep_de_script_path = prep_de_script_path if prep_de_script_path is not None \
+            else user_config.user_default_quant_prep_de_script_path
+        _gtf_path = gtf_path
+        _filtered_bam_dir = filtered_bam_dir
+        _output_dir = output_dir
+        _threads = threads
+
+    else:
+
+        inferred_filtered_bam_dir = os.path.abspath(
+            os.path.join(
+                run_config.output_path,
+                FILTERED_BAM_FILES_DEFAULT_DIRECTORY_NAME,
+                f"{name_output_file(run_config.run_name, run_config.feature_name)}"
+            )
+        )
+
+        _stringtie_executable_path = stringtie_executable_path if stringtie_executable_path is not None \
+            else run_config.quant_stringtie_executable_path
+        _prep_de_script_path = prep_de_script_path if prep_de_script_path is not None \
+            else run_config.quant_prep_de_script_path
+        _gtf_path = gtf_path if gtf_path is not None else run_config.genome
+        _filtered_bam_dir = filtered_bam_dir if filtered_bam_dir is not None else inferred_filtered_bam_dir
+        _output_dir = output_dir if output_dir is not None else run_config.output_path
+        _threads = threads if threads is not None else run_config.n_threads
+
+    # Check that _stringtie_executable_path and _prep_de_script_path have been defined in one of the three possible ways
+    if any([
+        _stringtie_executable_path is None,
+        _prep_de_script_path is None
+    ]):
+        raise ValueError(f"The parameter(s) stringtieExecutablePath and/or prepDeScriptPath have not been set "
+                         f"either in the [QUANT] section of run config, or the [DEFAULT QUANT] section of user "
+                         f"config. If neither are defined, then these parameters must be set using command line "
+                         f"arguments (see fase quant --help for more information).")
+
+    quantify_isoforms(
+        _stringtie_executable_path,
+        _prep_de_script_path,
+        _gtf_path,
+        _filtered_bam_dir,
+        _output_dir,
+        threads=_threads
+    )
+
+
 def main() -> None:
 
     # TODO: Auto-generated usage at top line of arg parser help text is incorrect for modes, need override
@@ -384,7 +471,7 @@ def main() -> None:
                     build_args.email
                 ]):
                     print(
-                        f"usage: {FASE_BUILD_COMMAND_USAGE}\n\n"
+                        f"Usage:\n{FASE_BUILD_COMMAND_USAGE}\n\n"
                         "If no run config file is provided, the --species and --genome options must be set.\n"
                         "Use \"fase build --help\" for more information on usage."
                     )
@@ -453,18 +540,18 @@ def main() -> None:
 
             # TODO: Implement --no-report flag
 
-            generate_report = False
-            generate_filtered_bam_files = False
+            enable_generate_report = False
+            enable_generate_filtered_bam_files = False
 
             if mode_arg.mode == "run":
                 parser = get_run_parser()
                 usage = FASE_RUN_COMMAND_USAGE
             elif mode_arg.mode == "report":
-                generate_report = True
+                enable_generate_report = True
                 parser = get_report_parser()
                 usage = FASE_REPORT_COMMAND_USAGE
             else:
-                generate_filtered_bam_files = True
+                enable_generate_filtered_bam_files = True
                 parser = get_filter_parser()
                 usage = FASE_FILTER_COMMAND_USAGE
 
@@ -492,11 +579,11 @@ def main() -> None:
                 )
                 if mode_arg.mode == "run":
                     if args.report:
-                        generate_report = True
+                        enable_generate_report = True
                         run_config.generate_report = True
                         run_config.check_feature_counts()  # Ensure either featureCountsExecutable or geneCounts is set
                     if args.filter:
-                        generate_filtered_bam_files = True
+                        enable_generate_filtered_bam_files = True
                         run_config.generate_filtered_bam_files = True
                         run_config.check_samtools()  # Ensure samtoolsExecutable is set
             except ValueError as e:
@@ -507,19 +594,19 @@ def main() -> None:
 
                 # Enable report generation if specified in config file and not via command line flag
                 if run_config.generate_report:
-                    generate_report = True
+                    enable_generate_report = True
 
                 # The --no-report flag will override behaviour specified elsewhere
                 if args.no_report:
-                    generate_report = False
+                    enable_generate_report = False
 
                 # Enable BAM file filtering if specified in config file and not via command line flag
                 if run_config.generate_filtered_bam_files:
-                    generate_filtered_bam_files = True
+                    enable_generate_filtered_bam_files = True
 
                 # The --no-filter flag will override behaviour specified elsewhere
                 if args.no_filter:
-                    generate_filtered_bam_files = False
+                    enable_generate_filtered_bam_files = False
 
                 species_specific_data_dir = os.path.join(base_dir, "data", run_config.species)
 
@@ -530,13 +617,57 @@ def main() -> None:
                     run_config
                 )
 
-            if generate_report:
+            if enable_generate_report:
 
+                # Execute report
                 report(run_config)
 
-            if generate_filtered_bam_files:
+            if enable_generate_filtered_bam_files:
 
+                # Execute filter
                 filter_bam_files(run_config)
+
+        elif mode_arg.mode == "quant":
+
+            quant_parser = get_quant_parser()
+            quant_args = quant_parser.parse_args(subsequent_args)
+
+            if quant_args.run_config_path is None and any([
+                quant_args.genome is None,
+                quant_args.input is None,
+                quant_args.output is None
+            ]):
+                print(
+                    f"Usage:\n{FASE_QUANT_COMMAND_USAGE}\n\n"
+                    "Use \"fase quant --help\" for more information on usage."
+                )
+                exit()
+
+            # Load run config if path was supplied
+            if quant_args.run_config_path is not None:
+                try:
+                    run_config = FaseRunConfig(
+                        quant_args.run_config_path,
+                        internal_config,
+                        user_config
+                    )
+                except ValueError as e:
+                    print(CONFIG_FILE_FORMATTING_ERROR_MESSAGE + "\n" + str(e))
+                    exit()
+            else:
+                run_config = None
+
+            # Execute quant
+            quant(
+                run_config,
+                user_config,
+                quant_args.stringtie,
+                quant_args.prep_de,
+                quant_args.genome,
+                quant_args.input,
+                quant_args.output,
+                quant_args.threads
+            )
 
 
 if __name__ == "__main__":

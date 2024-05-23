@@ -60,7 +60,7 @@ def generate_filtered_bam_files(
     # Get BAM file paths
     _ending_length = len(run_config.bam_ending)
     bam_file_absolute_paths = [os.path.join(
-        run_config.input_path, p
+        bam_files_dir, p
     ) for p in os.listdir(run_config.input_path) if p[-_ending_length:] == run_config.bam_ending]
 
     # Define samples

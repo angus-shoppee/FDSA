@@ -11,6 +11,10 @@ from src.config.marker_aliases import convert_marker_alias
 RANK_RESULTS_BY_ALLOWED_VALUES = ["frequency", "number"]
 
 
+# TODO: Refactor Union[None, x] to Union[x, None]
+# Possible TODO: Refactor all Union[x, None] to Optional[x] (project-wide)
+
+
 def _remove_lowercase_duplicates(values: List[str]) -> List[str]:
 
     # Ugly function to help bypass configparser duplicating options and their corresponding values when case
@@ -277,6 +281,8 @@ class FaseUserConfig:
     user_default_filter_min_total_n_occurrences_across_all_samples: Union[None, int]
     user_default_filter_min_n_occurrences_in_sample: Union[None, int]
     user_default_filter_occurrences_in_at_least_n_samples: Union[None, int, str]
+    user_default_quant_stringtie_executable_path: Union[None, str]
+    user_default_quant_prep_de_script_path: Union[None, str]
 
     def __init__(
         self,
@@ -316,7 +322,9 @@ class FaseUserConfig:
             parse_bool(user_default_generate_report)
 
         user_default_generate_filtered_bam_files = user_config.get(
-            "DEFAULT RUN", "filterBamFiles", fallback=None
+            "DEFAULT RUN", "filterBamFiles", fallback=user_config.get(
+                "DEFAULT RUN", "filter", fallback=None
+            )
         )
         self.user_default_generate_filtered_bam_files = None if user_default_generate_filtered_bam_files is None else \
             parse_bool(user_default_generate_filtered_bam_files)
@@ -561,6 +569,26 @@ class FaseUserConfig:
         if self.user_default_filter_occurrences_in_at_least_n_samples < 0:
             raise ValueError(_e + f"The parameter occurrencesInAtLeastNSamples cannot be less than zero")
 
+        # [DEFAULT QUANT]
+
+        user_default_quant_stringtie_executable_path = user_config.get(
+            "DEFAULT QUANT", "stringtieExecutablePath", fallback=user_config.get(
+                "DEFAULT QUANT", "stringtieExecutable", fallback=user_config.get(
+                    "DEFAULT QUANT", "stringtie", fallback=None
+                )
+            )
+        )
+        self.user_default_quant_stringtie_executable_path = user_default_quant_stringtie_executable_path
+
+        user_default_quant_prep_de_script_path = user_config.get(
+            "DEFAULT QUANT", "prepDEScriptPath", fallback=user_config.get(
+                "DEFAULT QUANT", "prepDEScript", fallback=user_config.get(
+                    "DEFAULT QUANT", "prepDE", fallback=None
+                )
+            )
+        )
+        self.user_default_quant_prep_de_script_path = user_default_quant_prep_de_script_path
+
     def __setattr__(self, name, value):
         # If attribute is a string, strip all quotation marks before applying
         if isinstance(value, str):
@@ -605,6 +633,8 @@ class FaseRunConfig:
     filter_min_total_n_occurrences_across_all_samples: int
     filter_min_n_occurrences_in_sample: int
     filter_occurrences_in_at_least_n_samples: int
+    quant_stringtie_executable_path: Union[None, str]
+    quant_prep_de_script_path: Union[None, str]
     sample_groups: Dict[str, List[str]]
     group_name_by_sample_name: Dict[str, str]  # Interpolated, not defined by the user
     color_by_group_name: Dict[str, str]
@@ -769,11 +799,15 @@ class FaseRunConfig:
         ))
         self.generate_report = parse_bool(generate_report)
 
-        generate_filtered_bam_files = run_config.get("RUN", "filterBamFiles", fallback=(
-            user_config.user_default_generate_filtered_bam_files
-            if user_config.user_default_generate_filtered_bam_files is not None
-            else internal_config.default_generate_filtered_bam_files
-        ))
+        generate_filtered_bam_files = run_config.get(
+            "RUN", "filterBamFiles", fallback=run_config.get(
+                "RUN", "filter", fallback=(
+                    user_config.user_default_generate_filtered_bam_files
+                    if user_config.user_default_generate_filtered_bam_files is not None
+                    else internal_config.default_generate_filtered_bam_files
+                )
+            )
+        )
         self.generate_filtered_bam_files = parse_bool(generate_filtered_bam_files)
 
         primary_alignment_only = run_config.get(
@@ -1106,6 +1140,26 @@ class FaseRunConfig:
 
         if self.filter_occurrences_in_at_least_n_samples < 0:
             raise ValueError(_e + f"The parameter occurrencesInAtLeastNSamples cannot be less than zero")
+
+        # Optional section: [QUANT]
+
+        quant_stringtie_executable_path = run_config.get(
+            "QUANT", "stringtieExecutablePath", fallback=run_config.get(
+                "QUANT", "stringtieExecutable", fallback=run_config.get(
+                    "QUANT", "stringtie", fallback=user_config.user_default_quant_stringtie_executable_path
+                )
+            )
+        )
+        self.quant_stringtie_executable_path = quant_stringtie_executable_path
+
+        quant_prep_de_script_path = run_config.get(
+            "QUANT", "prepDEScriptPath", fallback=run_config.get(
+                "QUANT", "prepDEScript", fallback=run_config.get(
+                    "QUANT", "prepDE", fallback=user_config.user_default_quant_prep_de_script_path
+                )
+            )
+        )
+        self.quant_prep_de_script_path = quant_prep_de_script_path
 
         # Enable case-sensitivity for option names in subsequent (SAMPLES, COLORS) sections
         run_config.optionxform = str

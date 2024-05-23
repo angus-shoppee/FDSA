@@ -12,7 +12,7 @@ def get_mode_parser(program_description: str) -> ArgumentParser:
     mode_parser.add_argument(
         "mode",
         type=str,
-        choices=["user", "build", "run", "report", "filter"],
+        choices=["user", "build", "run", "report", "filter", "quant"],
         help="\n".join([
             "user - (Required only once) Sets the user config file containing build information and optional default "
             "parameters.",
@@ -21,7 +21,10 @@ def get_mode_parser(program_description: str) -> ArgumentParser:
             "run - Performs splice analysis according to parameters set in the specified run config file.",
             "report - Generates a graphical report from the output of \"fase run\".",
             "filter - Generates filtered BAM files containing only reads aligned to genes that have splice events in "
-            "the output of \"fase run\" (thresholds are configurable via the [FILTER] section in run config)."
+            "the output of \"fase run\" (thresholds are configurable via the [FILTER] section in run config). "
+            "quant - Wraps stringtie: Stringtie is run individually for each supplied BAM file, then results are "
+            "merged, and stringtie is re-run using the merged GTF as a reference; estimated transcript counts are "
+            "finally extracted using stringtie's prepDE.py3 script."
         ])
     )
 
@@ -187,3 +190,67 @@ def get_filter_parser() -> ArgumentParser:
     )
 
     return filter_parser
+
+
+def get_quant_parser() -> ArgumentParser:
+
+    quant_parser = ArgumentParser()
+
+    quant_parser.add_argument(
+        "run_config_path",
+        nargs="?",
+        default=None,  # Allow no value so missing value error can be manually handled
+        type=str,
+        help="Path to a run config file containing a valid [RUN] section (see \"fase run --help\"). Can be omitted if "
+             "all of the -g, -i and -o parameters are set."
+    )
+
+    quant_parser.add_argument(
+        "-s",
+        "--stringtie",
+        type=str,
+        required=False,
+        help="(If not defined in user config or run config) Path to the stringtie executable"
+    )
+
+    quant_parser.add_argument(
+        "-p",
+        "--prep-de",
+        type=str,
+        required=False,
+        help="(If not defined in user config or run config) Path to the prepDE.py3 script provided with stringtie"
+    )
+
+    quant_parser.add_argument(
+        "-g",
+        "--genome",
+        type=str,
+        required=False,
+        help="(If not defined in run config) Path to a reference genome annotation (GTF) file"
+    )
+
+    quant_parser.add_argument(
+        "-i",
+        "--input",
+        type=str,
+        required=False,
+        help="(If not defined in run config) Input directory containing filtered BAM files (must end in \".bam\")"
+    )
+
+    quant_parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        required=False,
+        help="(If not defined in run config) Output directory where stringtie results will be saved"
+    )
+
+    quant_parser.add_argument(
+        "-t",
+        "--threads",
+        type=int,
+        required=False,
+        help="(If not defined in run config, optional) Number of threads for stringtie to use"
+    )
+
+    return quant_parser
