@@ -656,7 +656,7 @@ class FaseRunConfig:
         run_config.read(run_config_path)
 
         if user_config is None:
-            user_config = FaseUserConfig(os.path.join("src", "config", ".null_user.config"))
+            user_config = FaseUserConfig(os.path.join("src", "config", "null_user.config"))
 
         if "RUN" not in run_config:
             raise ValueError(_e + f"Missing mandatory section RUN (run settings)")

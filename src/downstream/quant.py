@@ -1,4 +1,5 @@
 
+from typing import Dict
 import os
 import subprocess
 
@@ -36,8 +37,10 @@ def quantify_isoforms(
         raise ValueError(f"No BAM files found in supplied input directory: {filtered_bam_dir}")
 
     # Run stringtie individually for each sample
+
     print("[stringtie] Assembling transcripts from individual BAM files...")
 
+    individual_stringtie_output_locations: Dict[str, str] = {}
     _n = 0
     for bam_path in bam_abs_paths:
 
@@ -47,17 +50,17 @@ def quantify_isoforms(
         _basename = os.path.basename(bam_path)
         output_filename = _basename[:_basename.index(".")] + ".gtf"
 
-        # stringtie BAM -G GENOME -o OUT.gtf -p THREADS
-        split_cmd = [
-            stringtie_executable_path,
-            "-G", gtf_path,
-            "-o", os.path.join(output_base_dir, "individual", output_filename),
-            "-p", str(threads),
-            bam_path
-        ]
+        individual_stringtie_output_locations[bam_path] = os.path.join(output_base_dir, "individual", output_filename)
 
-        process = subprocess.run(
-            split_cmd,
+        # stringtie -G GENOME -o INDIVIDUAL.gtf -p THREADS BAM
+        subprocess.run(
+            [
+                stringtie_executable_path,
+                "-G", gtf_path,
+                "-o", individual_stringtie_output_locations[bam_path],
+                "-p", str(threads),
+                bam_path
+            ],
             cwd=output_base_dir,
             encoding="utf8",
             check=check_exit_code
@@ -72,7 +75,30 @@ def quantify_isoforms(
 
     # Run stringtie in --merge mode to get the combined transcript GTF
 
+    print("[stringtie] Merging results...")
+
+    # Write merge list for --merge mode
+    merge_list_path = os.path.join(output_base_dir, "merge_list.txt")
+    with open(merge_list_path, "w") as f:
+        f.write("\n".join(list(individual_stringtie_output_locations.values())))
+
+    # stringtie --merge -G GENOME -o MERGED.gtf MERGE_LIST
+    subprocess.run(
+        [
+            stringtie_executable_path,
+            "--merge",
+            "-G", gtf_path,
+            "-o", os.path.join(output_base_dir, "merged.gtf"),
+            merge_list_path
+        ],
+        cwd=output_base_dir,
+        encoding="utf8",
+        check=check_exit_code
+    )
+
+    print("[stringtie] ... done")
+
     # Run stringtie in -e -b mode
-    # Note: In this step, the combined GTF from stringtie --merge is used with -G rather than the reference genome
+    # In this step, the combined GTF from stringtie --merge is used with -G rather than the reference genome
 
     pass
