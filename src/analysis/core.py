@@ -23,7 +23,7 @@ def name_output_file(
     run_name: str,
     feature_name: str
 ) -> str:
-    return sanitize_string_for_filename(f"{run_name} - {feature_name}")
+    return sanitize_string_for_filename(f"{feature_name} - {run_name}")
 
 
 def set_analysis_features(

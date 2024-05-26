@@ -7,7 +7,7 @@ import subprocess
 def quantify_isoforms(
     stringtie_executable_path: str,
     prep_de_script_path: str,
-    gtf_path: str,
+    reference_gtf_path: str,
     filtered_bam_dir: str,
     output_dir: str,
     bam_file_ending: str = ".bam",
@@ -15,8 +15,8 @@ def quantify_isoforms(
     check_exit_code: bool = False
 ) -> None:
 
-    if not os.path.isfile(gtf_path):
-        raise ValueError(f"Invalid path supplied for reference genome: {gtf_path}")
+    if not os.path.isfile(reference_gtf_path):
+        raise ValueError(f"Invalid path supplied for reference genome: {reference_gtf_path}")
 
     if not os.path.isdir(filtered_bam_dir):
         raise ValueError(f"Invalid path supplied for filtered BAM directory: {filtered_bam_dir}")
@@ -40,24 +40,25 @@ def quantify_isoforms(
 
     print("[stringtie] Assembling transcripts from individual BAM files...")
 
-    individual_stringtie_output_locations: Dict[str, str] = {}
+    stringtie_assembly_output_locations: Dict[str, str] = {}
     _n = 0
     for bam_path in bam_abs_paths:
 
         print(os.path.basename(bam_path))
 
-        # output_filename = os.path.basename(bam_path).replace(bam_file_ending, ".gtf")
         _basename = os.path.basename(bam_path)
-        output_filename = _basename[:_basename.index(".")] + ".gtf"
+        _output_local_filename = _basename[:_basename.index(".")] + ".gtf"
 
-        individual_stringtie_output_locations[bam_path] = os.path.join(output_base_dir, "individual", output_filename)
+        stringtie_assembly_output_locations[bam_path] = os.path.join(
+            output_base_dir, "assembly", _output_local_filename
+        )
 
         # stringtie -G GENOME -o INDIVIDUAL.gtf -p THREADS BAM
         subprocess.run(
             [
                 stringtie_executable_path,
-                "-G", gtf_path,
-                "-o", individual_stringtie_output_locations[bam_path],
+                "-G", reference_gtf_path,
+                "-o", stringtie_assembly_output_locations[bam_path],
                 "-p", str(threads),
                 bam_path
             ],
@@ -66,9 +67,10 @@ def quantify_isoforms(
             check=check_exit_code
         )
 
-        # DEBUG: Break after second iteration
+        # DEV: Break after second iteration
         _n += 1
         if _n >= 2:
+            print("[DEV] stopped after 2 files")
             break
 
     print("[stringtie] ... done")
@@ -80,15 +82,17 @@ def quantify_isoforms(
     # Write merge list for --merge mode
     merge_list_path = os.path.join(output_base_dir, "merge_list.txt")
     with open(merge_list_path, "w") as f:
-        f.write("\n".join(list(individual_stringtie_output_locations.values())))
+        f.write("\n".join(list(stringtie_assembly_output_locations.values())))
+
+    merged_gtf_path = os.path.join(output_base_dir, "merged.gtf")
 
     # stringtie --merge -G GENOME -o MERGED.gtf MERGE_LIST
     subprocess.run(
         [
             stringtie_executable_path,
             "--merge",
-            "-G", gtf_path,
-            "-o", os.path.join(output_base_dir, "merged.gtf"),
+            "-G", reference_gtf_path,
+            "-o", merged_gtf_path,
             merge_list_path
         ],
         cwd=output_base_dir,
@@ -100,5 +104,40 @@ def quantify_isoforms(
 
     # Run stringtie in -e -b mode
     # In this step, the combined GTF from stringtie --merge is used with -G rather than the reference genome
+
+    print("[stringtie] Quantifying transcripts...")
+
+    stringtie_assembly_output_locations: Dict[str, str] = {}
+
+    _n = 0
+    for bam_path in bam_abs_paths:
+
+        _basename = os.path.basename(bam_path)
+        _output_local_filename = _basename[:_basename.index(".")] + "_quant.gtf"
+
+        stringtie_assembly_output_locations[bam_path] = os.path.join(
+            output_base_dir, "quantified", _output_local_filename
+        )
+
+        print(_basename)
+
+        # stringtie -e -B -G MERGED.gtf -o OUT_QUANT.gtf BAM
+        subprocess.run(
+            [
+                stringtie_executable_path,
+                "-e", "-B",
+                "-G", merged_gtf_path,
+                "-o", stringtie_assembly_output_locations[bam_path],
+                bam_path
+            ]
+        )
+
+        # DEV: Break after second iteration
+        _n += 1
+        if _n >= 2:
+            print("[DEV] stopped after 2 files")
+            break
+
+    print("[stringtie] ... done")
 
     pass
