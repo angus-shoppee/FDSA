@@ -1,7 +1,9 @@
 
-from typing import Dict
+from typing import Dict, Optional
 import os
 import subprocess
+
+from src.analysis.core import name_output
 
 
 def quantify_isoforms(
@@ -9,8 +11,9 @@ def quantify_isoforms(
     prep_de_script_path: str,
     reference_gtf_path: str,
     filtered_bam_dir: str,
-    output_dir: str,
+    output_base_dir: str,
     bam_file_ending: str = ".bam",
+    read_length: Optional[int] = None,
     threads: int = 1,
     check_exit_code: bool = False
 ) -> None:
@@ -21,11 +24,11 @@ def quantify_isoforms(
     if not os.path.isdir(filtered_bam_dir):
         raise ValueError(f"Invalid path supplied for filtered BAM directory: {filtered_bam_dir}")
 
-    output_base_dir = os.path.join(output_dir, "STRINGTIE")
-    if not os.path.isdir(output_base_dir):
-        if os.path.exists(output_base_dir):
-            raise FileExistsError(f"Could not create output directory ({output_base_dir}): already exists as file")
-        os.makedirs(output_base_dir)
+    stringtie_out_dir = os.path.join(output_base_dir, "STRINGTIE")
+    if not os.path.isdir(stringtie_out_dir):
+        if os.path.exists(stringtie_out_dir):
+            raise FileExistsError(f"Could not create output directory ({stringtie_out_dir}): already exists as file")
+        os.makedirs(stringtie_out_dir)
 
     _bam_file_ending_length = len(bam_file_ending)
     bam_abs_paths = [
@@ -40,8 +43,10 @@ def quantify_isoforms(
 
     print("[stringtie] Assembling transcripts from individual BAM files...")
 
+    assembly_dir = os.path.join(stringtie_out_dir, "assembly")
     stringtie_assembly_output_locations: Dict[str, str] = {}
-    _n = 0
+
+    # _n = 0
     for bam_path in bam_abs_paths:
 
         print(os.path.basename(bam_path))
@@ -49,9 +54,7 @@ def quantify_isoforms(
         _basename = os.path.basename(bam_path)
         _output_local_filename = _basename[:_basename.index(".")] + ".gtf"
 
-        stringtie_assembly_output_locations[bam_path] = os.path.join(
-            output_base_dir, "assembly", _output_local_filename
-        )
+        stringtie_assembly_output_locations[bam_path] = os.path.join(assembly_dir, _output_local_filename)
 
         # stringtie -G GENOME -o INDIVIDUAL.gtf -p THREADS BAM
         subprocess.run(
@@ -62,7 +65,78 @@ def quantify_isoforms(
                 "-p", str(threads),
                 bam_path
             ],
-            cwd=output_base_dir,
+            cwd=stringtie_out_dir,
+            encoding="utf8",
+            check=check_exit_code
+        )
+
+        # # DEV: Break after second iteration
+        # _n += 1
+        # if _n >= 2:
+        #     print("[DEV] stopped after 2 files")
+        #     break
+
+    print("[stringtie] ... done")
+
+    # Run stringtie in --merge mode to get the combined transcript GTF
+
+    print("[stringtie] Merging results...")
+
+    # Write merge list for --merge mode
+    merge_list_path = os.path.join(assembly_dir, "merge_list.txt")
+    with open(merge_list_path, "w") as f:
+        f.write("\n".join(list(stringtie_assembly_output_locations.values())))
+
+    merged_gtf_path = os.path.join(stringtie_out_dir, "merged.gtf")
+
+    # stringtie --merge -G GENOME -o MERGED.gtf MERGE_LIST
+    subprocess.run(
+        [
+            stringtie_executable_path,
+            "--merge",
+            "-G", reference_gtf_path,
+            "-o", merged_gtf_path,
+            merge_list_path
+        ],
+        cwd=stringtie_out_dir,
+        encoding="utf8",
+        check=check_exit_code
+    )
+
+    print("[stringtie] ... done")
+
+    # Run stringtie in -e -b mode
+    # In this step, the combined GTF from stringtie --merge is used with -G rather than the reference genome
+
+    print("[stringtie] Quantifying transcripts...")
+
+    quantified_dir = os.path.join(stringtie_out_dir, "quantified")
+    stringtie_quantified_output_locations: Dict[str, str] = {}
+
+    _n = 0
+    for bam_path in bam_abs_paths:
+
+        _basename = os.path.basename(bam_path)
+        _basename_stripped = _basename[:_basename.index(".")]
+        _output_local_filename = _basename_stripped + ".quant.gtf"
+
+        stringtie_quantified_output_locations[bam_path] = os.path.join(
+            quantified_dir, _basename_stripped, _output_local_filename
+        )
+
+        print(_basename)
+
+        # stringtie -e -B -G MERGED.gtf -o OUT_QUANT.gtf -p THREADS BAM
+        subprocess.run(
+            [
+                stringtie_executable_path,
+                "-e", "-B",
+                "-G", merged_gtf_path,
+                "-o", stringtie_quantified_output_locations[bam_path],
+                "-p", str(threads),
+                bam_path
+            ],
+            cwd=stringtie_out_dir,
             encoding="utf8",
             check=check_exit_code
         )
@@ -75,68 +149,30 @@ def quantify_isoforms(
 
     print("[stringtie] ... done")
 
-    # Run stringtie in --merge mode to get the combined transcript GTF
+    # Run prepDE script
 
-    print("[stringtie] Merging results...")
+    print("[stringtie] Generating transcript count matrix (prepDE.py3)...")
 
-    # Write merge list for --merge mode
-    merge_list_path = os.path.join(output_base_dir, "merge_list.txt")
-    with open(merge_list_path, "w") as f:
-        f.write("\n".join(list(stringtie_assembly_output_locations.values())))
+    prep_de_out_dir = os.path.join(stringtie_out_dir, "prepDE")
 
-    merged_gtf_path = os.path.join(output_base_dir, "merged.gtf")
+    if not os.path.isdir(prep_de_out_dir):
+        if os.path.isfile(prep_de_out_dir):
+            raise ValueError(f"Could not create prepDE output directory {prep_de_out_dir} - File already exists")
+        os.makedirs(prep_de_out_dir)
 
-    # stringtie --merge -G GENOME -o MERGED.gtf MERGE_LIST
+    # prepDE.py3 -i INPUT [-g GENE_COUNTS.csv] [-t TRANSCRIPT_COUNTS.csv] [-l READ_LENGTH]
+    prep_de_cmd_split = [
+        "python3", prep_de_script_path,
+        "-i", quantified_dir,
+    ]
+    if read_length is not None:
+        prep_de_cmd_split += ["-l", read_length]
     subprocess.run(
-        [
-            stringtie_executable_path,
-            "--merge",
-            "-G", reference_gtf_path,
-            "-o", merged_gtf_path,
-            merge_list_path
-        ],
-        cwd=output_base_dir,
+        prep_de_cmd_split,
+        cwd=prep_de_out_dir,
         encoding="utf8",
         check=check_exit_code
     )
-
-    print("[stringtie] ... done")
-
-    # Run stringtie in -e -b mode
-    # In this step, the combined GTF from stringtie --merge is used with -G rather than the reference genome
-
-    print("[stringtie] Quantifying transcripts...")
-
-    stringtie_assembly_output_locations: Dict[str, str] = {}
-
-    _n = 0
-    for bam_path in bam_abs_paths:
-
-        _basename = os.path.basename(bam_path)
-        _output_local_filename = _basename[:_basename.index(".")] + "_quant.gtf"
-
-        stringtie_assembly_output_locations[bam_path] = os.path.join(
-            output_base_dir, "quantified", _output_local_filename
-        )
-
-        print(_basename)
-
-        # stringtie -e -B -G MERGED.gtf -o OUT_QUANT.gtf BAM
-        subprocess.run(
-            [
-                stringtie_executable_path,
-                "-e", "-B",
-                "-G", merged_gtf_path,
-                "-o", stringtie_assembly_output_locations[bam_path],
-                bam_path
-            ]
-        )
-
-        # DEV: Break after second iteration
-        _n += 1
-        if _n >= 2:
-            print("[DEV] stopped after 2 files")
-            break
 
     print("[stringtie] ... done")
 

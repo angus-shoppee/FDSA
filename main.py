@@ -16,7 +16,7 @@ from src.analysis.transcript import (
 from src.analysis.entrez import download_and_save_feature_annotation_xml, get_gbseq_from_xml
 from src.analysis.biomart import create_and_save_name_lookup, load_name_lookup_from_file
 from src.analysis.experiment import Sample
-from src.analysis.core import set_analysis_features, perform_splice_analysis, name_output_file
+from src.analysis.core import set_analysis_features, perform_splice_analysis, name_output
 from src.reporting.report import create_report
 from src.downstream.filter import generate_filtered_bam_files, FILTERED_BAM_FILES_DEFAULT_DIRECTORY_NAME
 from src.downstream.quant import quantify_isoforms
@@ -320,6 +320,7 @@ def quant(
     gtf_path: Union[str, None] = None,
     filtered_bam_dir: Union[str, None] = None,
     output_dir: Union[str, None] = None,
+    read_length: Union[int, None] = None,
     threads: Union[int, None] = None  # Allow None to indicate that value should be loaded from run config
 ) -> None:
 
@@ -352,6 +353,7 @@ def quant(
         _gtf_path = gtf_path
         _filtered_bam_dir = filtered_bam_dir
         _output_dir = output_dir
+        _read_length = read_length
         _threads = threads
 
     else:
@@ -360,7 +362,7 @@ def quant(
             os.path.join(
                 run_config.output_path,
                 FILTERED_BAM_FILES_DEFAULT_DIRECTORY_NAME,
-                f"{name_output_file(run_config.run_name, run_config.feature_name)}"
+                f"{name_output(run_config.run_name, run_config.feature_name)}"
             )
         )
 
@@ -371,6 +373,7 @@ def quant(
         _gtf_path = gtf_path if gtf_path is not None else run_config.genome
         _filtered_bam_dir = filtered_bam_dir if filtered_bam_dir is not None else inferred_filtered_bam_dir
         _output_dir = output_dir if output_dir is not None else run_config.output_path
+        _read_length = read_length if read_length is not None else run_config.quant_read_length
         _threads = threads if threads is not None else run_config.n_threads
 
     # Check that _stringtie_executable_path and _prep_de_script_path have been defined in one of the three possible ways
@@ -389,6 +392,7 @@ def quant(
         _gtf_path,
         _filtered_bam_dir,
         _output_dir,
+        read_length=_read_length,
         threads=_threads
     )
 
@@ -666,6 +670,7 @@ def main() -> None:
                 quant_args.genome,
                 quant_args.input,
                 quant_args.output,
+                quant_args.read_length,
                 quant_args.threads
             )
 

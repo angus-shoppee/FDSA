@@ -19,7 +19,7 @@ def sanitize_string_for_filename(s: str) -> str:
     return "".join(c for c in s if c.isalnum() or c in (".", "_", "-", " ")).rstrip()
 
 
-def name_output_file(
+def name_output(
     run_name: str,
     feature_name: str
 ) -> str:
@@ -302,7 +302,7 @@ def perform_splice_analysis(
 
     skipped_exon_match_failure = 0
 
-    output_file_path = os.path.join(output_dir, f"{name_output_file(run_name, feature_substring)}.csv")
+    output_file_path = os.path.join(output_dir, f"{name_output(run_name, feature_substring)}.csv")
     print(f"Saving output to {output_file_path}")
     print()  # Print blank line to be consumed by first one-line-up ansi code
 

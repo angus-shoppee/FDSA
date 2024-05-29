@@ -247,6 +247,14 @@ def get_quant_parser() -> ArgumentParser:
     )
 
     quant_parser.add_argument(
+        "-l",
+        "--read-length",
+        type=int,
+        required=False,
+        help="(If not defined in run config, optional) Input read length (stringtie default = 75)"
+    )
+
+    quant_parser.add_argument(
         "-t",
         "--threads",
         type=int,

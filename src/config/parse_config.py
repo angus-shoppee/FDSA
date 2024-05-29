@@ -1,12 +1,11 @@
 
-from typing import Union, List, Dict, Any
-from functools import reduce
+from typing import Union, List, Dict
 import csv
 import os
 import configparser
 
 from src.config.marker_aliases import convert_marker_alias
-
+from src.utils.general import remove_quotes, flatten_nested_lists
 
 RANK_RESULTS_BY_ALLOWED_VALUES = ["frequency", "number"]
 
@@ -28,14 +27,6 @@ def _remove_lowercase_duplicates(values: List[str]) -> List[str]:
     for value in lowercase_with_pair:
         modified_values.remove(value)
     return modified_values
-
-
-def remove_quotes(value: str) -> str:
-    return value.replace("\"", "").replace("\'", "")
-
-
-def flatten_nested_lists(nested_lists: List[List[Any]]) -> List[Any]:
-    return reduce(lambda a, b: a + b, nested_lists)
 
 
 def parse_bool(value: Union[bool, str]) -> bool:
@@ -635,6 +626,7 @@ class FaseRunConfig:
     filter_occurrences_in_at_least_n_samples: int
     quant_stringtie_executable_path: Union[None, str]
     quant_prep_de_script_path: Union[None, str]
+    quant_read_length: Union[None, int]
     sample_groups: Dict[str, List[str]]
     group_name_by_sample_name: Dict[str, str]  # Interpolated, not defined by the user
     color_by_group_name: Dict[str, str]
@@ -1160,6 +1152,13 @@ class FaseRunConfig:
             )
         )
         self.quant_prep_de_script_path = quant_prep_de_script_path
+
+        quant_read_length = run_config.get(
+            "QUANT", "inputReadLength", fallback=run_config.get(
+                "QUANT", "readLength", fallback=None
+            )
+        )
+        self.quant_read_length = None if quant_read_length is None else int(quant_read_length)
 
         # Enable case-sensitivity for option names in subsequent (SAMPLES, COLORS) sections
         run_config.optionxform = str

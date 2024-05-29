@@ -4,7 +4,7 @@ import os
 import subprocess
 
 from src.config.parse_config import FaseInternalConfig, FaseRunConfig
-from src.analysis.core import name_output_file, Sample
+from src.analysis.core import name_output, Sample
 from src.reporting.process_results import load_fase_results
 
 
@@ -29,7 +29,7 @@ def generate_filtered_bam_files(
         os.path.join(
             run_config.output_path,
             FILTERED_BAM_FILES_DEFAULT_DIRECTORY_NAME,
-            f"{name_output_file(run_config.run_name, run_config.feature_name)}"
+            f"{name_output(run_config.run_name, run_config.feature_name)}"
         )
     )
     if not os.path.exists(output_dir):
@@ -54,7 +54,7 @@ def generate_filtered_bam_files(
 
     fase_results_path = os.path.join(
         run_config.output_path,
-        f"{name_output_file(run_config.run_name, run_config.feature_name)}.csv"
+        f"{name_output(run_config.run_name, run_config.feature_name)}.csv"
     )
 
     # Get BAM file paths

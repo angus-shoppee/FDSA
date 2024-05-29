@@ -7,7 +7,7 @@ from pandas import read_csv as pd_read_csv
 from functools import reduce
 
 from src.config.parse_config import FaseRunConfig
-from src.analysis.core import name_output_file
+from src.analysis.core import name_output
 from src.analysis.experiment import Sample
 from src.analysis.counts import run_feature_counts, get_gene_counts_from_tsv, get_tmm_cpm_from_gene_counts
 from src.reporting.process_results import load_fase_results
@@ -58,7 +58,7 @@ def create_report(
     # ---------------------------------------------------------------------------------------------------------------- #
 
     output_dir = os.path.join(run_config.output_path, "REPORT")
-    _results_file_name_no_extension = name_output_file(run_config.run_name, run_config.feature_name)
+    _results_file_name_no_extension = name_output(run_config.run_name, run_config.feature_name)
     fase_results_path = os.path.join(run_config.output_path, f"{_results_file_name_no_extension}.csv")
 
     # Get BAM file paths
@@ -227,7 +227,7 @@ def create_report(
     )
 
     output_path = os.path.join(
-        output_dir_absolute, f"Report - {name_output_file(run_config.report_name, run_config.feature_name)}.html"
+        output_dir_absolute, f"Report - {name_output(run_config.report_name, run_config.feature_name)}.html"
     )
 
     with open(output_path, "w") as output_file:
