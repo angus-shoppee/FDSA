@@ -4,6 +4,7 @@ import gc
 import os
 import argparse
 from sys import argv
+# TODO: Remove gtfparse dependency
 from gtfparse import read_gtf
 
 from src.config.parse_args import (

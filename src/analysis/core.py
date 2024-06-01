@@ -147,10 +147,10 @@ def calculate_exonic_overlap(
 
     e_ranges = [range(e.start, e.end + 1) for e in transcript.exons]
 
-    # Ugly way to make a set from a list of ranges... is there a more pythonic way to do this?
-    e_union_set = set()
-    for r in e_ranges:
-        e_union_set = e_union_set.union(set(r))
+    e_union_set = {n for r in e_ranges for n in r}
+    # e_union_set = set()
+    # for r in e_ranges:
+    #     e_union_set = e_union_set.union(set(r))
 
     e_j_intersect = e_union_set.intersection(j_range)
 

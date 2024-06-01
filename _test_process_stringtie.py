@@ -1,14 +1,26 @@
 
-from src.downstream.format_stringtie_matrices import format_stringtie_matrices
+from src.downstream.format_stringtie_matrices import format_stringtie_matrices, annotate_formatted_stringtie_output
 
 
 def main() -> None:
 
+    fase_results_path = "/Users/aasho2/Projects/FASE_V1/OUTPUT/melanoma_stratified_icb_response_PRJNA312948/transmembrane region - Melanoma tumours stratified by ICB response and pre-treatment status PRJNA312948.csv"
+
+    gene_counts_path = "/Users/aasho2/Projects/FASE_V1/OUTPUT/melanoma_stratified_icb_response_PRJNA312948/STRINGTIE/prepDE/gene_count_matrix.csv"
+    transcript_counts_path = "/Users/aasho2/Projects/FASE_V1/OUTPUT/melanoma_stratified_icb_response_PRJNA312948/STRINGTIE/prepDE/transcript_count_matrix.csv"
+    merged_gtf_path = "/Users/aasho2/Projects/FASE_V1/OUTPUT/melanoma_stratified_icb_response_PRJNA312948/STRINGTIE/merged.gtf"
+    formatted_stringtie_output_path = "/Users/aasho2/Projects/FASE_V1/OUTPUT/melanoma_stratified_icb_response_PRJNA312948/STRINGTIE/test_formatted_out.csv"
+
     format_stringtie_matrices(
-        "/Users/aasho2/Projects/FASE_V1/OUTPUT/melanoma_stratified_icb_response_PRJNA312948/STRINGTIE/prepDE/gene_count_matrix.csv",
-        "/Users/aasho2/Projects/FASE_V1/OUTPUT/melanoma_stratified_icb_response_PRJNA312948/STRINGTIE/prepDE/transcript_count_matrix.csv",
-        "/Users/aasho2/Projects/FASE_V1/OUTPUT/melanoma_stratified_icb_response_PRJNA312948/STRINGTIE/merged.gtf",
-        "/Users/aasho2/Projects/FASE_V1/OUTPUT/melanoma_stratified_icb_response_PRJNA312948/STRINGTIE/test_formatted_out.csv"
+        gene_counts_path,
+        transcript_counts_path,
+        merged_gtf_path,
+        formatted_stringtie_output_path
+    )
+
+    annotate_formatted_stringtie_output(
+        formatted_stringtie_output_path,
+        fase_results_path
     )
 
 

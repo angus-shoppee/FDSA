@@ -279,8 +279,6 @@ class TranscriptRecord:
                 f"Failed to convert local position {local_position} - couldn't match exons.\n" + _error_exon_info
             )
 
-        pass
-
 
 class TranscriptLibrary:
 
@@ -295,6 +293,8 @@ class TranscriptLibrary:
         ref_gtf: DataFrame,
         numexpr_max_threads: int = 8
     ) -> None:
+
+        # TODO: Replace reference gtf DataFrame with dictionary structure
 
         self.species = species
         self.number_of_transcripts = 0
