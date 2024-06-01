@@ -205,7 +205,8 @@ def quantify_isoforms(
 
         annotate_formatted_stringtie_results(
             formatted_stringtie_output_path,
-            fase_results_path
+            fase_results_path,
+            assign_reference_gene=assign_reference_gene
         )
 
         print("[FASE] ... done")
