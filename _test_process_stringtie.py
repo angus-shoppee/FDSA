@@ -1,5 +1,5 @@
 
-from src.downstream.format_stringtie_matrices import format_stringtie_matrices, annotate_formatted_stringtie_output
+from src.downstream.process_stringtie import format_stringtie_matrices, annotate_formatted_stringtie_results
 
 
 def main() -> None:
@@ -18,7 +18,7 @@ def main() -> None:
         formatted_stringtie_output_path
     )
 
-    annotate_formatted_stringtie_output(
+    annotate_formatted_stringtie_results(
         formatted_stringtie_output_path,
         fase_results_path
     )

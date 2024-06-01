@@ -4,6 +4,7 @@ import os
 import subprocess
 
 from src.analysis.core import name_output
+from src.downstream.process_stringtie import format_stringtie_matrices, annotate_formatted_stringtie_results
 
 
 def quantify_isoforms(
@@ -14,9 +15,13 @@ def quantify_isoforms(
     output_base_dir: str,
     bam_file_ending: str = ".bam",
     read_length: Optional[int] = None,
+    fase_results_path: Optional[str] = None,
+    assign_reference_gene: bool = True,
     threads: int = 1,
     check_exit_code: bool = False
 ) -> None:
+
+    # TODO: Add option to delete intermediary files & directories upon completion
 
     if not os.path.isfile(reference_gtf_path):
         raise ValueError(f"Invalid path supplied for reference genome: {reference_gtf_path}")
@@ -41,12 +46,12 @@ def quantify_isoforms(
 
     # Run stringtie individually for each sample
 
-    print("[stringtie] Assembling transcripts from individual BAM files...")
+    print("[Stringtie] Assembling transcripts from individual BAM files...")
 
     assembly_dir = os.path.join(stringtie_out_dir, "assembly")
     stringtie_assembly_output_locations: Dict[str, str] = {}
 
-    # _n = 0
+    _n = 0
     for bam_path in bam_abs_paths:
 
         print(os.path.basename(bam_path))
@@ -70,17 +75,17 @@ def quantify_isoforms(
             check=check_exit_code
         )
 
-        # # DEV: Break after second iteration
-        # _n += 1
-        # if _n >= 2:
-        #     print("[DEV] stopped after 2 files")
-        #     break
+        # DEV: Break after second iteration
+        _n += 1
+        if _n >= 2:
+            print("[DEV] stopped after 2 files")
+            break
 
-    print("[stringtie] ... done")
+    print("[Stringtie] ... done")
 
     # Run stringtie in --merge mode to get the combined transcript GTF
 
-    print("[stringtie] Merging results...")
+    print("[Stringtie] Merging results...")
 
     # Write merge list for --merge mode
     merge_list_path = os.path.join(assembly_dir, "merge_list.txt")
@@ -103,12 +108,12 @@ def quantify_isoforms(
         check=check_exit_code
     )
 
-    print("[stringtie] ... done")
+    print("[Stringtie] ... done")
 
     # Run stringtie in -e -b mode
     # In this step, the combined GTF from stringtie --merge is used with -G rather than the reference genome
 
-    print("[stringtie] Quantifying transcripts...")
+    print("[Stringtie] Quantifying transcripts...")
 
     quantified_dir = os.path.join(stringtie_out_dir, "quantified")
     stringtie_quantified_output_locations: Dict[str, str] = {}
@@ -147,11 +152,11 @@ def quantify_isoforms(
             print("[DEV] stopped after 2 files")
             break
 
-    print("[stringtie] ... done")
+    print("[Stringtie] ... done")
 
     # Run prepDE script
 
-    print("[stringtie] Generating transcript count matrix (prepDE.py3)...")
+    print("[Stringtie] Generating transcript count matrix (prepDE.py3)...")
 
     prep_de_out_dir = os.path.join(stringtie_out_dir, "prepDE")
 
@@ -160,10 +165,15 @@ def quantify_isoforms(
             raise ValueError(f"Could not create prepDE output directory {prep_de_out_dir} - File already exists")
         os.makedirs(prep_de_out_dir)
 
+    prep_de_gene_counts_path = os.path.join(prep_de_out_dir, "gene_count_matrix.csv")
+    prep_de_transcript_counts_path = os.path.join(prep_de_out_dir, "transcript_count_matrix.csv")
+
     # prepDE.py3 -i INPUT [-g GENE_COUNTS.csv] [-t TRANSCRIPT_COUNTS.csv] [-l READ_LENGTH]
     prep_de_cmd_split = [
         "python3", prep_de_script_path,
         "-i", quantified_dir,
+        "-g", prep_de_gene_counts_path,
+        "-t", prep_de_transcript_counts_path
     ]
     if read_length is not None:
         prep_de_cmd_split += ["-l", read_length]
@@ -174,6 +184,32 @@ def quantify_isoforms(
         check=check_exit_code
     )
 
-    print("[stringtie] ... done")
+    print("[Stringtie] ... done")
 
-    pass
+    print("[FASE] Combining stringtie results...")
+
+    formatted_stringtie_output_path = os.path.join(stringtie_out_dir, "combined_stringtie_results.csv")
+
+    format_stringtie_matrices(
+        prep_de_gene_counts_path,
+        prep_de_transcript_counts_path,
+        merged_gtf_path,
+        formatted_stringtie_output_path
+    )
+
+    print("[FASE] ... done")
+
+    if fase_results_path is not None:
+
+        print("[FASE] Annotating stringtie results with feature overlap...")
+
+        annotate_formatted_stringtie_results(
+            formatted_stringtie_output_path,
+            fase_results_path
+        )
+
+        print("[FASE] ... done")
+
+    else:
+
+        print("[FASE] No FASE output supplied - stringtie results will not be annotated.")

@@ -235,7 +235,7 @@ def get_quant_parser() -> ArgumentParser:
         "--input",
         type=str,
         required=False,
-        help="(If not defined in run config) Input directory containing filtered BAM files (must end in \".bam\")"
+        help="(If not defined in run config) Input directory containing BAM files (must end in \".bam\")"
     )
 
     quant_parser.add_argument(
@@ -255,11 +255,30 @@ def get_quant_parser() -> ArgumentParser:
     )
 
     quant_parser.add_argument(
+        "-f",
+        "--fase-results",
+        type=str,
+        required=False,
+        help="(If no run config supplied, optional) Path to output file from \"fase run\""
+    )
+
+    quant_parser.add_argument(
         "-t",
         "--threads",
         type=int,
         required=False,
         help="(If not defined in run config, optional) Number of threads for stringtie to use"
+    )
+
+    quant_parser.add_argument(
+        "--disable-assign-reference-gene",
+        required=False,
+        action="store_true",
+        help="(If not defined in run config or user config, optional) Disables inference of reference gene IDs and "
+             "reference gene names for stringtie results without these values. By default, if a given stringtie gene "
+             "has at least one transcript with an associated reference gene ID and reference gene name, fase quant "
+             "will assign these to all other transcripts for that gene, as long as there is no ambiguity (transcripts "
+             "from a single stringtie gene associated with multiple reference gene IDs)"
     )
 
     return quant_parser

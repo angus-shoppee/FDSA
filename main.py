@@ -74,7 +74,7 @@ def _confirm_build_overwrite() -> bool:
     return True if user_choice.lower() in ("y", "yes") else False
 
 
-def user(
+def _user(
     user_config_path: str,
     save_path_to: str
 ) -> None:
@@ -95,7 +95,7 @@ def user(
     print("User config stored.\n")
 
 
-def build(
+def _build(
     species_specific_data_dir: str,
     species: str,
     genome_gtf_path: str,
@@ -233,7 +233,7 @@ def build(
     print("Build process complete.\n")
 
 
-def run(
+def _run(
     species_specific_data_dir: str,
     internal_config: FaseInternalConfig,
     run_config: FaseRunConfig
@@ -299,21 +299,21 @@ def run(
     )
 
 
-def report(
+def _report(
     run_config: FaseRunConfig
 ) -> None:
 
     create_report(run_config)
 
 
-def filter_bam_files(
+def _filter(
     run_config: FaseRunConfig
 ) -> None:
 
     generate_filtered_bam_files(run_config)
 
 
-def quant(
+def _quant(
     run_config: Union[FaseRunConfig, None],
     user_config: Union[FaseUserConfig, None] = None,
     stringtie_executable_path: Union[str, None] = None,
@@ -322,6 +322,8 @@ def quant(
     filtered_bam_dir: Union[str, None] = None,
     output_dir: Union[str, None] = None,
     read_length: Union[int, None] = None,
+    fase_results_path: Union[str, None] = None,
+    disable_assign_reference_gene: Union[bool, None] = None,
     threads: Union[int, None] = None  # Allow None to indicate that value should be loaded from run config
 ) -> None:
 
@@ -355,6 +357,8 @@ def quant(
         _filtered_bam_dir = filtered_bam_dir
         _output_dir = output_dir
         _read_length = read_length
+        _fase_results_path = fase_results_path
+        _assign_reference_gene = False if disable_assign_reference_gene else True
         _threads = threads
 
     else:
@@ -367,6 +371,11 @@ def quant(
             )
         )
 
+        inferred_fase_results_path = os.path.join(
+            run_config.output_path,
+            f"{name_output(run_config.run_name, run_config.feature_name)}.csv"
+        )
+
         _stringtie_executable_path = stringtie_executable_path if stringtie_executable_path is not None \
             else run_config.quant_stringtie_executable_path
         _prep_de_script_path = prep_de_script_path if prep_de_script_path is not None \
@@ -375,6 +384,10 @@ def quant(
         _filtered_bam_dir = filtered_bam_dir if filtered_bam_dir is not None else inferred_filtered_bam_dir
         _output_dir = output_dir if output_dir is not None else run_config.output_path
         _read_length = read_length if read_length is not None else run_config.quant_read_length
+        _fase_results_path = fase_results_path if fase_results_path is not None else (
+            inferred_fase_results_path if os.path.isfile(inferred_fase_results_path) else None
+        )
+        _assign_reference_gene = False if disable_assign_reference_gene else run_config.quant_assign_reference_gene
         _threads = threads if threads is not None else run_config.n_threads
 
     # Check that _stringtie_executable_path and _prep_de_script_path have been defined in one of the three possible ways
@@ -394,6 +407,8 @@ def quant(
         _filtered_bam_dir,
         _output_dir,
         read_length=_read_length,
+        fase_results_path=_fase_results_path,
+        assign_reference_gene=_assign_reference_gene,
         threads=_threads
     )
 
@@ -424,7 +439,7 @@ def main() -> None:
 
         user_args = user_parser.parse_args(subsequent_args)
 
-        user(
+        _user(
             os.path.abspath(user_args.user_config_path),
             stored_user_config_path
         )
@@ -526,7 +541,7 @@ def main() -> None:
             species_specific_data_dir = os.path.join(base_dir, "data", str(species))
 
             # Execute build
-            build(
+            _build(
                 species_specific_data_dir,
                 species,
                 genome,
@@ -616,7 +631,7 @@ def main() -> None:
                 species_specific_data_dir = os.path.join(base_dir, "data", run_config.species)
 
                 # Execute run
-                run(
+                _run(
                     species_specific_data_dir,
                     internal_config,
                     run_config
@@ -625,12 +640,12 @@ def main() -> None:
             if enable_generate_report:
 
                 # Execute report
-                report(run_config)
+                _report(run_config)
 
             if enable_generate_filtered_bam_files:
 
                 # Execute filter
-                filter_bam_files(run_config)
+                _filter(run_config)
 
         elif mode_arg.mode == "quant":
 
@@ -663,7 +678,7 @@ def main() -> None:
                 run_config = None
 
             # Execute quant
-            quant(
+            _quant(
                 run_config,
                 user_config,
                 quant_args.stringtie,
@@ -672,6 +687,7 @@ def main() -> None:
                 quant_args.input,
                 quant_args.output,
                 quant_args.read_length,
+                quant_args.disable_assign_reference_gene,
                 quant_args.threads
             )
 

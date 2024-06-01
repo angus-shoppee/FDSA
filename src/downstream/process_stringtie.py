@@ -28,7 +28,9 @@ import src.config.output_column_names as fase_output_cols
 #         }
 
 
-def _load_and_sum_results_matrix(matrix_path: str) -> Dict[str, Dict[str, int]]:
+def _load_and_sum_results_matrix(
+    matrix_path: str
+) -> Dict[str, Dict[str, int]]:
 
     # Sums counts from multiple lines with the same ID. For example, the following two lines:
     # MSTRG.1,           count_1a, count_2a, ...
@@ -156,13 +158,13 @@ def format_stringtie_matrices(
     if not os.path.isdir(_output_dir):
         os.makedirs(_output_dir)
 
-    print("Parsing transcript details from merged GTF...")
+    # print("Parsing transcript details from merged GTF...")
 
     stringtie_transcripts = get_stringtie_transcripts_from_gtf(merged_gtf_path)
 
-    print("... done")
+    # print("... done")
 
-    print("Combining stringtie results...")
+    # print("Combining stringtie results...")
 
     with open(output_path, "w") as output_file:
 
@@ -207,10 +209,12 @@ def format_stringtie_matrices(
                     [quant_fraction[sample_name] for sample_name in sample_names]
                 )
 
-    print("... done")
+    # print("... done")
 
 
-def _get_start_and_end_from_locus(locus: str) -> Tuple[int, int]:
+def _get_start_and_end_from_locus(
+    locus: str
+) -> Tuple[int, int]:
 
     positions = locus.split("-")
 
@@ -252,12 +256,13 @@ def _calculate_feature_exon_overlap(
     )
 
 
-def annotate_formatted_stringtie_output(
+def annotate_formatted_stringtie_results(
     formatted_stringtie_output_path: str,
-    fase_output_path: str
+    fase_output_path: str,
+    assign_reference_gene: bool = True
 ) -> None:
 
-    print("Annotating stringtie results with feature overlap...")
+    # print("Annotating stringtie results with feature overlap...")
 
     with open(fase_output_path, "r") as fase_output_file:
 
@@ -288,25 +293,44 @@ def annotate_formatted_stringtie_output(
 
         stringtie_gene_id_index = stringtie_header.index(cols.GENE_ID)
         stringtie_ref_gene_id_index = stringtie_header.index(cols.REF_GENE_ID)
+        stringtie_ref_gene_name_index = stringtie_header.index(cols.REF_GENE_NAME)
         stringtie_exons_index = stringtie_header.index(cols.EXONS)
 
         stringtie_body = [row for row in stringtie_csv]
 
     ref_gene_id_by_stringtie_gene_id: Dict[str, str] = {}
-    # Only store 1:1 mappings (store "" in cases where a stringtie gene has >1 corresponding ref gene IDs)
-    for row in stringtie_body:
-        stringtie_gene_id = row[stringtie_gene_id_index]
-        ref_gene_id = row[stringtie_ref_gene_id_index]
-        stored_ref_gene_id = ref_gene_id_by_stringtie_gene_id.get(stringtie_gene_id)
-        if stored_ref_gene_id is None:
-            if ref_gene_id == "":
-                continue  # Do not store blanks if they are the first to be encountered
-            ref_gene_id_by_stringtie_gene_id[stringtie_gene_id] = ref_gene_id
-        elif stored_ref_gene_id == "":
-            pass
-        else:
-            if ref_gene_id != "" and stored_ref_gene_id != ref_gene_id:
-                ref_gene_id_by_stringtie_gene_id[stringtie_gene_id] = ""
+    ref_gene_name_by_ref_gene_id: Dict[str, str] = {}
+    if assign_reference_gene:
+
+        # Only store 1:1 mappings (store "" in cases where a stringtie gene has >1 corresponding ref gene IDs)
+        for row in stringtie_body:
+
+            stringtie_gene_id = row[stringtie_gene_id_index]
+            ref_gene_id = row[stringtie_ref_gene_id_index]
+            ref_gene_name = row[stringtie_ref_gene_name_index]
+
+            stored_ref_gene_id = ref_gene_id_by_stringtie_gene_id.get(stringtie_gene_id)
+            if stored_ref_gene_id is None:
+                if ref_gene_id == "":
+                    continue  # Do not store blanks if they are the first to be encountered
+                ref_gene_id_by_stringtie_gene_id[stringtie_gene_id] = ref_gene_id
+            elif stored_ref_gene_id == "":
+                pass
+            else:
+                if ref_gene_id != "" and stored_ref_gene_id != ref_gene_id:
+                    ref_gene_id_by_stringtie_gene_id[stringtie_gene_id] = ""
+
+            stored_ref_gene_name = ref_gene_name_by_ref_gene_id.get(ref_gene_id)
+            if stored_ref_gene_name is None:
+                if ref_gene_name == "":
+                    continue   # Do not store blanks if they are the first to be encountered
+                if ref_gene_id != "":
+                    ref_gene_name_by_ref_gene_id[ref_gene_id] = ref_gene_name
+            elif stored_ref_gene_name == "":
+                pass
+            else:
+                if ref_gene_name != "" and ref_gene_id != "" and stored_ref_gene_name != ref_gene_name:
+                    ref_gene_name_by_ref_gene_id[ref_gene_id] = ref_gene_name
 
     with open(formatted_stringtie_output_path, "w") as overwrite_stringtie_file:
 
@@ -322,9 +346,15 @@ def annotate_formatted_stringtie_output(
 
             gene_id = row[stringtie_gene_id_index]
             ref_gene_id = row[stringtie_ref_gene_id_index]
-            if ref_gene_id == "":
-                # Use ref gene ID from other transcript variants, but only if there is a singular ref gene ID
-                ref_gene_id = ref_gene_id_by_stringtie_gene_id.get(gene_id, "")
+            ref_gene_name = row[stringtie_ref_gene_name_index]
+            if assign_reference_gene:
+                # Use ref gene ID & name from other transcript variants, but only if there is a singular ref gene ID
+                if ref_gene_id == "":
+                    ref_gene_id = ref_gene_id_by_stringtie_gene_id.get(gene_id, "")
+                if ref_gene_name == "":
+                    ref_gene_name = ref_gene_name_by_ref_gene_id.get(ref_gene_id, "")
+                row[stringtie_ref_gene_id_index] = ref_gene_id
+                row[stringtie_ref_gene_name_index] = ref_gene_name
 
             feature_region = feature_regions.get(ref_gene_id)
 
@@ -345,4 +375,4 @@ def annotate_formatted_stringtie_output(
                 row[stringtie_exons_index + 1:]
             )
 
-    print("... done")
+    # print("... done")

@@ -69,6 +69,7 @@ class FaseInternalConfig:
     # Possible TODO: Generalise default_feature_counts_primary_alignment_only to default_primary_alignment_only
     default_generate_filtered_bam_files: bool
     default_filter_unique_mapping_only: bool
+    default_assign_reference_gene: bool
 
     def __init__(self, internal_config_path: str) -> None:
 
@@ -237,6 +238,13 @@ class FaseInternalConfig:
             raise ValueError(_e + f"Missing mandatory parameter \"defaultUniqueMappingOnly\" in section FILTER")
         self.default_filter_unique_mapping_only = parse_bool(default_filter_unique_mapping_only)
 
+        default_assign_reference_gene = config.get(
+            "QUANT", "defaultAssignReferenceGene", fallback=None
+        )
+        if default_assign_reference_gene is None:
+            raise ValueError(_e + f"Missing mandatory parameter \"defaultAssignReferenceGene\" in section QUANT")
+        self.default_assign_reference_gene = parse_bool(default_assign_reference_gene)
+
     def __setattr__(self, name, value):
         # If attribute is a string, strip all quotation marks before applying
         if isinstance(value, str):
@@ -274,6 +282,7 @@ class FaseUserConfig:
     user_default_filter_occurrences_in_at_least_n_samples: Union[None, int, str]
     user_default_quant_stringtie_executable_path: Union[None, str]
     user_default_quant_prep_de_script_path: Union[None, str]
+    user_default_quant_assign_reference_gene: Union[None, bool]
 
     def __init__(
         self,
@@ -580,6 +589,15 @@ class FaseUserConfig:
         )
         self.user_default_quant_prep_de_script_path = user_default_quant_prep_de_script_path
 
+        user_default_quant_assign_reference_gene = user_config.get(
+            "DEFAULT QUANT", "assignReferenceGenes", fallback=user_config.get(
+                "DEFAULT QUANT", "assignReferenceGene", fallback=None
+            )
+        )
+        self.user_default_quant_assign_reference_gene = None \
+            if user_default_quant_assign_reference_gene is None else \
+            parse_bool(user_default_quant_assign_reference_gene)
+
     def __setattr__(self, name, value):
         # If attribute is a string, strip all quotation marks before applying
         if isinstance(value, str):
@@ -627,6 +645,7 @@ class FaseRunConfig:
     quant_stringtie_executable_path: Union[None, str]
     quant_prep_de_script_path: Union[None, str]
     quant_read_length: Union[None, int]
+    quant_assign_reference_gene: bool
     sample_groups: Dict[str, List[str]]
     group_name_by_sample_name: Dict[str, str]  # Interpolated, not defined by the user
     color_by_group_name: Dict[str, str]
@@ -1159,6 +1178,17 @@ class FaseRunConfig:
             )
         )
         self.quant_read_length = None if quant_read_length is None else int(quant_read_length)
+
+        quant_assign_reference_gene = run_config.get(
+            "QUANT", "assignReferenceGenes", fallback=run_config.get(
+                "QUANT", "assignReferenceGene", fallback=(
+                    user_config.user_default_quant_assign_reference_gene
+                    if user_config.user_default_quant_assign_reference_gene is not None
+                    else internal_config.default_assign_reference_gene
+                )
+            )
+        )
+        self.quant_assign_reference_gene = parse_bool(quant_assign_reference_gene)
 
         # Enable case-sensitivity for option names in subsequent (SAMPLES, COLORS) sections
         run_config.optionxform = str
