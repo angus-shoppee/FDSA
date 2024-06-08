@@ -4,28 +4,9 @@ import csv
 import os
 
 from src.utils.general import divide_or_default_zero
-# from src.downstream.parse_gtf import STRINGTIE_SOURCE_NAME, SOURCE_INDEX, FEATURE_INDEX, parse_gtf_record
-from src.downstream.parse_gtf import get_stringtie_transcripts_from_gtf
+from src.downstream.parse_gtf import get_stringtie_transcripts_from_gtf, GtfTranscript
 import src.config.stringtie_formatted_column_names as cols
 import src.config.output_column_names as fase_output_cols
-
-
-# def _load_results_matrix(matrix_path: str) -> Dict[str: Dict[str, int]]:
-#
-#     with open(matrix_path, "r") as f:
-#
-#         iterator = csv.reader(matrix_path)
-#
-#         header = next(iterator)
-#         header_length = len(header)
-#
-#         return {
-#             row[0]: {
-#                 header[i]: row[i]
-#                 for i in range(1, header_length)
-#             }
-#             for row in iterator
-#         }
 
 
 def _load_and_sum_results_matrix(
@@ -35,7 +16,9 @@ def _load_and_sum_results_matrix(
     # Sums counts from multiple lines with the same ID. For example, the following two lines:
     # MSTRG.1,           count_1a, count_2a, ...
     # MSTRG.1|GENE_NAME, count_1b, count_2b, ...
-    # Would be stored as {"MSTRG.1": {"sample_1": count_1a + count_1b, "sample_2": count_2a + count_2b, ...}}
+    # Will be stored as {"MSTRG.1": {"sample_1": count_1a + count_1b, "sample_2": count_2a + count_2b, ...}}
+
+    counts: Dict[str, Dict[str, int]] = {}
 
     with open(matrix_path, "r") as f:
 
@@ -44,8 +27,6 @@ def _load_and_sum_results_matrix(
         header = next(iterator)
         header_length = len(header)
         sample_names = header[1:]
-
-        counts: Dict[str, Dict[str, int]] = {}
 
         for row in iterator:
 
@@ -69,79 +50,6 @@ def _load_and_sum_results_matrix(
         return counts
 
 
-# def format_stringtie_matrices(
-#     gene_counts_path: str,
-#     transcript_counts_path: str,
-#     merged_gtf_path: str,
-#     output_path: str
-# ) -> None:
-#
-#     gene_counts = _load_and_sum_results_matrix(gene_counts_path)
-#     transcript_counts = _load_and_sum_results_matrix(transcript_counts_path)
-#
-#     sample_names = next(iter(gene_counts.values())).keys()
-#
-#     _output_dir = os.path.dirname(output_path)
-#     if not os.path.isdir(_output_dir):
-#         os.makedirs(_output_dir)
-#
-#     with open(output_path, "w") as output_file:
-#
-#         output_csv = csv.writer(output_file)
-#
-#         output_csv.writerow(
-#             ["seqname", "transcript_id", "gene_id", "ref_gene_id", "ref_gene_name"] +
-#             [f"gene.{sample_name}" for sample_name in sample_names] +
-#             [f"transcript.{sample_name}" for sample_name in sample_names] +
-#             [f"fraction.{sample_name}" for sample_name in sample_names]
-#         )
-#
-#         with open(merged_gtf_path, "r") as gtf_file:
-#
-#             # _i = 0
-#
-#             for line in gtf_file:
-#
-#                 if line[0] == "#":
-#                     continue
-#
-#                 # For a small speed improvement, only parse lines fully if they are StringTie transcripts
-#                 _line_split = line.split("\t")
-#                 if _line_split[SOURCE_INDEX] == STRINGTIE_SOURCE_NAME and _line_split[FEATURE_INDEX] == "transcript":
-#
-#                     record = parse_gtf_record(line)
-#
-#                     gene = gene_counts[record.attributes["gene_id"]]
-#                     transcript = transcript_counts[record.attributes["transcript_id"]]
-#                     fraction = {
-#                         key: divide_or_default_zero(transcript[key], gene[key])
-#                         for key in gene.keys()
-#                     }
-#
-#                     output_csv.writerow(
-#                         [
-#                             record.seqname, record.attributes.get("transcript_id", ""),
-#                             record.attributes.get("gene_id", ""), record.attributes.get("ref_gene_id", ""),
-#                             record.attributes.get("gene_name", "")
-#                             # NOTE: StringTie uses "gene_name" in merged.gtf despite using "ref_gene_name" elsewhere
-#                         ] +
-#                         [gene[sample_name] for sample_name in sample_names] +
-#                         [transcript[sample_name] for sample_name in sample_names] +
-#                         [fraction[sample_name] for sample_name in sample_names]
-#                     )
-#
-#                     # print("TRANSCRIPT")
-#                     # print(record)
-#                     # print("Gene counts:", gene)
-#                     # print("Transcript counts:", transcript)
-#                     # print("Transcript fractions:", fraction)
-#                     # print()
-#
-#                 # _i += 1
-#                 # if _i > 200:
-#                 #     break
-
-
 def format_stringtie_matrices(
     gene_counts_path: str,
     transcript_counts_path: str,
@@ -160,7 +68,7 @@ def format_stringtie_matrices(
 
     # print("Parsing transcript details from merged GTF...")
 
-    stringtie_transcripts = get_stringtie_transcripts_from_gtf(merged_gtf_path)
+    stringtie_transcripts: Dict[str, Dict[str, GtfTranscript]] = get_stringtie_transcripts_from_gtf(merged_gtf_path)
 
     # print("... done")
 
@@ -170,6 +78,7 @@ def format_stringtie_matrices(
 
         output_csv = csv.writer(output_file)
 
+        # Write header
         output_csv.writerow(
             [
                 cols.SEQNAME, cols.STRAND, cols.TRANSCRIPT_ID, cols.GENE_ID, cols.REF_GENE_ID, cols.REF_GENE_NAME,
@@ -196,6 +105,7 @@ def format_stringtie_matrices(
                     for key, quant_gene_value in quant_gene.items()
                 }
 
+                # Write data
                 output_csv.writerow(
                     [
                         transcript_record.seqname, transcript_record.strand, transcript_id, gene_id,
@@ -206,7 +116,7 @@ def format_stringtie_matrices(
                     ] +
                     [quant_gene[sample_name] for sample_name in sample_names] +
                     [quant_transcript[sample_name] for sample_name in sample_names] +
-                    [quant_fraction[sample_name] for sample_name in sample_names]
+                    [f"{quant_fraction[sample_name]:.4f}" for sample_name in sample_names]
                 )
 
     # print("... done")
@@ -264,6 +174,11 @@ def annotate_formatted_stringtie_results(
 
     # print("Annotating stringtie results with feature overlap...")
 
+    feature_regions: Dict[str, Dict[int, Tuple[int, int]]] = {}  # {Gene ID: {Feature number: (start, end)}}
+    ref_exons: Dict[str, List[Tuple[int, int]]] = {}  # {Gene ID: [(start, end), ...]}
+
+    # TODO: Explicitly check that fase_output_path is valid
+
     with open(fase_output_path, "r") as fase_output_file:
 
         fase_output_csv = csv.reader(fase_output_file)
@@ -271,21 +186,28 @@ def annotate_formatted_stringtie_results(
         header = next(fase_output_csv)
         fase_gene_id_index = header.index(fase_output_cols.GENE_ID)
         fase_ref_exons_index = header.index(fase_output_cols.EXON_POSITIONS)
+        fase_feature_number_index = header.index(fase_output_cols.FEATURE_NUMBER)
         fase_feature_region_index = header.index(fase_output_cols.FEATURE_REGION)
 
-        feature_regions: Dict[str, Tuple[int, int]] = {}
-        ref_exons: Dict[str, List[Tuple[int, int]]] = {}
         for row in fase_output_csv:
+
             fase_gene_id = str(row[fase_gene_id_index])
-            feature_regions[fase_gene_id] = _get_start_and_end_from_locus(
-                row[fase_feature_region_index]
-            )
+
             ref_exons[fase_gene_id] = [
                 _get_start_and_end_from_locus(locus)
                 for locus in row[fase_ref_exons_index].split(" ")
             ]
 
+            feature_number = int(row[fase_feature_number_index])
+            stored_feature_regions = feature_regions.get(fase_gene_id, {})
+            stored_feature_regions[feature_number] = _get_start_and_end_from_locus(
+                row[fase_feature_region_index]
+            )
+            feature_regions[fase_gene_id] = stored_feature_regions
+
     with open(formatted_stringtie_output_path, "r") as stringtie_file:
+
+        print(f"Loading {formatted_stringtie_output_path}")
 
         stringtie_csv = csv.reader(stringtie_file)
 
@@ -298,8 +220,11 @@ def annotate_formatted_stringtie_results(
 
         stringtie_body = [row for row in stringtie_csv]
 
+        print("Finished loading")
+
     ref_gene_id_by_stringtie_gene_id: Dict[str, str] = {}
     ref_gene_name_by_ref_gene_id: Dict[str, str] = {}
+
     if assign_reference_gene:
 
         # Only store 1:1 mappings (store "" in cases where a stringtie gene has >1 corresponding ref gene IDs)
@@ -332,21 +257,28 @@ def annotate_formatted_stringtie_results(
                 if ref_gene_name != "" and ref_gene_id != "" and stored_ref_gene_name != ref_gene_name:
                     ref_gene_name_by_ref_gene_id[ref_gene_id] = ref_gene_name
 
+    # Write to file
     with open(formatted_stringtie_output_path, "w") as overwrite_stringtie_file:
 
         overwrite_stringtie_writer = csv.writer(overwrite_stringtie_file)
 
-        annotated_header = stringtie_header[:stringtie_exons_index + 1] + [
-            cols.ANNOTATION_CONTAINS_FEATURE_BASES, cols.ANNOTATION_CONTAINS_FEATURE_FRACTION
-        ] + stringtie_header[stringtie_exons_index + 1:]
-
-        overwrite_stringtie_writer.writerow(annotated_header)
+        # Write header
+        overwrite_stringtie_writer.writerow(
+            stringtie_header[:stringtie_exons_index + 1] +
+            [
+                cols.ANNOTATION_FEATURE_REGIONS,
+                cols.ANNOTATION_CONTAINS_FEATURE_BASES,
+                cols.ANNOTATION_CONTAINS_FEATURE_FRACTION
+            ] +
+            stringtie_header[stringtie_exons_index + 1:]
+        )
 
         for row in stringtie_body:
 
             gene_id = row[stringtie_gene_id_index]
             ref_gene_id = row[stringtie_ref_gene_id_index]
             ref_gene_name = row[stringtie_ref_gene_name_index]
+
             if assign_reference_gene:
                 # Use ref gene ID & name from other transcript variants, but only if there is a singular ref gene ID
                 if ref_gene_id == "":
@@ -356,22 +288,33 @@ def annotate_formatted_stringtie_results(
                 row[stringtie_ref_gene_id_index] = ref_gene_id
                 row[stringtie_ref_gene_name_index] = ref_gene_name
 
-            feature_region = feature_regions.get(ref_gene_id)
+            feature_region_by_feature_number = feature_regions.get(ref_gene_id, None)
+            feature_regions_string_dump = ""
+            overlap_bases_string_dump = ""
+            overlap_fraction_string_dump = ""
 
-            if feature_region is not None:
-                overlap_bases, overlap_fraction = _calculate_feature_exon_overlap(
-                    feature_region,
-                    [_get_start_and_end_from_locus(locus) for locus in row[stringtie_exons_index].split(" ")],
-                    ref_exons[ref_gene_id]  # Assume ref_gene_id is a valid key since feature_regions uses same key
-                )
-                # threshold_pass = 1 if feature_overlap_fraction >= overlap_threshold else 0
-            else:
-                overlap_bases = ""
-                overlap_fraction = ""
+            if feature_region_by_feature_number is not None:
 
+                for feature_number, feature_region in feature_region_by_feature_number.items():
+
+                    feature_regions_string_dump = f"f{feature_number}:{(feature_region[0]-feature_region[1])} "
+
+                    overlap_bases, overlap_fraction = _calculate_feature_exon_overlap(
+                        feature_region,
+                        [_get_start_and_end_from_locus(locus) for locus in row[stringtie_exons_index].split(" ")],
+                        ref_exons[ref_gene_id]  # Assume ref_gene_id is a valid key since feature_regions uses same key
+                    )
+                    overlap_bases_string_dump += f"f{feature_number}:{overlap_bases} "
+                    overlap_fraction_string_dump += f"f{feature_number}:{overlap_fraction:.2f} "
+
+            # Write data
             overwrite_stringtie_writer.writerow(
                 row[:stringtie_exons_index + 1] +
-                [str(overlap_bases), str(overlap_fraction)] +
+                [
+                    feature_regions_string_dump.rstrip(),
+                    overlap_bases_string_dump.rstrip(),
+                    overlap_fraction_string_dump.rstrip()
+                ] +
                 row[stringtie_exons_index + 1:]
             )
 

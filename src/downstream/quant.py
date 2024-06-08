@@ -3,7 +3,7 @@ from typing import Dict, Optional
 import os
 import subprocess
 
-from src.analysis.core import name_output
+# from src.analysis.core import name_output
 from src.downstream.process_stringtie import format_stringtie_matrices, annotate_formatted_stringtie_results
 
 
@@ -51,7 +51,7 @@ def quantify_isoforms(
     assembly_dir = os.path.join(stringtie_out_dir, "assembly")
     stringtie_assembly_output_locations: Dict[str, str] = {}
 
-    _n = 0
+    # _n = 0
     for bam_path in bam_abs_paths:
 
         print(os.path.basename(bam_path))
@@ -75,11 +75,11 @@ def quantify_isoforms(
             check=check_exit_code
         )
 
-        # DEV: Break after second iteration
-        _n += 1
-        if _n >= 2:
-            print("[DEV] stopped after 2 files")
-            break
+        # # DEV: Break after second iteration
+        # _n += 1
+        # if _n >= 2:
+        #     print("[DEV] stopped after 2 files")
+        #     break
 
     print("[Stringtie] ... done")
 
@@ -110,7 +110,7 @@ def quantify_isoforms(
 
     print("[Stringtie] ... done")
 
-    # Run stringtie in -e -b mode
+    # Run stringtie in -e mode
     # In this step, the combined GTF from stringtie --merge is used with -G rather than the reference genome
 
     print("[Stringtie] Quantifying transcripts...")
@@ -118,7 +118,7 @@ def quantify_isoforms(
     quantified_dir = os.path.join(stringtie_out_dir, "quantified")
     stringtie_quantified_output_locations: Dict[str, str] = {}
 
-    _n = 0
+    # _n = 0
     for bam_path in bam_abs_paths:
 
         _basename = os.path.basename(bam_path)
@@ -131,11 +131,11 @@ def quantify_isoforms(
 
         print(_basename)
 
-        # stringtie -e -B -G MERGED.gtf -o OUT_QUANT.gtf -p THREADS BAM
+        # stringtie -e -G MERGED.gtf -o OUT_QUANT.gtf -p THREADS BAM
         subprocess.run(
             [
                 stringtie_executable_path,
-                "-e", "-B",
+                "-e",
                 "-G", merged_gtf_path,
                 "-o", stringtie_quantified_output_locations[bam_path],
                 "-p", str(threads),
@@ -146,11 +146,11 @@ def quantify_isoforms(
             check=check_exit_code
         )
 
-        # DEV: Break after second iteration
-        _n += 1
-        if _n >= 2:
-            print("[DEV] stopped after 2 files")
-            break
+        # # DEV: Break after second iteration
+        # _n += 1
+        # if _n >= 2:
+        #     print("[DEV] stopped after 2 files")
+        #     break
 
     print("[Stringtie] ... done")
 

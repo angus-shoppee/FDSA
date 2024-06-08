@@ -687,6 +687,7 @@ def main() -> None:
                 quant_args.input,
                 quant_args.output,
                 quant_args.read_length,
+                quant_args.fase_results,
                 quant_args.disable_assign_reference_gene,
                 quant_args.threads
             )
