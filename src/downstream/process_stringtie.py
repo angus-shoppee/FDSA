@@ -199,7 +199,7 @@ def annotate_formatted_stringtie_results(
             ]
 
             feature_number = int(row[fase_feature_number_index])
-            stored_feature_regions = feature_regions.get(fase_gene_id, {})
+            stored_feature_regions = feature_regions.get(fase_gene_id, dict())
             stored_feature_regions[feature_number] = _get_start_and_end_from_locus(
                 row[fase_feature_region_index]
             )
@@ -297,7 +297,7 @@ def annotate_formatted_stringtie_results(
 
                 for feature_number, feature_region in feature_region_by_feature_number.items():
 
-                    feature_regions_string_dump = f"f{feature_number}:{(feature_region[0]-feature_region[1])} "
+                    feature_regions_string_dump += f"f{feature_number}:{feature_region[0]}-{feature_region[1]} "
 
                     overlap_bases, overlap_fraction = _calculate_feature_exon_overlap(
                         feature_region,
