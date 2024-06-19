@@ -139,7 +139,7 @@ def _build(
     force_regenerate_transcript_library: bool = False,
     force_regenerate_genbank_features: bool = False,
     restart_partial_download: bool = False
-):
+) -> None:
 
     if any([
         force_redo_annotate_transcript_library,
