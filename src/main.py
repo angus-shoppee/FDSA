@@ -435,7 +435,7 @@ def main() -> None:
 
     # TODO: Auto-generated usage at top line of arg parser help text is incorrect for modes, need override
 
-    base_dir = os.path.realpath(os.path.dirname(__file__))
+    base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))  # Parent directory of src
     stored_user_config_path = os.path.join(base_dir, "data", ".user_config_path")
 
     mode_parser = get_mode_parser(PROGRAM_DESCRIPTION)

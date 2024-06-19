@@ -40,7 +40,7 @@ def get_mode_parser(program_description: str) -> ArgumentParser:
             "filter - Generates filtered BAM files containing only reads aligned to genes that have splice events in "
             "the output of \"fdsa run\" (thresholds are configurable via the [FILTER] section in run config). "
             "quant - Wraps stringtie: Stringtie is run individually for each supplied BAM file, then results are "
-            "merged, and stringtie is re-run using the merged GTF as a reference; finally, estimated transcript counts"
+            "merged, and stringtie is re-run using the merged GTF as a reference; finally, estimated transcript counts "
             "are extracted using stringtie's prepDE.py3 script."
         ])
     )
