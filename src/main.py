@@ -18,6 +18,7 @@
 from typing import Union
 import gc
 import os
+import logging
 import argparse
 from sys import argv
 # TODO: Remove gtfparse dependency
@@ -78,9 +79,22 @@ NO_EMAIL_ADDRESS_MESSAGE = ("An email address must be provided in order to make 
 
 # ==================================================================================================================== #
 
-# TODO: Refactor print to use logging, and add optional silent mode for progress indicators etc.
 
-# NOTE: Cd80 does not appear in output but has feature annotation - why?
+# TODO: Add silent flag
+# TODO: Add log file arg
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        # logging.FileHandler("fdsa.log"),
+        logging.StreamHandler()
+    ]
+)
+
+logger = logging.getLogger(__name__)
+
+
+# ==================================================================================================================== #
 
 
 def _confirm_build_overwrite() -> bool:
@@ -97,19 +111,19 @@ def _user(
 ) -> None:
 
     if not os.path.exists(user_config_path):
-        print(INVALID_CONFIG_PATH_MESSAGE)
+        logger.error(INVALID_CONFIG_PATH_MESSAGE)
         exit()
 
     try:
         ProgramUserConfig(user_config_path)
     except ValueError as e:
-        print(CONFIG_FILE_FORMATTING_ERROR_MESSAGE + "\n" + str(e))
+        logger.error(CONFIG_FILE_FORMATTING_ERROR_MESSAGE + "\n" + str(e))
         exit()
 
     with open(save_path_to, "w") as f:
         f.write(user_config_path)
 
-    print("User config stored.\n")
+    logger.info("User config stored.\n")
 
 
 def _build(
@@ -136,7 +150,7 @@ def _build(
         if not _confirm_build_overwrite():
             exit()
 
-    print("Beginning build process...\n")
+    logger.info("Beginning build process...\n")
 
     # Create data directory for this species if required
     if not os.path.isdir(species_specific_data_dir):
@@ -164,22 +178,22 @@ def _build(
     ]):
 
         if not os.path.exists(annotated_transcript_library_path):
-            print("Annotated transcript library has not been built and will be initialized this run.\n")
+            logger.info("Annotated transcript library has not been built and will be initialized this run.\n")
         if force_regenerate_transcript_library:
-            print("The FORCE_REGENERATE_TRANSCRIPT_LIBRARY flag has been enabled.\n")
+            logger.info("The FORCE_REGENERATE_TRANSCRIPT_LIBRARY flag has been enabled.\n")
         if force_regenerate_genbank_features:
-            print("The FORCE_REGENERATE_GENBANK_FEATURE_XML flag has been enabled.\n")
+            logger.info("The FORCE_REGENERATE_GENBANK_FEATURE_XML flag has been enabled.\n")
         if force_redo_annotate_transcript_library:
-            print("The FORCE_REDO_ANNOTATE_TRANSCRIPT_LIBRARY flag has been enabled.\n")
+            logger.info("The FORCE_REDO_ANNOTATE_TRANSCRIPT_LIBRARY flag has been enabled.\n")
 
         transcript_library_path = os.path.join(species_specific_data_dir, "transcript_library.object")
 
         # Create transcript library if required
         if force_regenerate_transcript_library or not os.path.exists(transcript_library_path):
-            print("Importing reference GTF...")
+            logger.info("Importing reference GTF...")
             # TODO: Use existing internal implementation of GTF parsing and remove gtfparse dependency
             ref_gtf = read_gtf(genome_gtf_path)
-            print("...done\n")
+            logger.info("...done\n")
 
             transcript_library = create_and_save_transcript_library(
                 species,
@@ -205,7 +219,7 @@ def _build(
             # Indicates previously started download has not finished
             not os.path.exists(genbank_feature_xml_path)
         ]):
-            print("Downloading genbank feature annotation data...")
+            logger.info("Downloading genbank feature annotation data...")
 
             transcripts_with_refseq = []
             for t in transcript_library.get_all_transcripts():
@@ -227,7 +241,7 @@ def _build(
             del transcripts_with_refseq
             gc.collect()
 
-            print("...done\n")
+            logger.info("...done\n")
 
         # Load genbank feature XML
         gbseq_by_refseq = get_gbseq_from_xml(
@@ -246,9 +260,9 @@ def _build(
         del gbseq_by_refseq
         gc.collect()
 
-        print("Annotated transcript library has been created and saved.\n")
+        logger.info("Annotated transcript library has been created and saved.\n")
 
-    print("Build process complete.\n")
+    logger.info("Build process complete.\n")
 
 
 def _run(
@@ -259,15 +273,15 @@ def _run(
 
     annotated_transcript_library_path = os.path.join(species_specific_data_dir, "annotated_transcript_library.object")
     if not os.path.exists(annotated_transcript_library_path):
-        print(BUILD_NOT_COMPLETED_MESSAGE)
-        return
+        logger.error(BUILD_NOT_COMPLETED_MESSAGE)
+        exit()
 
     # Load annotated transcript library
-    print(f"Loading {run_config.species} transcript library...")
+    logger.info(f"Loading {run_config.species} transcript library...")
     annotated_transcript_library = load_transcript_library_from_file(annotated_transcript_library_path)
-    print("...done\n")
+    logger.info("...done\n")
 
-    print(f"Enabling screening for features containing term: \"{run_config.feature_name}\"...")
+    logger.info(f"Enabling screening for features containing term: \"{run_config.feature_name}\"...")
 
     set_analysis_features(
         run_config.feature_name,
@@ -276,7 +290,7 @@ def _run(
         skip_transcripts_with_redundant_feature_annotation=run_config.skip_transcripts_with_redundant_feature_annotation
     )
 
-    print("... done\n")
+    logger.info("... done\n")
 
     if not os.path.isdir(run_config.output_path):
         if os.path.exists(run_config.output_path):
@@ -472,10 +486,10 @@ def main() -> None:
             with open(stored_user_config_path, "r") as f:
                 user_config_path = f.read()
             if not os.path.exists(user_config_path):
-                print(INVALID_CONFIG_PATH_MESSAGE)
+                logger.error(INVALID_CONFIG_PATH_MESSAGE)
                 exit()
         else:
-            print("NOTE:", USER_CONFIG_NOT_SPECIFIED_MESSAGE, "\n")
+            logger.warning(USER_CONFIG_NOT_SPECIFIED_MESSAGE + "\n")
             user_config_path = None
 
         internal_config = ProgramInternalConfig(
@@ -487,7 +501,7 @@ def main() -> None:
                     user_config_path
                 )
             except ValueError as e:
-                print(CONFIG_FILE_FORMATTING_ERROR_MESSAGE + "\n" + str(e))
+                logger.error(CONFIG_FILE_FORMATTING_ERROR_MESSAGE + "\n" + str(e))
                 exit()
         else:
             user_config = None
@@ -508,7 +522,7 @@ def main() -> None:
                     build_args.genome,
                     build_args.email
                 ]):
-                    print(
+                    logger.error(
                         f"Usage:\n{FDSA_BUILD_COMMAND_USAGE}\n\n"
                         "If no run config file is provided, the --species and --genome options must be set.\n"
                         "Use \"fdsa build --help\" for more information on usage."
@@ -518,7 +532,7 @@ def main() -> None:
             if build_args.run_config_path is not None:
                 # Load run config if provided
                 if not os.path.exists(build_args.run_config_path):
-                    print(INVALID_CONFIG_PATH_MESSAGE)
+                    logger.error(INVALID_CONFIG_PATH_MESSAGE)
                     exit()
                 try:
                     run_config = ProgramRunConfig(
@@ -527,7 +541,7 @@ def main() -> None:
                         user_config
                     )
                 except ValueError as e:
-                    print(CONFIG_FILE_FORMATTING_ERROR_MESSAGE + "\n" + str(e))
+                    logger.error(CONFIG_FILE_FORMATTING_ERROR_MESSAGE + "\n" + str(e))
                     exit()
 
                 # Allow args to override run config if provided
@@ -542,19 +556,20 @@ def main() -> None:
                 threads = build_args.threads if build_args.threads else 1  # Default to single-threaded
 
             if build_args.email is None and user_config is None:
-                print(NO_EMAIL_ADDRESS_MESSAGE)
+                logger.error(NO_EMAIL_ADDRESS_MESSAGE)
                 exit()
 
             email = build_args.email if build_args.email is not None else user_config.email_for_apis
             # Possible TODO: Final check for valid email_for_apis?
 
             if species not in internal_config.allowed_species:
-                print(f"Invalid species (\"{species}\") specified. Options are: "
-                      f"{'/'.join(internal_config.allowed_species)}")
+                logger.error(f"Invalid species (\"{species}\") specified. Options are: " +
+                             f"{'/'.join(internal_config.allowed_species)}")
                 exit()
 
             if not os.path.exists(genome):
-                print(f"The specified reference genome GTF file was not found. Path: {genome}")
+                logger.error(f"The specified reference genome GTF file was not found. Path: {genome}")
+                exit()
 
             species_specific_data_dir = os.path.join(base_dir, "data", str(species))
 
@@ -600,7 +615,7 @@ def main() -> None:
             args = parser.parse_args(subsequent_args)
 
             if args.run_config_path is None:
-                print(
+                logger.error(
                     f"usage: {usage}\n\n"
                     "Use \"fdsa run --help\" for more information on usage."
                 )
@@ -625,7 +640,7 @@ def main() -> None:
                         run_config.generate_filtered_bam_files = True
                         run_config.check_samtools()  # Ensure samtoolsExecutable is set
             except ValueError as e:
-                print(CONFIG_FILE_FORMATTING_ERROR_MESSAGE + "\n" + str(e))
+                logger.error(CONFIG_FILE_FORMATTING_ERROR_MESSAGE + "\n" + str(e))
                 exit()
 
             if mode_arg.mode == "run":
@@ -675,8 +690,8 @@ def main() -> None:
                 quant_args.input is None,
                 quant_args.output is None
             ]):
-                print(
-                    f"Usage:\n{FDSA_QUANT_COMMAND_USAGE}\n\n"
+                logger.error(
+                    f"Usage:\n{FDSA_QUANT_COMMAND_USAGE}\n\n" +
                     "Use \"fdsa quant --help\" for more information on usage."
                 )
                 exit()
@@ -690,7 +705,7 @@ def main() -> None:
                         user_config
                     )
                 except ValueError as e:
-                    print(CONFIG_FILE_FORMATTING_ERROR_MESSAGE + "\n" + str(e))
+                    logger.error(CONFIG_FILE_FORMATTING_ERROR_MESSAGE + "\n" + str(e))
                     exit()
             else:
                 run_config = None

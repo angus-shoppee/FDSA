@@ -18,6 +18,7 @@
 # ENTREZ API
 
 from typing import Dict, List, Any
+import logging
 import os
 import json
 import entrezpy.base.result
@@ -28,6 +29,9 @@ from xml.etree import cElementTree
 from xml.etree.ElementTree import Element
 
 from analysis.annotation import GBSeq, GBFeature, GBQual
+
+
+logger = logging.getLogger(__name__)
 
 
 class FetchResult(entrezpy.base.result.EutilsResult):
@@ -45,7 +49,7 @@ class FetchResult(entrezpy.base.result.EutilsResult):
         return True if self.xml else False
 
     def get_link_parameter(self, reqnum=0):
-        print("{} has no elink capability".format(self))
+        logger.info(f"{self} has no elink capability")
         return {}
 
     def dump(self):
@@ -75,7 +79,7 @@ class RecordAnalyzer(entrezpy.base.analyzer.EutilsAnalyzer):
             self.result = FetchResult(response, request)
 
     def analyze_error(self, response, request):
-        print(json.dumps({__name__: {'Response': {'dump': request.dump(), 'error': response}}}))
+        logger.warning(json.dumps({__name__: {'Response': {'dump': request.dump(), 'error': response}}}))
 
     def analyze_result(self, response, request):
         self.init_result(response, request)
@@ -97,7 +101,7 @@ def download_and_save_feature_annotation_xml(
     if os.path.exists(progress_file_path) and not force_restart_download:
         # Resume previously started download
         with open(progress_file_path, "r") as progress_file:
-            print("Resuming previously download")
+            logger.info("Resuming previously download")
             progress = json.load(progress_file)
             chunk_size = progress["chunk_size"]  # Override chunk_size to remain consistent
     else:
@@ -141,8 +145,8 @@ def download_and_save_feature_annotation_xml(
             if retry_attempt > max_retry_attempts_per_chunk:
                 raise RuntimeError("Could not download chunk from entrez - max attempts reached")
 
-            print(f"Downloading chunk {current_chunk_no} of {number_of_chunks}")
-            print(f"{chunk[:5]} ...")
+            logger.info(f"Downloading chunk {current_chunk_no} of {number_of_chunks}")
+            logger.debug(f"{chunk[:5]} ...")
 
             c = entrezpy.conduit.Conduit(user_email)
 
@@ -180,7 +184,7 @@ def download_and_save_feature_annotation_xml(
 
             except (AttributeError, TypeError, socket_timeout) as e:
                 retry_attempt += 1
-                print(
+                logger.warning(
                     f"(Caught exception: {e})\n" +
                     f"Query did not return XML data." +
                     f"Retrying (attempt {retry_attempt} of {max_retry_attempts_per_chunk})"
@@ -206,7 +210,7 @@ def download_and_save_feature_annotation_xml(
 
         # Remove download progress file
         os.remove(progress_file_path)
-        print("DEBUG: Removed progress file")
+        logger.debug("Removed progress file")
 
 
 def _get_unique_child(
@@ -231,13 +235,13 @@ def get_gbseq_from_xml(
     Returns a dictionary of GBSeq objects against refseq IDs.
     """
 
-    print("Reading feature annotation data from XML file...")
+    logger.info("Reading feature annotation data from XML file...")
 
     tree = cElementTree.parse(xml_file_path)
     root = tree.getroot()
 
-    print("...done\n")
-    print("Creating feature annotation records...")
+    logger.info("...done\n")
+    logger.info("Creating feature annotation records...")
 
     gbseq_by_refseq = {}
     skipped_feature_invalid_region, skipped_feature_missing_gbqual = 0, 0
@@ -247,7 +251,7 @@ def get_gbseq_from_xml(
     for gbseq in root:
 
         if _i % 1000 == 0:
-            print(f"Progress: ({_i}/{_t})")
+            logger.info(f"Progress: ({_i}/{_t})")
         _i += 1
 
         refseq_id = _get_unique_child(gbseq, "GBSeq_locus").text
@@ -297,7 +301,7 @@ def get_gbseq_from_xml(
             features
         )
 
-    print(
+    logger.info(
         f"...finished creating {len(gbseq_by_refseq)} records " +
         f"({skipped_feature_invalid_region} features skipped due to invalid region, "
         f"{skipped_feature_missing_gbqual} features skipped due to missing GBQualifier)\n"

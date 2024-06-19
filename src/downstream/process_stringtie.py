@@ -16,6 +16,7 @@
 
 
 from typing import Tuple, List, Dict
+import logging
 import csv
 import os
 
@@ -23,6 +24,9 @@ from utils.general import divide_or_default_zero
 from downstream.parse_gtf import get_stringtie_transcripts_from_gtf, GtfTranscript
 import config.stringtie_formatted_column_names as cols
 import config.output_column_names as fdsa_output_cols
+
+
+logger = logging.getLogger(__name__)
 
 
 def _load_and_sum_results_matrix(
@@ -82,13 +86,13 @@ def format_stringtie_matrices(
     if not os.path.isdir(_output_dir):
         os.makedirs(_output_dir)
 
-    # print("Parsing transcript details from merged GTF...")
+    # logger.info("Parsing transcript details from merged GTF...")
 
     stringtie_transcripts: Dict[str, Dict[str, GtfTranscript]] = get_stringtie_transcripts_from_gtf(merged_gtf_path)
 
-    # print("... done")
+    # logger.info("... done")
 
-    # print("Combining stringtie results...")
+    # logger.info("Combining stringtie results...")
 
     with open(output_path, "w") as output_file:
 
@@ -135,7 +139,7 @@ def format_stringtie_matrices(
                     [f"{quant_fraction[sample_name]:.4f}" for sample_name in sample_names]
                 )
 
-    # print("... done")
+    # logger.info("... done")
 
 
 def _get_start_and_end_from_locus(
@@ -223,7 +227,7 @@ def annotate_formatted_stringtie_results(
 
     with open(formatted_stringtie_output_path, "r") as stringtie_file:
 
-        print(f"Loading {formatted_stringtie_output_path}")
+        # logger.debug(f"Loading {formatted_stringtie_output_path}")
 
         stringtie_csv = csv.reader(stringtie_file)
 
@@ -236,7 +240,7 @@ def annotate_formatted_stringtie_results(
 
         stringtie_body = [row for row in stringtie_csv]
 
-        print("Finished loading")
+        # logger.debug("Finished loading")
 
     ref_gene_id_by_stringtie_gene_id: Dict[str, str] = {}
     ref_gene_name_by_ref_gene_id: Dict[str, str] = {}

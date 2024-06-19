@@ -18,6 +18,7 @@
 # FDSA RESULTS PLOTTING AND REPORTING
 
 from typing import List, Dict, Any
+import logging
 import os
 from pandas import read_csv as pd_read_csv
 from functools import reduce
@@ -33,6 +34,9 @@ from reporting.generate_html_report import generate_html_report
 
 GENE_COUNTS_DEFAULT_FILE_NAME = "gene_counts.tsv"
 TMM_NORM_GENE_COUNTS_DEFAULT_FILE_NAME = "tmm_norm_gene_counts.tsv"
+
+
+logger = logging.getLogger(__name__)
 
 
 def _check_inputs_are_valid(
@@ -111,7 +115,7 @@ def create_report(
         else os.path.join(output_dir_absolute, GENE_COUNTS_DEFAULT_FILE_NAME)
 
     if not os.path.exists(gene_counts_path):
-        print("Running feature counts...")
+        logger.info("Running feature counts...")
         run_feature_counts(
             run_config.report_feature_counts_executable,
             run_config.input_path,
@@ -122,16 +126,16 @@ def create_report(
             primary_alignment_only=run_config.primary_alignment_only,
             threads=run_config.report_n_threads
         )
-        print("... done")
+        logger.info("... done")
     else:
-        print("An existing gene count matrix has been supplied.\n")
+        logger.info("An existing gene count matrix has been supplied.\n")
 
     tmm_norm_gene_counts_path = os.path.join(output_dir_absolute, TMM_NORM_GENE_COUNTS_DEFAULT_FILE_NAME)
 
     # Load TMM norm counts if saved, otherwise read raw counts and perform normalization
     if os.path.isfile(tmm_norm_gene_counts_path):
 
-        print("Reading TMM normalized gene counts...")
+        logger.info("Reading TMM normalized gene counts...")
 
         norm_gene_counts = pd_read_csv(
             tmm_norm_gene_counts_path,
@@ -139,20 +143,20 @@ def create_report(
         )
         norm_gene_counts.set_index("Geneid", inplace=True)
 
-        print("...done")
+        logger.info("...done")
 
     else:
 
-        print("Reading gene counts...")
+        logger.info("Reading gene counts...")
 
         raw_gene_counts = get_gene_counts_from_tsv(
             gene_counts_path,
             bam_ending=run_config.bam_ending
         )
 
-        print("... done")
+        logger.info("... done")
 
-        print("Applying TMM normalization to gene counts...")
+        logger.info("Applying TMM normalization to gene counts...")
 
         norm_gene_counts = get_tmm_cpm_from_gene_counts(
             raw_gene_counts,
@@ -168,7 +172,7 @@ def create_report(
                 index=False
             )
 
-        print("... done")
+        logger.info("... done")
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
@@ -184,24 +188,24 @@ def create_report(
         min_per_sample_occurrences_in_at_least_n_samples=run_config.report_occurrences_in_at_least_n_samples
     )
 
-    print("Generating figures for report...")
+    logger.info("Generating figures for report...")
 
     plots: Dict[str, Dict[str, str]] = {}
     _current = 1
     _total = len(fdsa_results) if run_config.report_max_n_plotted is None \
         else min(len(fdsa_results), run_config.report_max_n_plotted)
-    print()  # Print blank line to be consumed by first one-line-up ansi code
+    # logger.info()  # Print blank line to be consumed by first one-line-up ansi code
     for fdsa_result in fdsa_results:
 
         if run_config.report_max_n_plotted is not None and _current > run_config.report_max_n_plotted:
             break
 
-        # TODO: Fix so that entire line is overwritten
-        _temp_solution_right_spacing = "            "
-        print(
-            "\x1b[A" + f"Progress: [{_current}/{_total}] {fdsa_result.gene_name} / {fdsa_result.transcript_id} " +
-            f"feature {fdsa_result.feature_number} of {fdsa_result.total_features_in_transcript}" +
-            _temp_solution_right_spacing
+        # _temp_solution_right_spacing = "            "
+        logger.info(
+            # "\x1b[A" +
+            f"Progress: [{_current}/{_total}] {fdsa_result.gene_name} / {fdsa_result.transcript_id} " +
+            f"feature {fdsa_result.feature_number} of {fdsa_result.total_features_in_transcript}"
+            # _temp_solution_right_spacing
         )
         _current += 1
 
@@ -232,9 +236,9 @@ def create_report(
             )
         }
 
-    print("... finished")
+    logger.info("... finished")
 
-    print("Generating report...")
+    logger.info("Generating report...")
 
     report_html = generate_html_report(
         run_config,
@@ -249,5 +253,5 @@ def create_report(
     with open(output_path, "w") as output_file:
         output_file.write(report_html)
 
-    print(f"Report written to {output_path}")
-    print("...finished")
+    logger.info(f"Report written to {output_path}")
+    logger.info("...finished")

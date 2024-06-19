@@ -18,9 +18,13 @@
 # TRANSCRIPT ID (ENSEMBL, REFSEQ) & GENE NAME CONVERSION
 
 from typing import List, Dict
+import logging
 from pybiomart import Dataset as BiomartDataset
 import os
 import json
+
+
+logger = logging.getLogger(__name__)
 
 
 class NameLookup:
@@ -79,15 +83,15 @@ def create_and_save_name_lookup(
 
     query_filters = {}
 
-    print("Obtaining info from Biomart...")
+    logger.info("Obtaining info from Biomart...")
 
     id_df = biomart_dataset.query(
         attributes=query_attributes,
         filters=query_filters
     )
 
-    print("...done\n")
-    print("Creating lookup object from Biomart data")
+    logger.info("...done\n")
+    logger.info("Creating lookup object from Biomart data")
 
     name_lookup_dict = {
         "refseq": {
@@ -106,7 +110,7 @@ def create_and_save_name_lookup(
     for rec in id_df.iterrows():
 
         if _i % 1000 == 0:
-            print(f"Progress: ({_i}/{_t})")
+            logger.info(f"Progress: ({_i}/{_t})")
         _i += 1
 
         name_lookup_dict["refseq"]["ensembl"][rec[1]["RefSeq mRNA ID"]] = str(
@@ -122,13 +126,13 @@ def create_and_save_name_lookup(
             rec[1]["Gene name"]
         ).replace("nan", "")
 
-    print("...done\n")
-    print("Saving to file...")
+    logger.info("...done\n")
+    logger.info("Saving to file...")
 
     with open(os.path.join(output_path), "w") as f:
         json.dump(name_lookup_dict, f)
 
-    print("...done\n")
+    logger.info("...done\n")
 
     return NameLookup(name_lookup_dict)
 

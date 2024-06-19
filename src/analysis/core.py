@@ -20,6 +20,7 @@
 from dataclasses import dataclass
 from typing import Tuple, List, Dict, Union
 from multiprocessing import Pool
+import logging
 import os
 import csv
 import time
@@ -29,6 +30,9 @@ from config import output_column_names as cols
 from analysis.transcript import TranscriptRecord, TranscriptLibrary
 from analysis.experiment import Sample
 from analysis.splice import DEFAULT_MAPQ_FOR_UNIQUE_MAPPING, SpliceJunction, get_splice_junctions_from_sample
+
+
+logger = logging.getLogger(__name__)
 
 
 def sanitize_string_for_filename(s: str) -> str:
@@ -295,7 +299,7 @@ def perform_splice_analysis(
 
     if n_processes > 1:
         pool = Pool(processes=n_processes)
-        print(f"Created worker pool with {n_processes} processes for BAM file parsing\n")
+        logger.info(f"Created worker pool with {n_processes} processes for BAM file parsing\n")
     else:
         pool = None
 
@@ -306,21 +310,21 @@ def perform_splice_analysis(
     #       (will require refactoring get_splice_analysis_result_for_sample to accept junctions rather than sample)
 
     if genes is not None:
-        print(f"Using provided gene set of {len(genes)} gene names\n")
+        logger.info(f"Using provided gene set of {len(genes)} gene names\n")
 
     if max_n_features_in_transcript:
-        print(
+        logger.info(
             f"Limiting analysis to transcripts containing up to {max_n_features_in_transcript} of the same "
             f"feature of interest\n"
         )
 
-    print(f"Performing splice analysis for term \"{feature_substring}\"...")
+    logger.info(f"Performing splice analysis for term \"{feature_substring}\"...")
 
     skipped_exon_match_failure = 0
 
     output_file_path = os.path.join(output_dir, f"{name_output(run_name, feature_substring)}.csv")
-    print(f"Saving output to {output_file_path}")
-    print()  # Print blank line to be consumed by first one-line-up ansi code
+    logger.info(f"Saving output to {output_file_path}")
+    # logger.info("")  # Print blank line to be consumed by first one-line-up ansi code
 
     with open(output_file_path, "w") as f:
 
@@ -348,8 +352,8 @@ def perform_splice_analysis(
         out_csv = csv.writer(f)
         out_csv.writerow(header)
 
-        _info_time_bam_read = False
-        _info_time_transcripts = False
+        # _info_time_bam_read = False
+        # _info_time_transcripts = False
 
         _progress = 0
         for transcripts_by_id in transcript_library.get_transcripts_for_all_genes().values():
@@ -361,8 +365,8 @@ def perform_splice_analysis(
 
             for _progress_plus_i in [_progress + i for i in range(len(transcripts))]:
                 if _progress_plus_i % 100 == 0:
-                    print(
-                        "\x1b[A" +
+                    logger.info(
+                        # "\x1b[A" +
                         f"Progress: {int(100 * _progress_plus_i / transcript_library.number_of_transcripts)}%"
                     )
 
@@ -379,21 +383,12 @@ def perform_splice_analysis(
                 _progress += len(transcripts)
                 continue
 
-            # # START DEBUG BLOCK
-            # if transcripts[0].gene_name not in ("ST3GAL5",):
-            #     _progress += len(transcripts)
-            #     continue
-            # # if _progress > 1000:
-            # #     break
-            # # print("REGION:", f"{transcript.seqname}:{transcript.start}-{transcript.end}")
-            # # END OF DEBUG BLOCK
-
             chromosome = transcripts[0].seqname
             gene_region_start = min([transcript.start for transcript in transcripts])
             gene_region_end = min([transcript.end for transcript in transcripts])
 
-            if _info_time_bam_read:
-                _bam_read_start_ms = time.time_ns() / 1_000_000
+            # if _info_time_bam_read:
+            #     _bam_read_start_ms = time.time_ns() / 1_000_000
 
             # Test time taken to parse junctions from first BAM file and decide whether parallelization is necessary
             first_bam_start_ns = time.time_ns()
@@ -447,12 +442,12 @@ def perform_splice_analysis(
 
                 remaining_reads, remaining_junctions = [], []
 
-            if _info_time_bam_read:
-                _bam_read_finish_ms = time.time_ns() / 1_000_000
-                print(
-                    f"INFO: parsed splice junctions from BAM files for gene {transcripts[0].gene_name} in " +
-                    f"{_bam_read_finish_ms - _bam_read_start_ms} ms"
-                )
+            # if _info_time_bam_read:
+            #     _bam_read_finish_ms = time.time_ns() / 1_000_000
+            #     logger.debug(
+            #         f"INFO: parsed splice junctions from BAM files for gene {transcripts[0].gene_name} in " +
+            #         f"{_bam_read_finish_ms - _bam_read_start_ms} ms"
+            #     )
 
             all_reads = [first_reads] + remaining_reads
             all_junctions = [first_junctions] + remaining_junctions
@@ -498,8 +493,8 @@ def perform_splice_analysis(
                 # REFACTOR --> if any([s in analysis_features.keys() for s in features_to_analyze]):
                 if feature_substring in analysis_features.keys():
 
-                    if _info_time_transcripts:
-                        _transcript_start_ms = time.time_ns() / 1_000_000
+                    # if _info_time_transcripts:
+                    #     _transcript_start_ms = time.time_ns() / 1_000_000
 
                     features = analysis_features[feature_substring]
                     n_features_in_transcript = len(features)
@@ -599,23 +594,26 @@ def perform_splice_analysis(
                             out_freq
                         )
 
-                    if _info_time_transcripts:
-                        _transcript_finish_ms = time.time_ns() / 1_000_000
-                        print(
-                            f"INFO: Processed transcript ({transcript.transcript_id} / {transcript.gene_name}) " +
-                            f"in {_transcript_finish_ms - _transcript_start_ms} ms"
-                        )
+                    # if _info_time_transcripts:
+                    #     _transcript_finish_ms = time.time_ns() / 1_000_000
+                    #     logger.debug(
+                    #         f"INFO: Processed transcript ({transcript.transcript_id} / {transcript.gene_name}) " +
+                    #         f"in {_transcript_finish_ms - _transcript_start_ms} ms"
+                    #     )
 
                 _progress += 1
 
-    print("\x1b[A" + "Progress: 100%")
+    logger.info(
+        # "\x1b[A" +
+        "Progress: 100%"
+    )
 
     _analysis_finish_ms = time.time_ns() / 1_000_000
     _analysis_runtime_minutes = (_analysis_finish_ms - _analysis_start_ms) / (1000 * 60)
 
-    print(f"TIME: Completed in {round(_analysis_runtime_minutes, 2)} minutes")
+    logger.info(f"TIME: Completed in {round(_analysis_runtime_minutes, 2)} minutes")
 
-    print(
+    logger.info(
         f"...finished ({skipped_exon_match_failure} features skipped either due to failed matching between "
         f"reference and annotation exons, or due to annotated position mapping outside the bounds of the "
         f"corresponding reference exon)\n"

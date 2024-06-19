@@ -16,10 +16,14 @@
 
 
 from typing import Dict, Optional
+import logging
 import os
 import subprocess
 
 from downstream.process_stringtie import format_stringtie_matrices, annotate_formatted_stringtie_results
+
+
+logger = logging.getLogger(__name__)
 
 
 def quantify_isoforms(
@@ -61,7 +65,7 @@ def quantify_isoforms(
 
     # Run stringtie individually for each sample
 
-    print("[Stringtie] Assembling transcripts from individual BAM files...")
+    logger.info("[Stringtie] Assembling transcripts from individual BAM files...")
 
     assembly_dir = os.path.join(stringtie_out_dir, "assembly")
     stringtie_assembly_output_locations: Dict[str, str] = {}
@@ -69,7 +73,7 @@ def quantify_isoforms(
     # _n = 0
     for bam_path in bam_abs_paths:
 
-        print(os.path.basename(bam_path))
+        logger.info(os.path.basename(bam_path))
 
         _basename = os.path.basename(bam_path)
         _output_local_filename = _basename[:_basename.index(".")] + ".gtf"
@@ -93,14 +97,14 @@ def quantify_isoforms(
         # # DEV: Break after second iteration
         # _n += 1
         # if _n >= 2:
-        #     print("[DEV] stopped after 2 files")
+        #     logger.debug("[DEV] stopped after 2 files")
         #     break
 
-    print("[Stringtie] ... done")
+    logger.info("[Stringtie] ... done")
 
     # Run stringtie in --merge mode to get the combined transcript GTF
 
-    print("[Stringtie] Merging results...")
+    logger.info("[Stringtie] Merging results...")
 
     # Write merge list for --merge mode
     merge_list_path = os.path.join(assembly_dir, "merge_list.txt")
@@ -123,12 +127,12 @@ def quantify_isoforms(
         check=check_exit_code
     )
 
-    print("[Stringtie] ... done")
+    logger.info("[Stringtie] ... done")
 
     # Run stringtie in -e mode
     # In this step, the combined GTF from stringtie --merge is used with -G rather than the reference genome
 
-    print("[Stringtie] Quantifying transcripts...")
+    logger.info("[Stringtie] Quantifying transcripts...")
 
     quantified_dir = os.path.join(stringtie_out_dir, "quantified")
     stringtie_quantified_output_locations: Dict[str, str] = {}
@@ -144,7 +148,7 @@ def quantify_isoforms(
             quantified_dir, _basename_stripped, _output_local_filename
         )
 
-        print(_basename)
+        logger.info(_basename)
 
         # stringtie -e -G MERGED.gtf -o OUT_QUANT.gtf -p THREADS BAM
         subprocess.run(
@@ -164,14 +168,14 @@ def quantify_isoforms(
         # # DEV: Break after second iteration
         # _n += 1
         # if _n >= 2:
-        #     print("[DEV] stopped after 2 files")
+        #     logger.debug("[DEV] stopped after 2 files")
         #     break
 
-    print("[Stringtie] ... done")
+    logger.info("[Stringtie] ... done")
 
     # Run prepDE script
 
-    print("[Stringtie] Generating transcript count matrix (prepDE.py3)...")
+    logger.info("[Stringtie] Generating transcript count matrix (prepDE.py3)...")
 
     prep_de_out_dir = os.path.join(stringtie_out_dir, "prepDE")
 
@@ -199,9 +203,9 @@ def quantify_isoforms(
         check=check_exit_code
     )
 
-    print("[Stringtie] ... done")
+    logger.info("[Stringtie] ... done")
 
-    print("[FDSA] Combining stringtie results...")
+    logger.info("[FDSA] Combining stringtie results...")
 
     formatted_stringtie_output_path = os.path.join(stringtie_out_dir, "combined_stringtie_results.csv")
 
@@ -212,11 +216,11 @@ def quantify_isoforms(
         formatted_stringtie_output_path
     )
 
-    print("[FDSA] ... done")
+    logger.info("[FDSA] ... done")
 
     if fdsa_results_path is not None:
 
-        print("[FDSA] Annotating stringtie results with feature overlap...")
+        logger.info("[FDSA] Annotating stringtie results with feature overlap...")
 
         annotate_formatted_stringtie_results(
             formatted_stringtie_output_path,
@@ -224,8 +228,8 @@ def quantify_isoforms(
             assign_reference_gene=assign_reference_gene
         )
 
-        print("[FDSA] ... done")
+        logger.info("[FDSA] ... done")
 
     else:
 
-        print("[FDSA] No FDSA output supplied - stringtie results will not be annotated.")
+        logger.info("[FDSA] No FDSA output supplied - stringtie results will not be annotated.")

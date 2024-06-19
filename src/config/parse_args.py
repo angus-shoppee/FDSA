@@ -31,7 +31,7 @@ def get_mode_parser(program_description: str) -> ArgumentParser:
         choices=["user", "build", "run", "report", "filter", "quant"],
         # TODO: Format mode help text
         help="\n".join([
-            "user - (Required only once) Sets the user config file containing build information and optional default "
+            "user - (Required only once) Ssets the user config file containing build information and optional default "
             "parameters.",
             "build - (Required once per species, before first run) Parses transcripts from the provided reference "
             "genome GTF, downloads feature annotation data, and links the two to enable directed splice analysis.",

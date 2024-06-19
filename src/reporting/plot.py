@@ -366,7 +366,7 @@ def plot_transcript(
                         )
                     )
                 except OutOfBoundsError:
-                    #                     print("INFO: Skipped junction with out-of-bounds location")
+                    # logger.warning("INFO: Skipped junction with out-of-bounds location")
                     continue
 
         # Order plot_junctions from the lowest length to highest

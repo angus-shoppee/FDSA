@@ -128,8 +128,6 @@ class GBSeq:
         gbfeature: GBFeature
     ) -> None:
 
-        # print(f"Adding: {feature_id}, quals: {gbfeature.quals}")
-
         # Create feature list if it doesn't exist yet
         if feature_id not in self._analysis_features.keys():
             self._analysis_features[feature_id] = []

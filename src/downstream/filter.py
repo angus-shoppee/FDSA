@@ -16,6 +16,7 @@
 
 
 from typing import List, Tuple
+import logging
 import os
 import subprocess
 
@@ -27,6 +28,9 @@ from reporting.process_results import load_fdsa_results
 SAM_FLAG_REVERSE_STRAND = 16  # If this flag is present in a read, it is mapped to the reverse strand
 
 FILTERED_BAM_FILES_DEFAULT_DIRECTORY_NAME = "FILTERED_BAM"
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_gene_start_and_end(exon_positions: List[Tuple[int, int]]) -> Tuple[int, int]:
@@ -98,15 +102,15 @@ def generate_filtered_bam_files(
     #
     #         bed_file.write(f"{result.chromosome}\t{span[0]}\t{span[1]}\n")
 
-    print("Generating filtered BAM files...")
+    logger.info("Generating filtered BAM files...")
 
     _right_padding = "            "
     _n_results = len(fdsa_results)
 
     for sample in samples.values():
 
-        print(f"Extracting reads from: {sample.name}{sample.bam_ending}")
-        print()  # Include blank line to be consumed by first one-line-up ansi code
+        logger.info(f"Extracting reads from: {sample.name}{sample.bam_ending}")
+        # logger.info("")  # Include blank line to be consumed by first one-line-up ansi code
 
         unsorted_sam_out_path = os.path.join(
             output_dir,
@@ -125,8 +129,8 @@ def generate_filtered_bam_files(
             #     sample.bam_path
             # ]
             #
-            # print("[DEBUG] Trying:")
-            # print(" ".join(split_cmd))
+            # logger.debug("Trying:")
+            # logger.debug(" ".join(split_cmd))
             #
             # _process = subprocess.run(
             #     split_cmd,
@@ -156,7 +160,11 @@ def generate_filtered_bam_files(
 
             for i, result in enumerate(fdsa_results):
 
-                print("\x1b[A" + f"[{i + 1} / {_n_results}] {result.gene_name}" + _right_padding)
+                logger.info(
+                    # "\x1b[A" +
+                    f"[{i + 1} / {_n_results}] {result.gene_name}" +
+                    _right_padding
+                )
 
                 span = get_gene_start_and_end(result.exon_positions)
                 genomic_region = f"{result.chromosome}:{span[0]}-{span[1]}"
@@ -199,7 +207,7 @@ def generate_filtered_bam_files(
         sorted_out_path = unsorted_sam_out_path.replace(".temp.sam", run_config.bam_ending)
         # sorted_out_path = unsorted_sam_out_path.replace(".temp.sam", run_config.bam_ending).replace(".bam", ".sam")
 
-        print("Sorting...")
+        logger.info("Sorting...")
 
         split_cmd = [
             samtools, "sort",
@@ -217,11 +225,11 @@ def generate_filtered_bam_files(
             stderr=subprocess.DEVNULL
         )
 
-        print("... done")
+        logger.info("... done")
 
         # Index the final BAM file
 
-        print("Indexing...")
+        logger.info("Indexing...")
 
         split_cmd = [
             samtools, "index",
@@ -235,9 +243,9 @@ def generate_filtered_bam_files(
             check=check_exit_code
         )
 
-        print("... done")
+        logger.info("... done")
 
         # Delete unsorted temp file
         os.remove(unsorted_sam_out_path)
 
-    print("... finished\n")
+    logger.info("... finished\n")

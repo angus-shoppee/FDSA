@@ -20,11 +20,15 @@
 from dataclasses import dataclass
 from typing import List, Dict, Union
 from pandas import DataFrame
+import logging
 import os
 import pickle
 
 from analysis.annotation import GBSeq, RefseqExon
 from analysis.biomart import NameLookup
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -96,16 +100,6 @@ def create_exon_map_to_gbseq(
                 if _with_fewer_exons[i].length == _with_more_exons[i+_offset].length:
                     _n_matches += 1
                 _n_matches_per_round.append(_n_matches)
-
-        # # DEBUG BLOCK
-        # try:
-        #     _n_matches_per_round.index(max(_n_matches_per_round))
-        # except ValueError:
-        #     print("transcript_exons:", transcript_exons)
-        #     print("gbseq_exons:", gbseq_exons)
-        #     print("_n_find_offset_iters:", _n_find_offset_iters)
-        #     print("_n_matches_per_round:", _n_matches_per_round)
-        # # END DEBUG BLOCK
 
         offset = _n_matches_per_round.index(max(_n_matches_per_round))
 
@@ -320,14 +314,14 @@ class TranscriptLibrary:
 
         gene_names = name_lookup.get_all_gene_names()
 
-        print("Creating transcript library...")
+        logger.info("Creating transcript library...")
         _i = 0
         _t = len(gene_names)
 
         for gene_name in gene_names:
 
             if _i % 1000 == 0:
-                print(f"Progress: ({_i}/{_t})")
+                logger.info(f"Progress: ({_i}/{_t})")
             _i += 1
 
             res = ref_gtf.query(f"gene_name=='{gene_name}'")
@@ -363,14 +357,11 @@ class TranscriptLibrary:
                     # exons=get_exons_from_gtf(t_id, transcripts_slice.query(f"transcript_id=='{t_id}'"))
                     exons=get_exons_from_gtf(t_id, res.query(f"transcript_id=='{t_id}'"))
                 )
-                # _exons = get_exons_from_gtf(t_id, res.query(f"transcript_id=='{t_id}'"))
-                # print(f"DEBUG: locus: {transcripts_slice.start.values[i]}-{transcripts_slice.end.values[i]}")
-                # print(f"DEBUG: exons: {_exons}")
                 self.number_of_transcripts += 1
 
             self._transcripts_by_gene[gene_name] = transcripts
 
-        print("...done\n")
+        logger.info("...done\n")
 
     def get_all_transcripts(self) -> List[TranscriptRecord]:
 
@@ -440,7 +431,7 @@ def annotate_and_save_transcript_library(
     all transcripts without a refseq_mrna ID are deleted"""
 
     # Get all transcripts that have a refseq ID
-    print("Applying annotation to transcripts with refseq IDs...")
+    logger.info("Applying annotation to transcripts with refseq IDs...")
     _key_errors, _without_refseq, _no_gbseq, _exon_map_failure, _successes = 0, 0, 0, 0, 0
     for transcript in transcript_library.get_all_transcripts():
         # TODO: Remove this check and its counting as this is now handled previously when creating transcript library
@@ -476,7 +467,7 @@ def annotate_and_save_transcript_library(
             transcript_library.number_of_transcripts -= 1
             _without_refseq += 1
 
-    print(
+    logger.info(
         f"... finished with {_successes} successes; removed {_without_refseq} transcripts without refseq ID, " +
         f"{_key_errors} unmappable due to missing or unrecognised ensembl ID, {_no_gbseq} without annotation, "
         f"{_exon_map_failure} failures to map reference genome exons to gbseq exons\n"
@@ -493,6 +484,5 @@ def load_transcript_library_from_file(path: str):
     with open(path, "rb") as f:
 
         transcript_library = pickle.load(f)
-        # transcript_library = RenameUnpickler(f).load()
 
     return transcript_library
