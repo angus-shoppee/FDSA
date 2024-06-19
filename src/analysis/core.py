@@ -25,10 +25,10 @@ import csv
 import time
 from statistics import mean
 
-from src.config import output_column_names as cols
-from src.analysis.transcript import TranscriptRecord, TranscriptLibrary
-from src.analysis.experiment import Sample
-from src.analysis.splice import DEFAULT_MAPQ_FOR_UNIQUE_MAPPING, SpliceJunction, get_splice_junctions_from_sample
+from config import output_column_names as cols
+from analysis.transcript import TranscriptRecord, TranscriptLibrary
+from analysis.experiment import Sample
+from analysis.splice import DEFAULT_MAPQ_FOR_UNIQUE_MAPPING, SpliceJunction, get_splice_junctions_from_sample
 
 
 def sanitize_string_for_filename(s: str) -> str:

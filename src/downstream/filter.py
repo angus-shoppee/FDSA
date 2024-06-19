@@ -19,9 +19,9 @@ from typing import List, Tuple
 import os
 import subprocess
 
-from src.config.parse_config import FaseInternalConfig, FaseRunConfig
-from src.analysis.core import name_output, Sample
-from src.reporting.process_results import load_fase_results
+from config.parse_config import FaseRunConfig
+from analysis.core import name_output, Sample
+from reporting.process_results import load_fase_results
 
 
 SAM_FLAG_REVERSE_STRAND = 16  # If this flag is present in a read, it is mapped to the reverse strand

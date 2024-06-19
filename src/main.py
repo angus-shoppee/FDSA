@@ -23,20 +23,20 @@ from sys import argv
 # TODO: Remove gtfparse dependency
 from gtfparse import read_gtf
 
-from src.config.parse_args import (
+from config.parse_args import (
     get_mode_parser, get_build_parser, get_run_parser, get_report_parser, get_filter_parser, get_quant_parser
 )
-from src.config.parse_config import FaseInternalConfig, FaseUserConfig, FaseRunConfig
-from src.analysis.transcript import (
+from config.parse_config import FaseInternalConfig, FaseUserConfig, FaseRunConfig
+from analysis.transcript import (
     create_and_save_transcript_library, annotate_and_save_transcript_library, load_transcript_library_from_file
 )
-from src.analysis.entrez import download_and_save_feature_annotation_xml, get_gbseq_from_xml
-from src.analysis.biomart import create_and_save_name_lookup, load_name_lookup_from_file
-from src.analysis.experiment import Sample
-from src.analysis.core import set_analysis_features, perform_splice_analysis, name_output
-from src.reporting.report import create_report
-from src.downstream.filter import generate_filtered_bam_files, FILTERED_BAM_FILES_DEFAULT_DIRECTORY_NAME
-from src.downstream.quant import quantify_isoforms
+from analysis.entrez import download_and_save_feature_annotation_xml, get_gbseq_from_xml
+from analysis.biomart import create_and_save_name_lookup, load_name_lookup_from_file
+from analysis.experiment import Sample
+from analysis.core import set_analysis_features, perform_splice_analysis, name_output
+from reporting.report import create_report
+from downstream.filter import generate_filtered_bam_files, FILTERED_BAM_FILES_DEFAULT_DIRECTORY_NAME
+from downstream.quant import quantify_isoforms
 
 
 # ==================================================================================================================== #

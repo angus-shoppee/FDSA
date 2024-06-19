@@ -19,10 +19,10 @@ from typing import Tuple, List, Dict
 import csv
 import os
 
-from src.utils.general import divide_or_default_zero
-from src.downstream.parse_gtf import get_stringtie_transcripts_from_gtf, GtfTranscript
-import src.config.stringtie_formatted_column_names as cols
-import src.config.output_column_names as fase_output_cols
+from utils.general import divide_or_default_zero
+from downstream.parse_gtf import get_stringtie_transcripts_from_gtf, GtfTranscript
+import config.stringtie_formatted_column_names as cols
+import config.output_column_names as fase_output_cols
 
 
 def _load_and_sum_results_matrix(

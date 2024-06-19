@@ -19,8 +19,8 @@ from typing import Dict, List, Tuple
 import os
 from dataclasses import dataclass
 
-from src.config.parse_config import FaseRunConfig
-from src.reporting.process_results import FaseResult
+from config.parse_config import FaseRunConfig
+from reporting.process_results import FaseResult
 
 
 TRANSCRIPT_SECTIONS_TEMPLATE = "transcript_sections.html"

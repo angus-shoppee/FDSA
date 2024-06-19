@@ -19,8 +19,7 @@ from typing import Dict, Optional
 import os
 import subprocess
 
-# from src.analysis.core import name_output
-from src.downstream.process_stringtie import format_stringtie_matrices, annotate_formatted_stringtie_results
+from downstream.process_stringtie import format_stringtie_matrices, annotate_formatted_stringtie_results
 
 
 def quantify_isoforms(

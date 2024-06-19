@@ -18,8 +18,8 @@
 from typing import List, Union
 import os
 
-from src.reporting.process_results import FaseResult
-from src.config.parse_config import FaseRunConfig
+from reporting.process_results import FaseResult
+from config.parse_config import FaseRunConfig
 
 
 RESULTS_TABLE_TEMPLATE = "results_table.html"

@@ -22,13 +22,13 @@ import os
 from pandas import read_csv as pd_read_csv
 from functools import reduce
 
-from src.config.parse_config import FaseRunConfig
-from src.analysis.core import name_output
-from src.analysis.experiment import Sample
-from src.analysis.counts import run_feature_counts, get_gene_counts_from_tsv, get_tmm_cpm_from_gene_counts
-from src.reporting.process_results import load_fase_results
-from src.reporting.plot import plot_transcript, plot_splice_rate
-from src.reporting.generate_html_report import generate_html_report
+from config.parse_config import FaseRunConfig
+from analysis.core import name_output
+from analysis.experiment import Sample
+from analysis.counts import run_feature_counts, get_gene_counts_from_tsv, get_tmm_cpm_from_gene_counts
+from reporting.process_results import load_fase_results
+from reporting.plot import plot_transcript, plot_splice_rate
+from reporting.generate_html_report import generate_html_report
 
 
 GENE_COUNTS_DEFAULT_FILE_NAME = "gene_counts.tsv"

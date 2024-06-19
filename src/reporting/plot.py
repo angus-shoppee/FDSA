@@ -24,7 +24,7 @@ from matplotlib import pyplot as plt
 from matplotlib import patches
 from matplotlib.path import Path
 
-from src.reporting.process_results import QuantifiedSpliceJunctionLocus, FaseResult
+from reporting.process_results import QuantifiedSpliceJunctionLocus, FaseResult
 
 
 def find_location_within_exon(

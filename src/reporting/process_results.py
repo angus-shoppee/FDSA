@@ -19,8 +19,8 @@ from typing import List, Tuple, Dict, Any, Union
 import csv
 import pandas as pd
 
-from src.config import output_column_names as cols
-from src.analysis.experiment import Sample
+from config import output_column_names as cols
+from analysis.experiment import Sample
 
 
 FASE_RESULT_FREQUENCY_COLUMN_PREFIX = "Percent "

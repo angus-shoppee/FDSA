@@ -18,11 +18,11 @@
 from typing import List, Dict
 import os
 
-from src.config.parse_config import FaseRunConfig
-from src.reporting.process_results import FaseResult
-from src.reporting.templates.results_table import results_table
-from src.reporting.templates.transcript_sections import transcript_sections
-from src.reporting.templates.table_of_contents import table_of_contents
+from config.parse_config import FaseRunConfig
+from reporting.process_results import FaseResult
+from reporting.templates.results_table import results_table
+from reporting.templates.transcript_sections import transcript_sections
+from reporting.templates.table_of_contents import table_of_contents
 
 
 REPORT_TEMPLATE = "templates/main_report.html"

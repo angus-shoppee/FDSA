@@ -23,8 +23,8 @@ from pandas import DataFrame
 import os
 import pickle
 
-from src.analysis.annotation import GBSeq, RefseqExon
-from src.analysis.biomart import NameLookup
+from analysis.annotation import GBSeq, RefseqExon
+from analysis.biomart import NameLookup
 
 
 @dataclass
