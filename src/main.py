@@ -1,4 +1,4 @@
-# Feature-directed Analysis of Splice Events (FASE)
+# Feature-Directed Splice Analysis
 # Copyright (C) 2024 Angus Shoppee
 #
 # This program is free software: you can redistribute it and/or modify
@@ -42,7 +42,7 @@ from downstream.quant import quantify_isoforms
 # ==================================================================================================================== #
 
 
-PROGRAM_DESCRIPTION = "Feature-directed Analysis of Splice Events (FASE)"
+PROGRAM_DESCRIPTION = "Feature-Directed Splice Analysis"
 
 FASE_BUILD_COMMAND_USAGE = ("fase build RUN_CONFIG_PATH\n(or)\n"
                             "fase build --species SPECIES_NAME --genome REFERENCE_GENOME_GTF_PATH")

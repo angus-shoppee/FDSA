@@ -1,4 +1,4 @@
-# Feature-directed Analysis of Splice Events (FASE)
+# Feature-Directed Splice Analysis
 # Copyright (C) 2024 Angus Shoppee
 #
 # This program is free software: you can redistribute it and/or modify
@@ -104,8 +104,6 @@ def transcript_sections(
 
     with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), TRANSCRIPT_SECTION_UNIT_TEMPLATE), "r") as f:
         section_unit_template = f.read()
-        # Slice the section unit template HTML from first <section> tag to avoid duplicating license header
-        section_unit_template = section_unit_template[section_unit_template.index("<section"):]
 
     sections_html = (
         template.format(

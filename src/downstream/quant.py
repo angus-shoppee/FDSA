@@ -1,4 +1,4 @@
-# Feature-directed Analysis of Splice Events (FASE)
+# Feature-Directed Splice Analysis
 # Copyright (C) 2024 Angus Shoppee
 #
 # This program is free software: you can redistribute it and/or modify
