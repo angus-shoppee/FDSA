@@ -1,4 +1,4 @@
-# Feature-directed Analysis of Splice Events (FASE)
+# Feature-Directed Splice Analysis
 # Copyright (C) 2024 Angus Shoppee
 #
 # This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@ from setuptools import setup, find_packages
 
 
 setup(
-    name="fase",
+    name="fdsa",
     version="0.1.0",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
@@ -36,7 +36,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "fase=main:main"
+            "fdsa=main:main"
         ]
     },
     classifiers=[
