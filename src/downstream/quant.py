@@ -30,7 +30,7 @@ def quantify_isoforms(
     output_base_dir: str,
     bam_file_ending: str = ".bam",
     read_length: Optional[int] = None,
-    fase_results_path: Optional[str] = None,
+    fdsa_results_path: Optional[str] = None,
     assign_reference_gene: bool = True,
     threads: int = 1,
     check_exit_code: bool = False
@@ -201,7 +201,7 @@ def quantify_isoforms(
 
     print("[Stringtie] ... done")
 
-    print("[FASE] Combining stringtie results...")
+    print("[FDSA] Combining stringtie results...")
 
     formatted_stringtie_output_path = os.path.join(stringtie_out_dir, "combined_stringtie_results.csv")
 
@@ -212,20 +212,20 @@ def quantify_isoforms(
         formatted_stringtie_output_path
     )
 
-    print("[FASE] ... done")
+    print("[FDSA] ... done")
 
-    if fase_results_path is not None:
+    if fdsa_results_path is not None:
 
-        print("[FASE] Annotating stringtie results with feature overlap...")
+        print("[FDSA] Annotating stringtie results with feature overlap...")
 
         annotate_formatted_stringtie_results(
             formatted_stringtie_output_path,
-            fase_results_path,
+            fdsa_results_path,
             assign_reference_gene=assign_reference_gene
         )
 
-        print("[FASE] ... done")
+        print("[FDSA] ... done")
 
     else:
 
-        print("[FASE] No FASE output supplied - stringtie results will not be annotated.")
+        print("[FDSA] No FDSA output supplied - stringtie results will not be annotated.")

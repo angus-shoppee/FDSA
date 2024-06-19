@@ -15,18 +15,18 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-# FASE RESULTS PLOTTING AND REPORTING
+# FDSA RESULTS PLOTTING AND REPORTING
 
 from typing import List, Dict, Any
 import os
 from pandas import read_csv as pd_read_csv
 from functools import reduce
 
-from config.parse_config import FaseRunConfig
+from config.parse_config import ProgramRunConfig
 from analysis.core import name_output
 from analysis.experiment import Sample
 from analysis.counts import run_feature_counts, get_gene_counts_from_tsv, get_tmm_cpm_from_gene_counts
-from reporting.process_results import load_fase_results
+from reporting.process_results import load_fdsa_results
 from reporting.plot import plot_transcript, plot_splice_rate
 from reporting.generate_html_report import generate_html_report
 
@@ -39,7 +39,7 @@ def _check_inputs_are_valid(
     bam_file_absolute_paths: List[str],
     bam_files_dir: str,
     bam_ending: str,
-    fase_results_path: str,
+    fdsa_results_path: str,
     output_dir: str,
 ) -> None:
 
@@ -49,9 +49,9 @@ def _check_inputs_are_valid(
     if len(bam_file_absolute_paths) == 0:
         raise ValueError(f"No BAM files detected in {bam_files_dir} with ending {bam_ending}")
 
-    # Check FASE results file
-    if not os.path.exists(fase_results_path):
-        raise FileNotFoundError(f"The specified FASE results file was not found: {fase_results_path}")
+    # Check FDSA results file
+    if not os.path.exists(fdsa_results_path):
+        raise FileNotFoundError(f"The specified FDSA results file was not found: {fdsa_results_path}")
 
     # Check output directory (but do not create it yet)
     if not os.path.isdir(output_dir) and os.path.exists(output_dir):
@@ -63,10 +63,10 @@ def flatten_nested_lists(nested_lists: List[List[Any]]) -> List[Any]:
 
 
 def create_report(
-    run_config: FaseRunConfig
+    run_config: ProgramRunConfig
     # bam_files_dir: str,
     # bam_ending: str,
-    # fase_results_path: str,
+    # fdsa_results_path: str,
     # output_dir: str,
     # max_n_plotted: Union[None, int] = None
 ) -> None:
@@ -75,7 +75,7 @@ def create_report(
 
     output_dir = os.path.join(run_config.output_path, "REPORT")
     _results_file_name_no_extension = name_output(run_config.run_name, run_config.feature_name)
-    fase_results_path = os.path.join(run_config.output_path, f"{_results_file_name_no_extension}.csv")
+    fdsa_results_path = os.path.join(run_config.output_path, f"{_results_file_name_no_extension}.csv")
 
     # Get BAM file paths
     _ending_length = len(run_config.bam_ending)
@@ -91,7 +91,7 @@ def create_report(
         bam_file_absolute_paths,
         run_config.input_path,
         run_config.bam_ending,
-        fase_results_path,
+        fdsa_results_path,
         output_dir_absolute
     )
 
@@ -172,10 +172,10 @@ def create_report(
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
-    # Load FASE results
+    # Load FDSA results
     # TODO: Implement force_include_gene_names as an argument here
-    fase_results = load_fase_results(
-        fase_results_path,
+    fdsa_results = load_fdsa_results(
+        fdsa_results_path,
         samples,
         rank_by=run_config.rank_results_by,
         force_gene_names=None if run_config.report_genes is None else list(run_config.report_genes.keys()),
@@ -188,10 +188,10 @@ def create_report(
 
     plots: Dict[str, Dict[str, str]] = {}
     _current = 1
-    _total = len(fase_results) if run_config.report_max_n_plotted is None \
-        else min(len(fase_results), run_config.report_max_n_plotted)
+    _total = len(fdsa_results) if run_config.report_max_n_plotted is None \
+        else min(len(fdsa_results), run_config.report_max_n_plotted)
     print()  # Print blank line to be consumed by first one-line-up ansi code
-    for fase_result in fase_results:
+    for fdsa_result in fdsa_results:
 
         if run_config.report_max_n_plotted is not None and _current > run_config.report_max_n_plotted:
             break
@@ -199,8 +199,8 @@ def create_report(
         # TODO: Fix so that entire line is overwritten
         _temp_solution_right_spacing = "            "
         print(
-            "\x1b[A" + f"Progress: [{_current}/{_total}] {fase_result.gene_name} / {fase_result.transcript_id} " +
-            f"feature {fase_result.feature_number} of {fase_result.total_features_in_transcript}" +
+            "\x1b[A" + f"Progress: [{_current}/{_total}] {fdsa_result.gene_name} / {fdsa_result.transcript_id} " +
+            f"feature {fdsa_result.feature_number} of {fdsa_result.total_features_in_transcript}" +
             _temp_solution_right_spacing
         )
         _current += 1
@@ -214,9 +214,9 @@ def create_report(
         else:
             limit_transcript_plots_to_samples = None
 
-        plots[f"{fase_result.transcript_id}-{fase_result.feature_number}"] = {
+        plots[f"{fdsa_result.transcript_id}-{fdsa_result.feature_number}"] = {
             "expression": plot_splice_rate(
-                fase_result,
+                fdsa_result,
                 norm_gene_counts,
                 run_config.sample_groups,
                 run_config.group_name_by_sample_name,
@@ -225,7 +225,7 @@ def create_report(
                 show_main_title=False
             ),
             "splice": plot_transcript(
-                fase_result,
+                fdsa_result,
                 draw_junctions_with_min_n_occurrences=run_config.report_draw_junctions_min_count,
                 show_main_title=False,
                 limit_to_samples=limit_transcript_plots_to_samples
@@ -238,7 +238,7 @@ def create_report(
 
     report_html = generate_html_report(
         run_config,
-        fase_results,
+        fdsa_results,
         plots
     )
 

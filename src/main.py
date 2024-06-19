@@ -26,7 +26,7 @@ from gtfparse import read_gtf
 from config.parse_args import (
     get_mode_parser, get_build_parser, get_run_parser, get_report_parser, get_filter_parser, get_quant_parser
 )
-from config.parse_config import FaseInternalConfig, FaseUserConfig, FaseRunConfig
+from config.parse_config import ProgramInternalConfig, ProgramUserConfig, ProgramRunConfig
 from analysis.transcript import (
     create_and_save_transcript_library, annotate_and_save_transcript_library, load_transcript_library_from_file
 )
@@ -44,21 +44,21 @@ from downstream.quant import quantify_isoforms
 
 PROGRAM_DESCRIPTION = "Feature-Directed Splice Analysis"
 
-FASE_BUILD_COMMAND_USAGE = ("fase build RUN_CONFIG_PATH\n(or)\n"
-                            "fase build --species SPECIES_NAME --genome REFERENCE_GENOME_GTF_PATH")
+FDSA_BUILD_COMMAND_USAGE = ("fdsa build RUN_CONFIG_PATH\n(or)\n"
+                            "fdsa build --species SPECIES_NAME --genome REFERENCE_GENOME_GTF_PATH")
 
-FASE_RUN_COMMAND_USAGE = "fase run [--report] [--no-report] RUN_CONFIG_PATH"
+FDSA_RUN_COMMAND_USAGE = "fdsa run [--report] [--no-report] RUN_CONFIG_PATH"
 
-FASE_REPORT_COMMAND_USAGE = "fase report RUN_CONFIG_PATH"
+FDSA_REPORT_COMMAND_USAGE = "fdsa report RUN_CONFIG_PATH"
 
-FASE_FILTER_COMMAND_USAGE = "fase filter RUN_CONFIG_PATH"
+FDSA_FILTER_COMMAND_USAGE = "fdsa filter RUN_CONFIG_PATH"
 
-FASE_QUANT_COMMAND_USAGE = ("fase quant RUN_CONFIG_PATH [-g REFERENCE_GENOME_PATH] [-i FILTERED_BAM_DIRECTORY] "
+FDSA_QUANT_COMMAND_USAGE = ("fdsa quant RUN_CONFIG_PATH [-g REFERENCE_GENOME_PATH] [-i FILTERED_BAM_DIRECTORY] "
                             "[-o OUTPUT_DIRECTORY]\n(or)\n"
-                            "fase quant -g REFERENCE_GENOME_PATH -i FILTERED_BAM_DIRECTORY -o OUTPUT_DIRECTORY")
+                            "fdsa quant -g REFERENCE_GENOME_PATH -i FILTERED_BAM_DIRECTORY -o OUTPUT_DIRECTORY")
 
 BUILD_NOT_COMPLETED_MESSAGE = ("Annotated transcript library has not yet been built for this species. Please complete "
-                               "the build process using \"fase build [species]\"")
+                               "the build process using \"fdsa build [species]\"")
 
 INVALID_CONFIG_PATH_MESSAGE = ("The specified path does not represent a valid config file. Please check that the path "
                                "is correct.")
@@ -67,12 +67,13 @@ CONFIG_FILE_FORMATTING_ERROR_MESSAGE = ("Error encountered while parsing config 
                                         "information:")
 
 USER_CONFIG_NOT_SPECIFIED_MESSAGE = ("A user config file has not been set. No user defaults will be loaded, and the "
-                                     "\"fase build\" command will require an email address to be supplied at run time. "
-                                     "To set a user config file, run: \"fase user [path-to-config-file]\"")
+                                     "\"fdsa build\" command will require an email_for_apis address to be supplied at "
+                                     "run time. To set a user config file, run: \"fdsa user [path-to-config-file]\"")
 
-NO_EMAIL_ADDRESS_MESSAGE = ("An email address must be provided in order to make GenBank API requests. Please either "
-                            "set a user config with a valid \"email\" parameter under the [BUILD] section, or "
-                            "otherwise provide an email address using the \"--email\" option.")
+NO_EMAIL_ADDRESS_MESSAGE = ("An email address must be provided in order to make GenBank API requests. Please "
+                            "either set a user config with a valid \"email\" parameter under the [BUILD] "
+                            "section, or otherwise provide an email_for_apis address using the \"--email\" "
+                            "option.")
 
 
 # ==================================================================================================================== #
@@ -100,7 +101,7 @@ def _user(
         exit()
 
     try:
-        FaseUserConfig(user_config_path)
+        ProgramUserConfig(user_config_path)
     except ValueError as e:
         print(CONFIG_FILE_FORMATTING_ERROR_MESSAGE + "\n" + str(e))
         exit()
@@ -117,8 +118,8 @@ def _build(
     genome_gtf_path: str,
     email: str,
     n_threads: int,
-    internal_config: FaseInternalConfig,
-    user_config: FaseUserConfig,
+    internal_config: ProgramInternalConfig,
+    user_config: ProgramUserConfig,
     force_redo_annotate_transcript_library: bool = False,
     force_regenerate_whole_genome_lookup: bool = False,
     force_regenerate_transcript_library: bool = False,
@@ -252,8 +253,8 @@ def _build(
 
 def _run(
     species_specific_data_dir: str,
-    internal_config: FaseInternalConfig,
-    run_config: FaseRunConfig
+    internal_config: ProgramInternalConfig,
+    run_config: ProgramRunConfig
 ) -> None:
 
     annotated_transcript_library_path = os.path.join(species_specific_data_dir, "annotated_transcript_library.object")
@@ -317,29 +318,29 @@ def _run(
 
 
 def _report(
-    run_config: FaseRunConfig
+    run_config: ProgramRunConfig
 ) -> None:
 
     create_report(run_config)
 
 
 def _filter(
-    run_config: FaseRunConfig
+    run_config: ProgramRunConfig
 ) -> None:
 
     generate_filtered_bam_files(run_config)
 
 
 def _quant(
-    run_config: Union[FaseRunConfig, None],
-    user_config: Union[FaseUserConfig, None] = None,
+    run_config: Union[ProgramRunConfig, None],
+    user_config: Union[ProgramUserConfig, None] = None,
     stringtie_executable_path: Union[str, None] = None,
     prep_de_script_path: Union[str, None] = None,
     gtf_path: Union[str, None] = None,
     filtered_bam_dir: Union[str, None] = None,
     output_dir: Union[str, None] = None,
     read_length: Union[int, None] = None,
-    fase_results_path: Union[str, None] = None,
+    fdsa_results_path: Union[str, None] = None,
     disable_assign_reference_gene: Union[bool, None] = None,
     threads: Union[int, None] = None  # Allow None to indicate that value should be loaded from run config
 ) -> None:
@@ -374,7 +375,7 @@ def _quant(
         _filtered_bam_dir = filtered_bam_dir
         _output_dir = output_dir
         _read_length = read_length
-        _fase_results_path = fase_results_path
+        _fdsa_results_path = fdsa_results_path
         _assign_reference_gene = False if disable_assign_reference_gene else True
         _threads = threads
 
@@ -388,7 +389,7 @@ def _quant(
             )
         )
 
-        inferred_fase_results_path = os.path.join(
+        inferred_fdsa_results_path = os.path.join(
             run_config.output_path,
             f"{name_output(run_config.run_name, run_config.feature_name)}.csv"
         )
@@ -401,8 +402,8 @@ def _quant(
         _filtered_bam_dir = filtered_bam_dir if filtered_bam_dir is not None else inferred_filtered_bam_dir
         _output_dir = output_dir if output_dir is not None else run_config.output_path
         _read_length = read_length if read_length is not None else run_config.quant_read_length
-        _fase_results_path = fase_results_path if fase_results_path is not None else (
-            inferred_fase_results_path if os.path.isfile(inferred_fase_results_path) else None
+        _fdsa_results_path = fdsa_results_path if fdsa_results_path is not None else (
+            inferred_fdsa_results_path if os.path.isfile(inferred_fdsa_results_path) else None
         )
         _assign_reference_gene = False if disable_assign_reference_gene else run_config.quant_assign_reference_gene
         _threads = threads if threads is not None else run_config.n_threads
@@ -415,7 +416,7 @@ def _quant(
         raise ValueError(f"The parameter(s) stringtieExecutablePath and/or prepDeScriptPath have not been set "
                          f"either in the [QUANT] section of run config, or the [DEFAULT QUANT] section of user "
                          f"config. If neither are defined, then these parameters must be set using command line "
-                         f"arguments (see fase quant --help for more information).")
+                         f"arguments (see fdsa quant --help for more information).")
 
     quantify_isoforms(
         _stringtie_executable_path,
@@ -424,7 +425,7 @@ def _quant(
         _filtered_bam_dir,
         _output_dir,
         read_length=_read_length,
-        fase_results_path=_fase_results_path,
+        fdsa_results_path=_fdsa_results_path,
         assign_reference_gene=_assign_reference_gene,
         threads=_threads
     )
@@ -477,12 +478,12 @@ def main() -> None:
             print("NOTE:", USER_CONFIG_NOT_SPECIFIED_MESSAGE, "\n")
             user_config_path = None
 
-        internal_config = FaseInternalConfig(
+        internal_config = ProgramInternalConfig(
             os.path.join(base_dir, "src", "config", "internal.config")
         )
         if user_config_path is not None:
             try:
-                user_config = FaseUserConfig(
+                user_config = ProgramUserConfig(
                     user_config_path
                 )
             except ValueError as e:
@@ -508,9 +509,9 @@ def main() -> None:
                     build_args.email
                 ]):
                     print(
-                        f"Usage:\n{FASE_BUILD_COMMAND_USAGE}\n\n"
+                        f"Usage:\n{FDSA_BUILD_COMMAND_USAGE}\n\n"
                         "If no run config file is provided, the --species and --genome options must be set.\n"
-                        "Use \"fase build --help\" for more information on usage."
+                        "Use \"fdsa build --help\" for more information on usage."
                     )
                     exit()
 
@@ -520,7 +521,7 @@ def main() -> None:
                     print(INVALID_CONFIG_PATH_MESSAGE)
                     exit()
                 try:
-                    run_config = FaseRunConfig(
+                    run_config = ProgramRunConfig(
                         build_args.run_config_path,
                         internal_config,
                         user_config
@@ -544,8 +545,8 @@ def main() -> None:
                 print(NO_EMAIL_ADDRESS_MESSAGE)
                 exit()
 
-            email = build_args.email if build_args.email is not None else user_config.email
-            # Possible TODO: Final check for valid email?
+            email = build_args.email if build_args.email is not None else user_config.email_for_apis
+            # Possible TODO: Final check for valid email_for_apis?
 
             if species not in internal_config.allowed_species:
                 print(f"Invalid species (\"{species}\") specified. Options are: "
@@ -582,15 +583,15 @@ def main() -> None:
 
             if mode_arg.mode == "run":
                 parser = get_run_parser()
-                usage = FASE_RUN_COMMAND_USAGE
+                usage = FDSA_RUN_COMMAND_USAGE
             elif mode_arg.mode == "report":
                 enable_generate_report = True
                 parser = get_report_parser()
-                usage = FASE_REPORT_COMMAND_USAGE
+                usage = FDSA_REPORT_COMMAND_USAGE
             else:
                 enable_generate_filtered_bam_files = True
                 parser = get_filter_parser()
-                usage = FASE_FILTER_COMMAND_USAGE
+                usage = FDSA_FILTER_COMMAND_USAGE
 
             if any([arg in subsequent_args for arg in ("-h", "--help")]):
                 parser.print_help()
@@ -601,7 +602,7 @@ def main() -> None:
             if args.run_config_path is None:
                 print(
                     f"usage: {usage}\n\n"
-                    "Use \"fase run --help\" for more information on usage."
+                    "Use \"fdsa run --help\" for more information on usage."
                 )
                 exit()
 
@@ -609,7 +610,7 @@ def main() -> None:
 
             # Load run config
             try:
-                run_config = FaseRunConfig(
+                run_config = ProgramRunConfig(
                     run_config_path,
                     internal_config,
                     user_config
@@ -675,15 +676,15 @@ def main() -> None:
                 quant_args.output is None
             ]):
                 print(
-                    f"Usage:\n{FASE_QUANT_COMMAND_USAGE}\n\n"
-                    "Use \"fase quant --help\" for more information on usage."
+                    f"Usage:\n{FDSA_QUANT_COMMAND_USAGE}\n\n"
+                    "Use \"fdsa quant --help\" for more information on usage."
                 )
                 exit()
 
             # Load run config if path was supplied
             if quant_args.run_config_path is not None:
                 try:
-                    run_config = FaseRunConfig(
+                    run_config = ProgramRunConfig(
                         quant_args.run_config_path,
                         internal_config,
                         user_config
@@ -704,7 +705,7 @@ def main() -> None:
                 quant_args.input,
                 quant_args.output,
                 quant_args.read_length,
-                quant_args.fase_results,
+                quant_args.fdsa_results,
                 quant_args.disable_assign_reference_gene,
                 quant_args.threads
             )

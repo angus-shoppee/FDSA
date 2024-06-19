@@ -24,7 +24,7 @@ from matplotlib import pyplot as plt
 from matplotlib import patches
 from matplotlib.path import Path
 
-from reporting.process_results import QuantifiedSpliceJunctionLocus, FaseResult
+from reporting.process_results import QuantifiedSpliceJunctionLocus, FdsaResult
 
 
 def find_location_within_exon(
@@ -237,30 +237,30 @@ class PlotJunction:
 
 
 def plot_transcript(
-    fase_result: FaseResult,
+    fdsa_result: FdsaResult,
     draw_junctions_with_min_n_occurrences: int = 1,
     show_main_title: bool = True,
     limit_to_samples: Union[None, List[str]] = None
 ) -> str:
 
-    samples_to_plot = limit_to_samples if limit_to_samples is not None else fase_result.all.keys()
+    samples_to_plot = limit_to_samples if limit_to_samples is not None else fdsa_result.all.keys()
 
     n_samples = len(samples_to_plot)
 
-    n_exons = len(fase_result.exon_positions)
+    n_exons = len(fdsa_result.exon_positions)
 
-    # TODO: Though an extreme edge case in the context of FASE's intended purpose, this logic does not work for
+    # TODO: Though an extreme edge case in the context of FDSA's intended purpose, this logic does not work for
     #       transcripts consisting of a single exon - should require strandedness as an explicit argument here
     #       (splice events should not be relevant for these, unless there is intra-exonic splicing)
     forward_stranded = True
-    if len(fase_result.exon_positions) > 1:
-        if fase_result.exon_positions[0][0] > fase_result.exon_positions[1][0]:
+    if len(fdsa_result.exon_positions) > 1:
+        if fdsa_result.exon_positions[0][0] > fdsa_result.exon_positions[1][0]:
             forward_stranded = False
 
-    avg_exon_length = mean([position[1] - position[0] for position in fase_result.exon_positions])
+    avg_exon_length = mean([position[1] - position[0] for position in fdsa_result.exon_positions])
 
     scaled_exon_positions = convert_global_exon_positions_to_local(
-        fase_result.exon_positions,
+        fdsa_result.exon_positions,
         forward_stranded
     )
 
@@ -291,12 +291,12 @@ def plot_transcript(
     ]
 
     plot_feature_start_exon, plot_feature_start_steps = find_location_within_exon(
-        fase_result.feature_region[0],
-        fase_result.exon_positions
+        fdsa_result.feature_region[0],
+        fdsa_result.exon_positions
     )
     plot_feature_end_exon, plot_feature_end_steps = find_location_within_exon(
-        fase_result.feature_region[1],
-        fase_result.exon_positions
+        fdsa_result.feature_region[1],
+        fdsa_result.exon_positions
     )
 
     for exon_number in range(plot_feature_start_exon, plot_feature_end_exon + 1):
@@ -346,8 +346,8 @@ def plot_transcript(
         curve_height_multiplier = 0.75
 
         plot_junctions = []
-        for junction in fase_result.all[sample_name]:
-            _highlight = (junction in fase_result.overlapping[sample_name])
+        for junction in fdsa_result.all[sample_name]:
+            _highlight = (junction in fdsa_result.overlapping[sample_name])
             # TODO: Only if not red
             if (
                 junction.n >= draw_junctions_with_min_n_occurrences
@@ -358,7 +358,7 @@ def plot_transcript(
                     plot_junctions.append(
                         PlotJunction(
                             junction,
-                            fase_result.exon_positions,
+                            fdsa_result.exon_positions,
                             plotting_exon_positions,
                             avg_exon_length,
                             forward_stranded,
@@ -528,8 +528,8 @@ def plot_transcript(
 
         ax.set_title(sample_name, size=24)
 
-    main_title = f"{fase_result.gene_name} - Feature {fase_result.feature_number} " + \
-                 f"of {fase_result.total_features_in_transcript}"
+    main_title = f"{fdsa_result.gene_name} - Feature {fdsa_result.feature_number} " + \
+                 f"of {fdsa_result.total_features_in_transcript}"
 
     _first_ax_fig = axs[0].get_figure()
 
@@ -555,7 +555,7 @@ def plot_transcript(
 
 
 def plot_splice_rate(
-    fase_result: FaseResult,
+    fdsa_result: FdsaResult,
     norm_gene_counts: DataFrame,
     sample_groups: Dict[str, List[str]],
     group_name_by_sample: Dict[str, str],
@@ -565,9 +565,9 @@ def plot_splice_rate(
 ) -> str:
 
     x, y, color, shape, labels = [], [], [], [], []
-    for sample_name, frequency in fase_result.frequencies.items():
+    for sample_name, frequency in fdsa_result.frequencies.items():
         y.append(frequency)
-        x.append(norm_gene_counts.loc[fase_result.gene_id][sample_name])
+        x.append(norm_gene_counts.loc[fdsa_result.gene_id][sample_name])
         color.append(color_by_group_name[group_name_by_sample[sample_name]])
         shape.append(shape_by_group_name[group_name_by_sample[sample_name]])
         labels.append(group_name_by_sample[sample_name])
@@ -615,8 +615,8 @@ def plot_splice_rate(
 
     if show_main_title:
         ax.set_title(
-            f"{fase_result.gene_name} - Feature {fase_result.feature_number}" +
-            f" of {fase_result.total_features_in_transcript}",
+            f"{fdsa_result.gene_name} - Feature {fdsa_result.feature_number}" +
+            f" of {fdsa_result.total_features_in_transcript}",
             size=28
         )
 

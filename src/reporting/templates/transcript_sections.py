@@ -19,8 +19,8 @@ from typing import Dict, List, Tuple
 import os
 from dataclasses import dataclass
 
-from config.parse_config import FaseRunConfig
-from reporting.process_results import FaseResult
+from config.parse_config import ProgramRunConfig
+from reporting.process_results import FdsaResult
 
 
 TRANSCRIPT_SECTIONS_TEMPLATE = "transcript_sections.html"
@@ -57,33 +57,33 @@ def transcript_unit_section(
 
 
 def transcript_sections(
-    run_config: FaseRunConfig,
-    fase_results: List[FaseResult],
+    run_config: ProgramRunConfig,
+    fdsa_results: List[FdsaResult],
     plots: Dict[str, Dict[str, str]],
     svg_scheme: str
 ) -> Tuple[str, List[TranscriptSectionRenderInfo]]:
 
     all_section_render_info = [
         TranscriptSectionRenderInfo(
-            section_id=f"transcript-{fase_result.transcript_id}-{fase_result.feature_number}",
-            section_title=f"{fase_result.gene_name} " +
-                          f"({fase_result.feature_number} of {fase_result.total_features_in_transcript})",
-            gene_name=fase_result.gene_name,
-            transcript_id=fase_result.transcript_id,
-            n_exons=len(fase_result.exon_positions),
+            section_id=f"transcript-{fdsa_result.transcript_id}-{fdsa_result.feature_number}",
+            section_title=f"{fdsa_result.gene_name} " +
+                          f"({fdsa_result.feature_number} of {fdsa_result.total_features_in_transcript})",
+            gene_name=fdsa_result.gene_name,
+            transcript_id=fdsa_result.transcript_id,
+            n_exons=len(fdsa_result.exon_positions),
             feature_name=run_config.feature_name,
-            feature_qualifiers=fase_result.feature_qualifiers,
-            feature_no=fase_result.feature_number,
-            n_features=fase_result.total_features_in_transcript,
+            feature_qualifiers=fdsa_result.feature_qualifiers,
+            feature_no=fdsa_result.feature_number,
+            n_features=fdsa_result.total_features_in_transcript,
             expression_plot_uri=svg_scheme + plots[
-                f"{fase_result.transcript_id}-{fase_result.feature_number}"
+                f"{fdsa_result.transcript_id}-{fdsa_result.feature_number}"
             ]["expression"],
             splice_plot_uri=svg_scheme + plots[
-                f"{fase_result.transcript_id}-{fase_result.feature_number}"
+                f"{fdsa_result.transcript_id}-{fdsa_result.feature_number}"
             ]["splice"]
         )
-        for fase_result in fase_results if plots.get(
-            f"{fase_result.transcript_id}-{fase_result.feature_number}", None
+        for fdsa_result in fdsa_results if plots.get(
+            f"{fdsa_result.transcript_id}-{fdsa_result.feature_number}", None
         ) is not None
     ]
 

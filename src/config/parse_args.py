@@ -36,9 +36,9 @@ def get_mode_parser(program_description: str) -> ArgumentParser:
             "build - (Required once per species, before first run) Parses transcripts from the provided reference "
             "genome GTF, downloads feature annotation data, and links the two to enable directed splice analysis.",
             "run - Performs splice analysis according to parameters set in the specified run config file.",
-            "report - Generates a graphical report from the output of \"fase run\".",
+            "report - Generates a graphical report from the output of \"fdsa run\".",
             "filter - Generates filtered BAM files containing only reads aligned to genes that have splice events in "
-            "the output of \"fase run\" (thresholds are configurable via the [FILTER] section in run config). "
+            "the output of \"fdsa run\" (thresholds are configurable via the [FILTER] section in run config). "
             "quant - Wraps stringtie: Stringtie is run individually for each supplied BAM file, then results are "
             "merged, and stringtie is re-run using the merged GTF as a reference; finally, estimated transcript counts"
             "are extracted using stringtie's prepDE.py3 script."
@@ -79,10 +79,10 @@ def get_build_parser() -> ArgumentParser:
     )
     build_parser.add_argument(
         "-e",
-        "--email",
+        "--email_for_apis",
         type=str,
         required=False,
-        help="An identifying email address to be attached to GenBank API queries. Note: no emails will be "
+        help="An identifying email_for_apis address to be attached to GenBank API queries. Note: no emails will be "
              "sent - used for identification/anti-spam purposes only."
     )
     build_parser.add_argument(
@@ -147,7 +147,7 @@ def get_run_parser() -> ArgumentParser:
     run_parser.add_argument(
         "--report",
         action="store_true",
-        help="Generates a visual report for the output of FASE's analysis upon completion."
+        help="Generates a visual report for the output of FDSA's analysis upon completion."
     )
     run_parser.add_argument(
         "--no-report",
@@ -158,7 +158,7 @@ def get_run_parser() -> ArgumentParser:
         "--filter",
         action="store_true",
         help=(
-            "Generates filtered BAM files containing only reads aligning to genes that have splice events in FASE's "
+            "Generates filtered BAM files containing only reads aligning to genes that have splice events in FDSA's "
             "output upon completion."
         )
     )
@@ -181,7 +181,7 @@ def get_report_parser() -> ArgumentParser:
         default=None,  # Allow no value so missing value error can be manually handled
         type=str,
         help=(
-            "Path to a run config file containing a valid [RUN] section (see \"fase run --help\") and optional "
+            "Path to a run config file containing a valid [RUN] section (see \"fdsa run --help\") and optional "
             "[REPORT], [SAMPLES], and [COLORS] sections."
             ""
         )
@@ -200,7 +200,7 @@ def get_filter_parser() -> ArgumentParser:
         default=None,  # Allow no value so missing value error can be manually handled
         type=str,
         help=(
-            "Path to a run config file containing a valid [RUN] section (see \"fase run --help\") and optional "
+            "Path to a run config file containing a valid [RUN] section (see \"fdsa run --help\") and optional "
             "[FILTER] section."
             ""
         )
@@ -218,7 +218,7 @@ def get_quant_parser() -> ArgumentParser:
         nargs="?",
         default=None,  # Allow no value so missing value error can be manually handled
         type=str,
-        help="Path to a run config file containing a valid [RUN] section (see \"fase run --help\"). Can be omitted if "
+        help="Path to a run config file containing a valid [RUN] section (see \"fdsa run --help\"). Can be omitted if "
              "all of the -g, -i and -o parameters are set."
     )
 
@@ -272,10 +272,10 @@ def get_quant_parser() -> ArgumentParser:
 
     quant_parser.add_argument(
         "-f",
-        "--fase-results",
+        "--fdsa-results",
         type=str,
         required=False,
-        help="(If no run config supplied, optional) Path to output file from \"fase run\""
+        help="(If no run config supplied, optional) Path to output file from \"fdsa run\""
     )
 
     quant_parser.add_argument(
@@ -292,7 +292,7 @@ def get_quant_parser() -> ArgumentParser:
         action="store_true",
         help="(If not defined in run config or user config, optional) Disables inference of reference gene IDs and "
              "reference gene names for stringtie results without these values. By default, if a given stringtie gene "
-             "has at least one transcript with an associated reference gene ID and reference gene name, fase quant "
+             "has at least one transcript with an associated reference gene ID and reference gene name, fdsa quant "
              "will assign these to all other transcripts for that gene, as long as there is no ambiguity (transcripts "
              "from a single stringtie gene associated with multiple reference gene IDs)"
     )

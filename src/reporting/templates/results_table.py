@@ -18,15 +18,15 @@
 from typing import List, Union
 import os
 
-from reporting.process_results import FaseResult
-from config.parse_config import FaseRunConfig
+from reporting.process_results import FdsaResult
+from config.parse_config import ProgramRunConfig
 
 
 RESULTS_TABLE_TEMPLATE = "results_table.html"
 RESULTS_TABLE_CSS = "results_table.css"
 
 
-def _generate_results_criteria_text(run_config: FaseRunConfig) -> str:
+def _generate_results_criteria_text(run_config: ProgramRunConfig) -> str:
 
     # _s1 and _s2 control plurality of term "splice event/events" in rendered text
     _s1 = "" if run_config.report_min_total_n_occurrences_across_all_samples == 1 else "s"
@@ -39,19 +39,19 @@ def _generate_results_criteria_text(run_config: FaseRunConfig) -> str:
     )
 
 
-def _get_results_row(fase_result: FaseResult) -> List[Union[str, int, float]]:
+def _get_results_row(fdsa_result: FdsaResult) -> List[Union[str, int, float]]:
 
     numbers = [
         sum([junction.n for junction in junctions])
-        for junctions in fase_result.overlapping.values()
+        for junctions in fdsa_result.overlapping.values()
     ]
-    frequencies = list(fase_result.frequencies.values())
+    frequencies = list(fdsa_result.frequencies.values())
 
     average_number = round(sum(numbers) / len(numbers), 2)
     average_frequency = round(sum(frequencies) / len(frequencies), 2)
 
     return [
-        fase_result.gene_name, fase_result.feature_number, fase_result.total_features_in_transcript,
+        fdsa_result.gene_name, fdsa_result.feature_number, fdsa_result.total_features_in_transcript,
         average_number, average_frequency
     ] + numbers + frequencies
 
@@ -77,8 +77,8 @@ def _generate_table_contents(
 
 
 def results_table(
-    run_config: FaseRunConfig,
-    fase_results: List[FaseResult]
+    run_config: ProgramRunConfig,
+    fdsa_results: List[FdsaResult]
 ) -> str:
 
     with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), RESULTS_TABLE_TEMPLATE), "r") as f:
@@ -91,13 +91,13 @@ def results_table(
 
     table_header = [
        "Gene name", "Feature #", "Total features", "Avg. N", "Avg. %"
-    ] + list(fase_results[0].overlapping.keys()) + [
+    ] + list(fdsa_results[0].overlapping.keys()) + [
        f"% {sample_name}"
-       for sample_name in fase_results[0].frequencies.keys()
+       for sample_name in fdsa_results[0].frequencies.keys()
     ]
     table_data = [
-        _get_results_row(fase_result)
-        for fase_result in fase_results
+        _get_results_row(fdsa_result)
+        for fdsa_result in fdsa_results
     ]
 
     table_contents = _generate_table_contents(table_header, table_data)

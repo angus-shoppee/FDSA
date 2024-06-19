@@ -23,7 +23,7 @@ from config import output_column_names as cols
 from analysis.experiment import Sample
 
 
-FASE_RESULT_FREQUENCY_COLUMN_PREFIX = "Percent "
+FDSA_RESULT_FREQUENCY_COLUMN_PREFIX = "Percent "
 
 
 class QuantifiedSpliceJunctionLocus:
@@ -51,7 +51,7 @@ class QuantifiedSpliceJunctionLocus:
         return False
 
 
-class FaseResult:
+class FdsaResult:
     transcript_id: str
     gene_id: str
     gene_name: str
@@ -119,28 +119,28 @@ class FaseResult:
         return sum([sum([locus.n for locus in loci] for loci in self.overlapping.values())])
 
 
-def load_fase_results_as_df(
-    fase_results_path: str,
+def load_fdsa_results_as_df(
+    fdsa_results_path: str,
     samples: Dict[str, Sample],
     rank_by: str = "frequency",
     force_gene_names: Union[None, List[str]] = None,
     min_total_number_occurrences_across_all_samples: int = 1,
     min_per_sample_occurrences_number_occurrences: int = 0,
     min_per_sample_occurrences_in_at_least_n_samples: int = 0,
-    fase_result_frequency_column_prefix: str = FASE_RESULT_FREQUENCY_COLUMN_PREFIX
+    fdsa_result_frequency_column_prefix: str = FDSA_RESULT_FREQUENCY_COLUMN_PREFIX
 ) -> pd.DataFrame:
 
     if force_gene_names is None:
         force_gene_names = list()
 
-    with open(fase_results_path, "r") as f:
+    with open(fdsa_results_path, "r") as f:
 
         results = csv.reader(f)
 
         header = next(results)
 
         raw_number_column_names = [sample_name for sample_name in samples.keys()]
-        frequency_column_names = [fase_result_frequency_column_prefix + sample_name for sample_name in samples.keys()]
+        frequency_column_names = [fdsa_result_frequency_column_prefix + sample_name for sample_name in samples.keys()]
 
         gene_name_column_index: Union[None, int] = None
         info_column_indexes, raw_number_column_indexes, frequency_column_indexes = [], [], []
@@ -161,9 +161,9 @@ def load_fase_results_as_df(
 
         if not all([raw_number_column_indexes, frequency_column_indexes]):
             raise ValueError(
-                "Unable to find matching sample data in FASE results. Check that BAM files match FASE output.\n" +
+                "Unable to find matching sample data in FDSA results. Check that BAM files match FDSA output.\n" +
                 f"Sample names from BAM files: {samples.keys()}\n" +
-                f"Column names in FASE output: {header}"
+                f"Column names in FDSA output: {header}"
             )
 
         if force_gene_names:
@@ -182,12 +182,12 @@ def load_fase_results_as_df(
                 ) >= min_per_sample_occurrences_in_at_least_n_samples
             ])]
 
-        fase_results_df = pd.DataFrame(
+        fdsa_results_df = pd.DataFrame(
             rows_to_import,
             columns=header
         )
 
-        # fase_results_df = pd.DataFrame(
+        # fdsa_results_df = pd.DataFrame(
         #     [row for row in results if row[gene_name_column_index] in force_gene_names or all([
         #         sum(
         #             [int(n) for n in row[raw_number_column_indexes[0]:frequency_column_indexes[0]]]
@@ -200,99 +200,99 @@ def load_fase_results_as_df(
         #     columns=header
         # )
 
-        if len(fase_results_df) == 0:
+        if len(fdsa_results_df) == 0:
             raise ValueError("No results were loaded - check that specified criteria are not too stringent")
 
         # Convert integer columns
-        fase_results_df[cols.TRANSCRIPT_START] = fase_results_df[cols.TRANSCRIPT_START].astype(int)
-        fase_results_df[cols.N_FEATURES_IN_TRANSCRIPT] = fase_results_df[cols.N_FEATURES_IN_TRANSCRIPT].astype(int)
-        fase_results_df[cols.FEATURE_NUMBER] = fase_results_df[cols.FEATURE_NUMBER].astype(int)
+        fdsa_results_df[cols.TRANSCRIPT_START] = fdsa_results_df[cols.TRANSCRIPT_START].astype(int)
+        fdsa_results_df[cols.N_FEATURES_IN_TRANSCRIPT] = fdsa_results_df[cols.N_FEATURES_IN_TRANSCRIPT].astype(int)
+        fdsa_results_df[cols.FEATURE_NUMBER] = fdsa_results_df[cols.FEATURE_NUMBER].astype(int)
         for column_name in raw_number_column_names:
-            fase_results_df[column_name] = fase_results_df[column_name].astype(int)
+            fdsa_results_df[column_name] = fdsa_results_df[column_name].astype(int)
 
         # Convert float columns
-        fase_results_df[cols.AVG_NUMBER] = fase_results_df[cols.AVG_NUMBER].astype(float)
-        fase_results_df[cols.AVG_FREQUENCY] = fase_results_df[cols.AVG_FREQUENCY].astype(float)
+        fdsa_results_df[cols.AVG_NUMBER] = fdsa_results_df[cols.AVG_NUMBER].astype(float)
+        fdsa_results_df[cols.AVG_FREQUENCY] = fdsa_results_df[cols.AVG_FREQUENCY].astype(float)
         for column_name in frequency_column_names:
-            fase_results_df[column_name] = fase_results_df[column_name].astype(float)
+            fdsa_results_df[column_name] = fdsa_results_df[column_name].astype(float)
 
         # Order results by either number or avg frequency, depending on report config
         if rank_by == "frequency":
-            fase_results_df = fase_results_df.sort_values(
+            fdsa_results_df = fdsa_results_df.sort_values(
                 by=[cols.AVG_FREQUENCY, cols.AVG_NUMBER],
                 ascending=[False, False]
             )
         elif rank_by == "number":
-            fase_results_df = fase_results_df.sort_values(
+            fdsa_results_df = fdsa_results_df.sort_values(
                 by=[cols.AVG_NUMBER, cols.AVG_FREQUENCY],
                 ascending=[False, False]
             )
         else:
             raise ValueError(f"Invalid value for rank_by specified (\"{rank_by}\"). Options are frequency/number")
 
-        return fase_results_df
+        return fdsa_results_df
 
 
-def convert_fase_results_df_to_objects(fase_results_df: pd.DataFrame) -> List[FaseResult]:
+def convert_fdsa_results_df_to_objects(fdsa_results_df: pd.DataFrame) -> List[FdsaResult]:
 
     zipped_info_columns = list(zip(
-        fase_results_df[cols.TRANSCRIPT_ID],
-        fase_results_df[cols.GENE_ID],
-        fase_results_df[cols.GENE_NAME],
-        fase_results_df[cols.CHROMOSOME],
-        fase_results_df[cols.STRAND],
-        fase_results_df[cols.EXON_POSITIONS],
-        fase_results_df[cols.FEATURE_QUALIFIERS],
-        fase_results_df[cols.FEATURE_REGION],
-        fase_results_df[cols.FEATURE_NUMBER],
-        fase_results_df[cols.N_FEATURES_IN_TRANSCRIPT],
-        fase_results_df[cols.JUNCTION_DEFINITION],
-        fase_results_df[cols.ALL_JUNCTIONS],
-        fase_results_df[cols.OVERLAPPING_JUNCTIONS]
+        fdsa_results_df[cols.TRANSCRIPT_ID],
+        fdsa_results_df[cols.GENE_ID],
+        fdsa_results_df[cols.GENE_NAME],
+        fdsa_results_df[cols.CHROMOSOME],
+        fdsa_results_df[cols.STRAND],
+        fdsa_results_df[cols.EXON_POSITIONS],
+        fdsa_results_df[cols.FEATURE_QUALIFIERS],
+        fdsa_results_df[cols.FEATURE_REGION],
+        fdsa_results_df[cols.FEATURE_NUMBER],
+        fdsa_results_df[cols.N_FEATURES_IN_TRANSCRIPT],
+        fdsa_results_df[cols.JUNCTION_DEFINITION],
+        fdsa_results_df[cols.ALL_JUNCTIONS],
+        fdsa_results_df[cols.OVERLAPPING_JUNCTIONS]
     ))
 
-    frequency_column_names = fase_results_df.columns[
-        fase_results_df.columns.str.contains(FASE_RESULT_FREQUENCY_COLUMN_PREFIX)]
+    frequency_column_names = fdsa_results_df.columns[
+        fdsa_results_df.columns.str.contains(FDSA_RESULT_FREQUENCY_COLUMN_PREFIX)]
 
     zipped_frequency_columns = list(zip(
-        *[fase_results_df[column_name] for column_name in frequency_column_names]
+        *[fdsa_results_df[column_name] for column_name in frequency_column_names]
     ))
 
     # TODO: Investigate type warning (expected str got dict)
     return [
-        FaseResult(
+        FdsaResult(
             *[row[col_i] for col_i in range(len(zipped_info_columns[0]))],
             {
-                frequency_column_names[freq_i].replace(FASE_RESULT_FREQUENCY_COLUMN_PREFIX, ""): frequency
+                frequency_column_names[freq_i].replace(FDSA_RESULT_FREQUENCY_COLUMN_PREFIX, ""): frequency
                 for freq_i, frequency in enumerate(zipped_frequency_columns[row_i])
             }
         ) for row_i, row in enumerate(zipped_info_columns)
     ]
 
 
-def load_fase_results(
-    fase_results_path: str,
+def load_fdsa_results(
+    fdsa_results_path: str,
     samples: Dict[str, Sample],
     rank_by: str = "frequency",
     force_gene_names: Union[None, List[str]] = None,
     min_total_number_occurrences_across_all_samples: int = 1,
     min_per_sample_occurrences_number_occurrences: int = 0,
     min_per_sample_occurrences_in_at_least_n_samples: int = 0,
-    fase_result_frequency_column_prefix: str = FASE_RESULT_FREQUENCY_COLUMN_PREFIX
-) -> List[FaseResult]:
+    fdsa_result_frequency_column_prefix: str = FDSA_RESULT_FREQUENCY_COLUMN_PREFIX
+) -> List[FdsaResult]:
 
-    fase_results_df = load_fase_results_as_df(
-        fase_results_path=fase_results_path,
+    fdsa_results_df = load_fdsa_results_as_df(
+        fdsa_results_path=fdsa_results_path,
         samples=samples,
         rank_by=rank_by,
         force_gene_names=force_gene_names,
         min_total_number_occurrences_across_all_samples=min_total_number_occurrences_across_all_samples,
         min_per_sample_occurrences_number_occurrences=min_per_sample_occurrences_number_occurrences,
         min_per_sample_occurrences_in_at_least_n_samples=min_per_sample_occurrences_in_at_least_n_samples,
-        fase_result_frequency_column_prefix=fase_result_frequency_column_prefix
+        fdsa_result_frequency_column_prefix=fdsa_result_frequency_column_prefix
     )
 
-    return convert_fase_results_df_to_objects(fase_results_df)
+    return convert_fdsa_results_df_to_objects(fdsa_results_df)
 
 
 def parse_junction_locus_by_id_from_string(

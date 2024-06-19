@@ -63,7 +63,7 @@ def parse_bool(value: Union[bool, str]) -> bool:
 # TODO: Refactor names for default report parameters to be consistently named between internal and user config classes
 
 
-class FaseInternalConfig:
+class ProgramInternalConfig:
     allowed_species: List[str]
     biomart_name_for_species: Dict[str, str]
     default_biomart_mirror: str
@@ -268,8 +268,8 @@ class FaseInternalConfig:
         super().__setattr__(name, value)
 
 
-class FaseUserConfig:
-    email: str
+class ProgramUserConfig:
+    email_for_apis: str
     user_default_biomart_mirror: Union[None, str]
     user_default_generate_report: Union[None, bool]
     user_default_generate_filtered_bam_files: Union[None, bool]
@@ -314,15 +314,15 @@ class FaseUserConfig:
 
         email = user_config.get(
             "BUILD", "emailAddress", fallback=user_config.get(
-                "BUILD", "email", fallback=None
+                "BUILD", "email_for_apis", fallback=None
             )
         )
         if email is None:
-            raise ValueError(_e + f"Missing mandatory parameter \"email\" in section BUILD. Please note that this "
-                                  f"email address is used only for external academic API calls during the build "
+            raise ValueError(_e + f"Missing mandatory parameter \"email_for_apis\" in section BUILD. Please note that this "
+                                  f"email_for_apis address is used only for external academic API calls during the build "
                                   f"process.")
-        # Possible TODO: Validity check on provided email address (or later in main.build)?
-        self.email = email
+        # Possible TODO: Validity check on provided email_for_apis address (or later in main.build)?
+        self.email_for_apis = email
 
         user_default_biomart_mirror = user_config.get(
             "BUILD", "biomartMirror", fallback=user_config.get(
@@ -621,7 +621,7 @@ class FaseUserConfig:
         super().__setattr__(name, value)
 
 
-class FaseRunConfig:
+class ProgramRunConfig:
     run_name: str
     feature_name: str
     output_path: str
@@ -670,8 +670,8 @@ class FaseRunConfig:
     def __init__(
         self,
         run_config_path: str,
-        internal_config: FaseInternalConfig,
-        user_config: Union[None, FaseUserConfig]
+        internal_config: ProgramInternalConfig,
+        user_config: Union[None, ProgramUserConfig]
     ) -> None:
 
         if not os.path.exists(run_config_path):
@@ -683,7 +683,7 @@ class FaseRunConfig:
         run_config.read(run_config_path)
 
         if user_config is None:
-            user_config = FaseUserConfig(os.path.join("src", "config", "null_user.config"))
+            user_config = ProgramUserConfig(os.path.join("src", "config", "null_user.config"))
 
         if "RUN" not in run_config:
             raise ValueError(_e + f"Missing mandatory section RUN (run settings)")

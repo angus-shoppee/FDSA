@@ -19,9 +19,9 @@ from typing import List, Tuple
 import os
 import subprocess
 
-from config.parse_config import FaseRunConfig
+from config.parse_config import ProgramRunConfig
 from analysis.core import name_output, Sample
-from reporting.process_results import load_fase_results
+from reporting.process_results import load_fdsa_results
 
 
 SAM_FLAG_REVERSE_STRAND = 16  # If this flag is present in a read, it is mapped to the reverse strand
@@ -37,7 +37,7 @@ def get_gene_start_and_end(exon_positions: List[Tuple[int, int]]) -> Tuple[int, 
 
 
 def generate_filtered_bam_files(
-    run_config: FaseRunConfig,
+    run_config: ProgramRunConfig,
     check_exit_code: bool = True
 ) -> None:
 
@@ -57,18 +57,7 @@ def generate_filtered_bam_files(
     if not os.path.isfile(samtools):
         raise ValueError(f"The supplied samtools executable path is not a valid file")
 
-    # def load_fase_results(
-    #     fase_results_path: str,
-    #     samples: Dict[str, Sample],
-    #     rank_by: str = "frequency",
-    #     force_gene_names: Union[None, List[str]] = None,
-    #     min_total_number_occurrences_across_all_samples: int = 1,
-    #     min_per_sample_occurrences_number_occurrences: int = 0,
-    #     min_per_sample_occurrences_in_at_least_n_samples: int = 0,
-    #     fase_result_frequency_column_prefix: str = FASE_RESULT_FREQUENCY_COLUMN_PREFIX
-    # ) -> List[FaseResult]:
-
-    fase_results_path = os.path.join(
+    fdsa_results_path = os.path.join(
         run_config.output_path,
         f"{name_output(run_config.run_name, run_config.feature_name)}.csv"
     )
@@ -85,8 +74,8 @@ def generate_filtered_bam_files(
         sample = Sample(bam_path, run_config.bam_ending)
         samples[sample.name] = sample
 
-    fase_results = load_fase_results(
-        fase_results_path,
+    fdsa_results = load_fdsa_results(
+        fdsa_results_path,
         samples,
         min_total_number_occurrences_across_all_samples=run_config.filter_min_total_n_occurrences_across_all_samples,
         min_per_sample_occurrences_number_occurrences=run_config.filter_min_n_occurrences_in_sample,
@@ -102,7 +91,7 @@ def generate_filtered_bam_files(
     #
     # with open(bed_file_path, "w") as bed_file:
     #
-    #     for result in fase_results:
+    #     for result in fdsa_results:
     #
     #         span = get_gene_start_and_end(result.exon_positions)
     #         # genomic_region = f"{result.chromosome}:{span[0]}-{span[1]}"
@@ -112,7 +101,7 @@ def generate_filtered_bam_files(
     print("Generating filtered BAM files...")
 
     _right_padding = "            "
-    _n_results = len(fase_results)
+    _n_results = len(fdsa_results)
 
     for sample in samples.values():
 
@@ -139,7 +128,7 @@ def generate_filtered_bam_files(
             # print("[DEBUG] Trying:")
             # print(" ".join(split_cmd))
             #
-            # process = subprocess.run(
+            # _process = subprocess.run(
             #     split_cmd,
             #     cwd=output_dir,
             #     encoding="utf8",
@@ -155,7 +144,7 @@ def generate_filtered_bam_files(
                 samtools, "view", sample.bam_path, "--header-only"
             ]
 
-            process = subprocess.run(
+            _process = subprocess.run(
                 split_cmd,
                 cwd=output_dir,
                 encoding="utf8",
@@ -165,7 +154,7 @@ def generate_filtered_bam_files(
 
             # Then, write reads to output SAM file for each qualifying gene
 
-            for i, result in enumerate(fase_results):
+            for i, result in enumerate(fdsa_results):
 
                 print("\x1b[A" + f"[{i + 1} / {_n_results}] {result.gene_name}" + _right_padding)
 
@@ -177,7 +166,7 @@ def generate_filtered_bam_files(
                 elif result.strand == "-":
                     strand_specifier = ["--require-flags", str(SAM_FLAG_REVERSE_STRAND)]
                 else:
-                    raise ValueError(f"Encountered FASE output for gene {result.gene_name} with invalid strand "
+                    raise ValueError(f"Encountered FDSA output for gene {result.gene_name} with invalid strand "
                                      f"(\"{result.strand}\"). Expected either \"+\" or \"-\"")
 
                 # split_cmd = [
@@ -186,13 +175,12 @@ def generate_filtered_bam_files(
                 split_cmd = [
                     samtools, "view", sample.bam_path, genomic_region
                 ]
-
-                # NOTE: Strand selection has been removed for now - unsure whether mate reads were handled correctly
+                # TODO: Strand selection has been removed for now - unsure whether mate reads were handled correctly
 
                 if run_config.filter_unique_mapping_only:
                     split_cmd += ["--min-MQ", str(run_config.mapq_for_unique_mapping)]
 
-                process = subprocess.run(
+                _process = subprocess.run(
                     split_cmd,
                     cwd=output_dir,
                     encoding="utf8",
@@ -200,9 +188,9 @@ def generate_filtered_bam_files(
                     stdout=subprocess.PIPE
                 )
 
-                if process.stdout:
+                if _process.stdout:
 
-                    out_file.write(process.stdout)
+                    out_file.write(_process.stdout)
 
             # Allow file to close before proceeding to final step
 
@@ -221,7 +209,7 @@ def generate_filtered_bam_files(
             unsorted_sam_out_path
         ]
 
-        process = subprocess.run(
+        _process = subprocess.run(
             split_cmd,
             cwd=output_dir,
             encoding="utf8",
@@ -240,7 +228,7 @@ def generate_filtered_bam_files(
             sorted_out_path
         ]
 
-        process = subprocess.run(
+        _process = subprocess.run(
             split_cmd,
             cwd=output_dir,
             encoding="utf8",

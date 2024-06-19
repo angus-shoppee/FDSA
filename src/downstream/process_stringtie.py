@@ -22,7 +22,7 @@ import os
 from utils.general import divide_or_default_zero
 from downstream.parse_gtf import get_stringtie_transcripts_from_gtf, GtfTranscript
 import config.stringtie_formatted_column_names as cols
-import config.output_column_names as fase_output_cols
+import config.output_column_names as fdsa_output_cols
 
 
 def _load_and_sum_results_matrix(
@@ -184,7 +184,7 @@ def _calculate_feature_exon_overlap(
 
 def annotate_formatted_stringtie_results(
     formatted_stringtie_output_path: str,
-    fase_output_path: str,
+    fdsa_output_path: str,
     assign_reference_gene: bool = True
 ) -> None:
 
@@ -193,33 +193,33 @@ def annotate_formatted_stringtie_results(
     feature_regions: Dict[str, Dict[int, Tuple[int, int]]] = {}  # {Gene ID: {Feature number: (start, end)}}
     ref_exons: Dict[str, List[Tuple[int, int]]] = {}  # {Gene ID: [(start, end), ...]}
 
-    # TODO: Explicitly check that fase_output_path is valid
+    # TODO: Explicitly check that fdsa_output_path is valid
 
-    with open(fase_output_path, "r") as fase_output_file:
+    with open(fdsa_output_path, "r") as fdsa_output_file:
 
-        fase_output_csv = csv.reader(fase_output_file)
+        fdsa_output_csv = csv.reader(fdsa_output_file)
 
-        header = next(fase_output_csv)
-        fase_gene_id_index = header.index(fase_output_cols.GENE_ID)
-        fase_ref_exons_index = header.index(fase_output_cols.EXON_POSITIONS)
-        fase_feature_number_index = header.index(fase_output_cols.FEATURE_NUMBER)
-        fase_feature_region_index = header.index(fase_output_cols.FEATURE_REGION)
+        header = next(fdsa_output_csv)
+        fdsa_gene_id_index = header.index(fdsa_output_cols.GENE_ID)
+        fdsa_ref_exons_index = header.index(fdsa_output_cols.EXON_POSITIONS)
+        fdsa_feature_number_index = header.index(fdsa_output_cols.FEATURE_NUMBER)
+        fdsa_feature_region_index = header.index(fdsa_output_cols.FEATURE_REGION)
 
-        for row in fase_output_csv:
+        for row in fdsa_output_csv:
 
-            fase_gene_id = str(row[fase_gene_id_index])
+            fdsa_gene_id = str(row[fdsa_gene_id_index])
 
-            ref_exons[fase_gene_id] = [
+            ref_exons[fdsa_gene_id] = [
                 _get_start_and_end_from_locus(locus)
-                for locus in row[fase_ref_exons_index].split(" ")
+                for locus in row[fdsa_ref_exons_index].split(" ")
             ]
 
-            feature_number = int(row[fase_feature_number_index])
-            stored_feature_regions = feature_regions.get(fase_gene_id, dict())
+            feature_number = int(row[fdsa_feature_number_index])
+            stored_feature_regions = feature_regions.get(fdsa_gene_id, dict())
             stored_feature_regions[feature_number] = _get_start_and_end_from_locus(
-                row[fase_feature_region_index]
+                row[fdsa_feature_region_index]
             )
-            feature_regions[fase_gene_id] = stored_feature_regions
+            feature_regions[fdsa_gene_id] = stored_feature_regions
 
     with open(formatted_stringtie_output_path, "r") as stringtie_file:
 

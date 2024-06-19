@@ -18,8 +18,8 @@
 from typing import List, Dict
 import os
 
-from config.parse_config import FaseRunConfig
-from reporting.process_results import FaseResult
+from config.parse_config import ProgramRunConfig
+from reporting.process_results import FdsaResult
 from reporting.templates.results_table import results_table
 from reporting.templates.transcript_sections import transcript_sections
 from reporting.templates.table_of_contents import table_of_contents
@@ -35,19 +35,17 @@ JUMP_TO_TRANSCRIPTS_ID = "transcript-sections-intro"
 
 
 def generate_html_report(
-    # run_name: str,
-    # feature_name: str,
-    run_config: FaseRunConfig,
-    fase_results: List[FaseResult],
+    run_config: ProgramRunConfig,
+    fdsa_results: List[FdsaResult],
     plots: Dict[str, Dict[str, str]],
     svg_scheme: str = SVG_SCHEME
 ) -> str:
 
-    results_table_html = results_table(run_config, fase_results)
+    results_table_html = results_table(run_config, fdsa_results)
 
     sections_html, all_section_render_info = transcript_sections(
         run_config,
-        fase_results,
+        fdsa_results,
         plots,
         svg_scheme
     )

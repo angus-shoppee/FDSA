@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-# FASE CONFIG & CORE FUNCTIONS
+# FDSA CONFIG & CORE FUNCTIONS
 
 from dataclasses import dataclass
 from typing import Tuple, List, Dict, Union
