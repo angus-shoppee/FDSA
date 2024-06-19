@@ -45,6 +45,8 @@ from downstream.quant import quantify_isoforms
 
 PROGRAM_DESCRIPTION = "Feature-Directed Splice Analysis"
 
+FDSA_USER_COMMAND_USAGE = "fdsa user USER_CONFIG_PATH"
+
 FDSA_BUILD_COMMAND_USAGE = ("fdsa build RUN_CONFIG_PATH\n(or)\n"
                             "fdsa build --species SPECIES_NAME --genome REFERENCE_GENOME_GTF_PATH")
 
@@ -447,8 +449,6 @@ def _quant(
 
 def main() -> None:
 
-    # TODO: Auto-generated usage at top line of arg parser help text is incorrect for modes, need override
-
     base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))  # Parent directory of src
     stored_user_config_path = os.path.join(base_dir, "data", ".user_config_path")
 
@@ -468,6 +468,16 @@ def main() -> None:
             type=str,
             help="Path to a user config file containing build information and optional default parameters."
         )
+
+        if any([arg in subsequent_args for arg in ("-h", "--help")]):
+            # build_parser.print_help()
+            help_message = user_parser.format_help()
+            print(
+                FDSA_USER_COMMAND_USAGE +
+                "\n" +
+                help_message[help_message.index("\n"):]
+            )
+            exit()
 
         user_args = user_parser.parse_args(subsequent_args)
 
@@ -511,7 +521,13 @@ def main() -> None:
             build_parser = get_build_parser()
 
             if any([arg in subsequent_args for arg in ("-h", "--help")]):
-                build_parser.print_help()
+                # build_parser.print_help()
+                help_message = build_parser.format_help()
+                print(
+                    FDSA_BUILD_COMMAND_USAGE +
+                    "\n" +
+                    help_message[help_message.index("\n"):]
+                )
                 exit()
 
             build_args = build_parser.parse_args(subsequent_args)
@@ -591,8 +607,6 @@ def main() -> None:
 
         elif mode_arg.mode in ("run", "report", "filter"):
 
-            # TODO: Implement --no-report flag
-
             enable_generate_report = False
             enable_generate_filtered_bam_files = False
 
@@ -609,7 +623,13 @@ def main() -> None:
                 usage = FDSA_FILTER_COMMAND_USAGE
 
             if any([arg in subsequent_args for arg in ("-h", "--help")]):
-                parser.print_help()
+                # parser.print_help()
+                help_message = parser.format_help()
+                print(
+                    usage +
+                    "\n" +
+                    help_message[help_message.index("\n"):]
+                )
                 exit()
 
             args = parser.parse_args(subsequent_args)
@@ -684,6 +704,16 @@ def main() -> None:
 
             quant_parser = get_quant_parser()
             quant_args = quant_parser.parse_args(subsequent_args)
+
+            if any([arg in subsequent_args for arg in ("-h", "--help")]):
+                # build_parser.print_help()
+                help_message = quant_parser.format_help()
+                print(
+                    FDSA_QUANT_COMMAND_USAGE +
+                    "\n" +
+                    help_message[help_message.index("\n"):]
+                )
+                exit()
 
             if quant_args.run_config_path is None and any([
                 quant_args.genome is None,
