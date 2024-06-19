@@ -576,7 +576,7 @@ def main() -> None:
                 exit()
 
             email = build_args.email if build_args.email is not None else user_config.email_for_apis
-            # Possible TODO: Final check for valid email_for_apis?
+            # Possible TODO: Final check for valid email?
 
             if species not in internal_config.allowed_species:
                 logger.error(f"Invalid species (\"{species}\") specified. Options are: " +

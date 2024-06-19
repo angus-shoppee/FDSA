@@ -312,17 +312,17 @@ class ProgramUserConfig:
 
         # [USER]
 
-        email = user_config.get(
+        email_for_apis = user_config.get(
             "BUILD", "emailAddress", fallback=user_config.get(
-                "BUILD", "email_for_apis", fallback=None
+                "BUILD", "email", fallback=None
             )
         )
-        if email is None:
-            raise ValueError(_e + f"Missing mandatory parameter \"email_for_apis\" in section BUILD. Please note that this "
-                                  f"email_for_apis address is used only for external academic API calls during the build "
+        if email_for_apis is None:
+            raise ValueError(_e + f"Missing mandatory parameter \"email\" in section BUILD. Please note that this "
+                                  f"email address is used only for external academic API calls during the build "
                                   f"process.")
-        # Possible TODO: Validity check on provided email_for_apis address (or later in main.build)?
-        self.email_for_apis = email
+        # Possible TODO: Validity check on provided email address (or later in main.build)?
+        self.email_for_apis = email_for_apis
 
         user_default_biomart_mirror = user_config.get(
             "BUILD", "biomartMirror", fallback=user_config.get(

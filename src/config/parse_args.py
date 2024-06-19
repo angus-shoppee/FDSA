@@ -79,10 +79,10 @@ def get_build_parser() -> ArgumentParser:
     )
     build_parser.add_argument(
         "-e",
-        "--email_for_apis",
+        "--email",
         type=str,
         required=False,
-        help="An identifying email_for_apis address to be attached to GenBank API queries. Note: no emails will be "
+        help="An identifying email address to be attached to GenBank API queries. Note: no emails will be "
              "sent - used for identification/anti-spam purposes only."
     )
     build_parser.add_argument(
