@@ -15,8 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from . import generate_html_report
-from . import plot
-from . import process_results
-from . import report
-from . import templates
+from . import results_table
+from . import table_of_contents
+from . import transcript_sections
