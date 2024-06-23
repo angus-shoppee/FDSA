@@ -23,6 +23,7 @@ import configparser
 from config.marker_aliases import convert_marker_alias
 from utils.general import remove_quotes, flatten_nested_lists
 
+
 RANK_RESULTS_BY_ALLOWED_VALUES = ["frequency", "number"]
 
 

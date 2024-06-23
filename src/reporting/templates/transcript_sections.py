@@ -38,7 +38,7 @@ class TranscriptSectionRenderInfo:
     section_id: str
     section_title: str
     gene_name: str
-    transcript_id: str
+    gene_id: str
     n_exons: int
     feature_name: str
     feature_qualifiers: str
@@ -69,7 +69,7 @@ def transcript_sections(
             section_title=f"{fdsa_result.gene_name} " +
                           f"({fdsa_result.feature_number} of {fdsa_result.total_features_in_transcript})",
             gene_name=fdsa_result.gene_name,
-            transcript_id=fdsa_result.transcript_id,
+            gene_id=fdsa_result.gene_id,
             n_exons=len(fdsa_result.exon_positions),
             feature_name=run_config.feature_name,
             feature_qualifiers=fdsa_result.feature_qualifiers,
