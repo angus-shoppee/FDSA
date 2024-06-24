@@ -192,7 +192,7 @@ def annotate_formatted_stringtie_results(
     assign_reference_gene: bool = True
 ) -> None:
 
-    # print("Annotating stringtie results with feature overlap...")
+    # logger.info("Annotating stringtie results with feature overlap...")
 
     feature_regions: Dict[str, Dict[int, Tuple[int, int]]] = {}  # {Gene ID: {Feature number: (start, end)}}
     ref_exons: Dict[str, List[Tuple[int, int]]] = {}  # {Gene ID: [(start, end), ...]}
@@ -338,4 +338,4 @@ def annotate_formatted_stringtie_results(
                 row[stringtie_exons_index + 1:]
             )
 
-    # print("... done")
+    # logger.info("... done")

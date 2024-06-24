@@ -173,10 +173,14 @@ class PlotJunction:
                                                global_exon_positions[start_intron_left - 1][1]
                                            ) / (global_exon_positions[start_intron_right - 1][0] -
                                                 global_exon_positions[start_intron_left - 1][1])
-            self.plot_start = plotting_exon_positions[start_intron_left - 1][0] + \
+            self.plot_start = \
+                plotting_exon_positions[start_intron_left - 1][1] + \
                 int(intron_display_length * _start_fraction_along_intron)
+            # OLD / BUGGED (calculated position from start, instead of end, of exon to the left of intronic locus):
+            # plotting_exon_positions[end_intron_left - 1][0] + \
         else:
-            self.plot_start = plotting_exon_positions[start_exon - 1][0] + start_steps_from_exon_start
+            self.plot_start = \
+                plotting_exon_positions[start_exon - 1][0] + start_steps_from_exon_start
             start_intron_left = None  # Keep the linter happy (start_intron_left is always defined)
 
         self.start_exon_nearest = start_exon if start_exon is not None else start_intron_left
@@ -206,10 +210,14 @@ class PlotJunction:
                                              global_exon_positions[end_intron_left - 1][1]
                                          ) / (global_exon_positions[end_intron_right - 1][0] -
                                               global_exon_positions[end_intron_left - 1][1])
-            self.plot_end = plotting_exon_positions[end_intron_left - 1][0] + \
+            self.plot_end = \
+                plotting_exon_positions[end_intron_left - 1][1] + \
                 int(intron_display_length * _end_fraction_along_intron)
+            # OLD / BUGGED (calculated position from start, instead of end, of exon to the left of intronic locus):
+            # plotting_exon_positions[end_intron_left - 1][0] + \
         else:
-            self.plot_end = plotting_exon_positions[end_exon - 1][0] + end_steps_from_exon_start
+            self.plot_end = \
+                plotting_exon_positions[end_exon - 1][0] + end_steps_from_exon_start
             end_intron_right = None  # Keep the linter happy (end_intron_right is always defined)
 
         self.end_exon_nearest = end_exon if end_exon is not None else end_intron_right
@@ -266,21 +274,25 @@ def plot_transcript(
 
     plotting_exon_positions = []
     plotting_spacer_scale = 0.67
+    draw_intron_size = int(avg_exon_length * plotting_spacer_scale)
     _cumulative_plotting_spacer_between_exons = 0
     _exon_positions_range = range(n_exons) if forward_stranded else reversed(list(range(n_exons)))
 
     for i in _exon_positions_range:
 
         position_adjusted_for_plotting = (
-            scaled_exon_positions[i][0] + int(_cumulative_plotting_spacer_between_exons * plotting_spacer_scale),
-            scaled_exon_positions[i][1] + int(_cumulative_plotting_spacer_between_exons * plotting_spacer_scale)
+            scaled_exon_positions[i][0] + _cumulative_plotting_spacer_between_exons,
+            scaled_exon_positions[i][1] + _cumulative_plotting_spacer_between_exons
+            # scaled_exon_positions[i][0] + int(_cumulative_plotting_spacer_between_exons * plotting_spacer_scale),
+            # scaled_exon_positions[i][1] + int(_cumulative_plotting_spacer_between_exons * plotting_spacer_scale)
         )
         if forward_stranded:
             plotting_exon_positions.append(position_adjusted_for_plotting)
         else:
             plotting_exon_positions.insert(0, position_adjusted_for_plotting)
 
-        _cumulative_plotting_spacer_between_exons += avg_exon_length
+        _cumulative_plotting_spacer_between_exons += draw_intron_size
+        # _cumulative_plotting_spacer_between_exons += avg_exon_length
 
     # ----------------------
     # DEFINE SHARED ELEMENTS
@@ -360,7 +372,7 @@ def plot_transcript(
                             junction,
                             fdsa_result.exon_positions,
                             plotting_exon_positions,
-                            avg_exon_length,
+                            draw_intron_size,
                             forward_stranded,
                             highlight=_highlight
                         )
