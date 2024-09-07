@@ -15,12 +15,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from typing import List, Tuple, Dict, Any, Union
+from typing import List, Tuple, Dict, Any, Union, Optional
 import csv
 import pandas as pd
 
 from config import output_column_names as cols
 from analysis.experiment import Sample
+from reporting.process_stringtie import calculate_fraction_lacking_feature
 
 
 FDSA_RESULT_FREQUENCY_COLUMN_PREFIX = "Percent "
@@ -66,6 +67,7 @@ class FdsaResult:
     overlapping: Dict[str, List[QuantifiedSpliceJunctionLocus]]
     frequencies: Dict[str, float]
     # frequencies: List[Dict[str, float]]
+    stringtie_frequencies: Optional[Dict[str, float]]  # TODO: Give frequencies and stringtie_frequencies better names
 
     def __init__(
         self,
@@ -83,8 +85,10 @@ class FdsaResult:
         all_junction_dump_string: str,
         overlapping_junction_dump_string: str,
         # TODO: Confirm intended type is Dict[str, float] and not List[Dict[str, float]]
-        frequencies: Dict[str, float]
+        frequencies: Dict[str, float],
         # frequencies: List[Dict[str, float]]
+        stringtie_frequencies: Optional[Dict[str, float]]
+
     ) -> None:
         self.transcript_id = transcript_id
         self.gene_id = gene_id
@@ -114,6 +118,8 @@ class FdsaResult:
 
         self.frequencies = frequencies
 
+        self.stringtie_frequencies = stringtie_frequencies
+
     def total_number_occurrences_across_all_samples(self) -> int:
 
         return sum([sum([locus.n for locus in loci] for loci in self.overlapping.values())])
@@ -122,7 +128,7 @@ class FdsaResult:
 def load_fdsa_results_as_df(
     fdsa_results_path: str,
     samples: Dict[str, Sample],
-    rank_by: str = "frequency",
+    rank_by: str = "frequency",   # TODO: Parse default rank_by from config (add stringtie_frequency option?)
     force_gene_names: Union[None, List[str]] = None,
     min_total_number_occurrences_across_all_samples: int = 1,
     min_per_sample_occurrences_number_occurrences: int = 0,
@@ -233,7 +239,10 @@ def load_fdsa_results_as_df(
         return fdsa_results_df
 
 
-def convert_fdsa_results_df_to_objects(fdsa_results_df: pd.DataFrame) -> List[FdsaResult]:
+def convert_fdsa_results_df_to_objects(
+    fdsa_results_df: pd.DataFrame,
+    stringtie_results_df: Optional[pd.DataFrame]
+) -> List[FdsaResult]:
 
     zipped_info_columns = list(zip(
         fdsa_results_df[cols.TRANSCRIPT_ID],
@@ -251,6 +260,10 @@ def convert_fdsa_results_df_to_objects(fdsa_results_df: pd.DataFrame) -> List[Fd
         fdsa_results_df[cols.OVERLAPPING_JUNCTIONS]
     ))
 
+    # Keep indexes updated if modifying column zip!
+    _gene_id_index_in_zipped = 1
+    _feature_number_index_in_zipped = 8
+
     frequency_column_names = fdsa_results_df.columns[
         fdsa_results_df.columns.str.contains(FDSA_RESULT_FREQUENCY_COLUMN_PREFIX)]
 
@@ -265,8 +278,15 @@ def convert_fdsa_results_df_to_objects(fdsa_results_df: pd.DataFrame) -> List[Fd
             {
                 frequency_column_names[freq_i].replace(FDSA_RESULT_FREQUENCY_COLUMN_PREFIX, ""): frequency
                 for freq_i, frequency in enumerate(zipped_frequency_columns[row_i])
-            }
-        ) for row_i, row in enumerate(zipped_info_columns)
+            },
+            None if stringtie_results_df is None else calculate_fraction_lacking_feature(
+                stringtie_results_df,
+                row[_gene_id_index_in_zipped],
+                int(row[_feature_number_index_in_zipped]),
+                scale_to_percentage=True
+            )
+        )
+        for row_i, row in enumerate(zipped_info_columns)
     ]
 
 
@@ -278,7 +298,9 @@ def load_fdsa_results(
     min_total_number_occurrences_across_all_samples: int = 1,
     min_per_sample_occurrences_number_occurrences: int = 0,
     min_per_sample_occurrences_in_at_least_n_samples: int = 0,
-    fdsa_result_frequency_column_prefix: str = FDSA_RESULT_FREQUENCY_COLUMN_PREFIX
+    fdsa_result_frequency_column_prefix: str = FDSA_RESULT_FREQUENCY_COLUMN_PREFIX,
+    stringtie_results_path: Optional[str] = None,
+    stringtie_remove_sample_name_ending: Optional[str] = None
 ) -> List[FdsaResult]:
 
     fdsa_results_df = load_fdsa_results_as_df(
@@ -292,7 +314,24 @@ def load_fdsa_results(
         fdsa_result_frequency_column_prefix=fdsa_result_frequency_column_prefix
     )
 
-    return convert_fdsa_results_df_to_objects(fdsa_results_df)
+    stringtie_results_df = None if stringtie_results_path is None else pd.read_csv(stringtie_results_path)
+
+    suffix = stringtie_remove_sample_name_ending \
+        if "." not in stringtie_remove_sample_name_ending \
+        else stringtie_remove_sample_name_ending[:stringtie_remove_sample_name_ending.index(".")]
+
+    stringtie_results_df.rename(
+        columns={
+            col: col.replace(suffix, '')
+            for col in [_col for _col in stringtie_results_df.columns if suffix in _col]
+        },
+        inplace=True
+    )
+
+    return convert_fdsa_results_df_to_objects(
+        fdsa_results_df,
+        stringtie_results_df
+    )
 
 
 def parse_junction_locus_by_id_from_string(

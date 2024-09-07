@@ -30,6 +30,7 @@ from analysis.counts import run_feature_counts, get_gene_counts_from_tsv, get_tm
 from reporting.process_results import load_fdsa_results
 from reporting.plot import plot_transcript, plot_splice_rate
 from reporting.generate_html_report import generate_html_report
+from downstream.quant import STRINGTIE_OUTPUT_DIR_NAME, COMBINED_RESULTS_FILE_NAME
 
 
 GENE_COUNTS_DEFAULT_FILE_NAME = "gene_counts.tsv"
@@ -176,8 +177,12 @@ def create_report(
 
     # ---------------------------------------------------------------------------------------------------------------- #
 
+    # TODO: Revamp method for detecting quant mode output
+    stringtie_results_path = os.path.join(
+        os.path.abspath(run_config.output_path), STRINGTIE_OUTPUT_DIR_NAME, f"{COMBINED_RESULTS_FILE_NAME}.csv"
+    )
+
     # Load FDSA results
-    # TODO: Implement force_include_gene_names as an argument here
     fdsa_results = load_fdsa_results(
         fdsa_results_path,
         samples,
@@ -185,7 +190,9 @@ def create_report(
         force_gene_names=None if run_config.report_genes is None else list(run_config.report_genes.keys()),
         min_total_number_occurrences_across_all_samples=run_config.report_min_total_n_occurrences_across_all_samples,
         min_per_sample_occurrences_number_occurrences=run_config.report_min_n_occurrences_in_sample,
-        min_per_sample_occurrences_in_at_least_n_samples=run_config.report_occurrences_in_at_least_n_samples
+        min_per_sample_occurrences_in_at_least_n_samples=run_config.report_occurrences_in_at_least_n_samples,
+        stringtie_results_path=stringtie_results_path if os.path.isfile(stringtie_results_path) else None,
+        stringtie_remove_sample_name_ending=run_config.bam_ending
     )
 
     logger.info("Generating figures for report...")
@@ -247,7 +254,8 @@ def create_report(
     )
 
     output_path = os.path.join(
-        output_dir_absolute, f"Report - {name_output(run_config.report_name, run_config.feature_name)}.html"
+        # output_dir_absolute, f"Report - {name_output(run_config.report_name, run_config.feature_name)}.html"
+        output_dir_absolute, f"{name_output(run_config.report_name, run_config.feature_name)}.html"
     )
 
     with open(output_path, "w") as output_file:

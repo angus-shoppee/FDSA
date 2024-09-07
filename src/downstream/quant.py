@@ -23,6 +23,11 @@ import subprocess
 from downstream.process_stringtie import format_stringtie_matrices, annotate_formatted_stringtie_results
 
 
+STRINGTIE_OUTPUT_DIR_NAME = "STRINGTIE"
+
+COMBINED_RESULTS_FILE_NAME = "combined_stringtie_results"
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -48,7 +53,7 @@ def quantify_isoforms(
     if not os.path.isdir(filtered_bam_dir):
         raise ValueError(f"Invalid path supplied for filtered BAM directory: {filtered_bam_dir}")
 
-    stringtie_out_dir = os.path.join(output_base_dir, "STRINGTIE")
+    stringtie_out_dir = os.path.join(output_base_dir, STRINGTIE_OUTPUT_DIR_NAME)
     if not os.path.isdir(stringtie_out_dir):
         if os.path.exists(stringtie_out_dir):
             raise FileExistsError(f"Could not create output directory ({stringtie_out_dir}): already exists as file")
@@ -207,7 +212,7 @@ def quantify_isoforms(
 
     logger.info("[FDSA] Combining stringtie results...")
 
-    formatted_stringtie_output_path = os.path.join(stringtie_out_dir, "combined_stringtie_results.csv")
+    formatted_stringtie_output_path = os.path.join(stringtie_out_dir, f"{COMBINED_RESULTS_FILE_NAME}.csv")
 
     format_stringtie_matrices(
         prep_de_gene_counts_path,

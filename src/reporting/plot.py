@@ -576,8 +576,15 @@ def plot_splice_rate(
     show_main_title: bool = True
 ) -> str:
 
+    use_stringtie_frequency = fdsa_result.stringtie_frequencies is not None
+    y_label = "Transcripts without feature (%)" if use_stringtie_frequency else "Splice event detection (%)"
+
+    # TODO: Include both graphs!
+    frequencies_for_plotting = fdsa_result.stringtie_frequencies if use_stringtie_frequency else fdsa_result.frequencies
+
     x, y, color, shape, labels = [], [], [], [], []
-    for sample_name, frequency in fdsa_result.frequencies.items():
+    # for sample_name, frequency in fdsa_result.frequencies.items():
+    for sample_name, frequency in frequencies_for_plotting.items():
         y.append(frequency)
         x.append(norm_gene_counts.loc[fdsa_result.gene_id][sample_name])
         color.append(color_by_group_name[group_name_by_sample[sample_name]])
@@ -597,7 +604,8 @@ def plot_splice_rate(
         )
 
     plt.xlabel("Gene expression (TMM norm. CPM)", fontsize=22)
-    plt.ylabel("Splice event detection (%)", fontsize=22)
+    # plt.ylabel("Splice event detection (%)", fontsize=22)
+    plt.ylabel(y_label, fontsize=22)
     ax.tick_params(axis='both', which='major', labelsize=18)
 
     handles, labels = ax.get_legend_handles_labels()
