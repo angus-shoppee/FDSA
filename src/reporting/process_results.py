@@ -21,7 +21,7 @@ import pandas as pd
 
 from config import output_column_names as cols
 from analysis.experiment import Sample
-from reporting.process_stringtie import calculate_fraction_lacking_feature
+from reporting.parse_stringtie_combined import calculate_fraction_lacking_feature
 
 
 FDSA_RESULT_FREQUENCY_COLUMN_PREFIX = "Percent "
@@ -316,17 +316,19 @@ def load_fdsa_results(
 
     stringtie_results_df = None if stringtie_results_path is None else pd.read_csv(stringtie_results_path)
 
-    suffix = stringtie_remove_sample_name_ending \
-        if "." not in stringtie_remove_sample_name_ending \
-        else stringtie_remove_sample_name_ending[:stringtie_remove_sample_name_ending.index(".")]
+    if stringtie_results_df is not None:
 
-    stringtie_results_df.rename(
-        columns={
-            col: col.replace(suffix, '')
-            for col in [_col for _col in stringtie_results_df.columns if suffix in _col]
-        },
-        inplace=True
-    )
+        suffix = stringtie_remove_sample_name_ending \
+            if "." not in stringtie_remove_sample_name_ending \
+            else stringtie_remove_sample_name_ending[:stringtie_remove_sample_name_ending.index(".")]
+
+        stringtie_results_df.rename(
+            columns={
+                col: col.replace(suffix, '')
+                for col in [_col for _col in stringtie_results_df.columns if suffix in _col]
+            },
+            inplace=True
+        )
 
     return convert_fdsa_results_df_to_objects(
         fdsa_results_df,

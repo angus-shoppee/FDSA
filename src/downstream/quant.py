@@ -23,6 +23,9 @@ import subprocess
 from downstream.process_stringtie import format_stringtie_matrices, annotate_formatted_stringtie_results
 
 
+# TODO: Enable automatic deletion of generated files
+
+
 STRINGTIE_OUTPUT_DIR_NAME = "STRINGTIE"
 
 COMBINED_RESULTS_FILE_NAME = "combined_stringtie_results"

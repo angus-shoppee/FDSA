@@ -226,7 +226,7 @@ def create_report(
             limit_transcript_plots_to_samples = None
 
         plots[f"{fdsa_result.transcript_id}-{fdsa_result.feature_number}"] = {
-            "expression": plot_splice_rate(
+            "expression": None if fdsa_result.stringtie_frequencies is None else plot_splice_rate(
                 fdsa_result,
                 norm_gene_counts,
                 run_config.sample_groups,

@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from typing import List, Dict
+from typing import List, Dict, Optional
 import os
 
 from config.parse_config import ProgramRunConfig
@@ -37,7 +37,7 @@ JUMP_TO_TRANSCRIPTS_ID = "transcript-sections-intro"
 def generate_html_report(
     run_config: ProgramRunConfig,
     fdsa_results: List[FdsaResult],
-    plots: Dict[str, Dict[str, str]],
+    plots: Dict[str, Dict[str, Optional[str]]],
     svg_scheme: str = SVG_SCHEME
 ) -> str:
 

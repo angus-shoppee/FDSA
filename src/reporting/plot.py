@@ -576,11 +576,12 @@ def plot_splice_rate(
     show_main_title: bool = True
 ) -> str:
 
-    use_stringtie_frequency = fdsa_result.stringtie_frequencies is not None
-    y_label = "Transcripts without feature (%)" if use_stringtie_frequency else "Splice event detection (%)"
+    # use_stringtie_frequency = fdsa_result.stringtie_frequencies is not None
+    # y_label = "Transcripts without feature (%)" if use_stringtie_frequency else "Splice event detection (%)"
+    y_label = "Transcripts without feature (%)"
 
-    # TODO: Include both graphs!
-    frequencies_for_plotting = fdsa_result.stringtie_frequencies if use_stringtie_frequency else fdsa_result.frequencies
+    # TODO: Include both graphs if desired by user
+    frequencies_for_plotting = fdsa_result.stringtie_frequencies
 
     x, y, color, shape, labels = [], [], [], [], []
     # for sample_name, frequency in fdsa_result.frequencies.items():

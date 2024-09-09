@@ -15,8 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 import os
+import re
 from dataclasses import dataclass
 
 from config.parse_config import ProgramRunConfig
@@ -44,7 +45,7 @@ class TranscriptSectionRenderInfo:
     feature_qualifiers: str
     feature_no: int
     n_features: int
-    expression_plot_uri: str
+    expression_plot_uri: Optional[str]
     splice_plot_uri: str
 
 
@@ -53,13 +54,17 @@ def transcript_unit_section(
     render_info: TranscriptSectionRenderInfo
 ) -> str:
 
-    return html_template.format(**vars(render_info))
+    formatted_html = html_template.format(**vars(render_info))
+
+    # Delete expression plot container div if image is null
+    null_src_regex_pattern = r"""<div class="expression-plot-container">.*?<img src=""[^>]*>.*?</div>"""
+    return re.sub(null_src_regex_pattern, '', formatted_html, flags=re.DOTALL)
 
 
 def transcript_sections(
     run_config: ProgramRunConfig,
     fdsa_results: List[FdsaResult],
-    plots: Dict[str, Dict[str, str]],
+    plots: Dict[str, Dict[str, Optional[str]]],
     svg_scheme: str
 ) -> Tuple[str, List[TranscriptSectionRenderInfo]]:
 
@@ -75,9 +80,13 @@ def transcript_sections(
             feature_qualifiers=fdsa_result.feature_qualifiers,
             feature_no=fdsa_result.feature_number,
             n_features=fdsa_result.total_features_in_transcript,
-            expression_plot_uri=svg_scheme + plots[
-                f"{fdsa_result.transcript_id}-{fdsa_result.feature_number}"
-            ]["expression"],
+            expression_plot_uri="" if plots[
+                    f"{fdsa_result.transcript_id}-{fdsa_result.feature_number}"
+                ]["expression"] is None else (
+                svg_scheme + plots[
+                    f"{fdsa_result.transcript_id}-{fdsa_result.feature_number}"
+                ]["expression"]
+            ),
             splice_plot_uri=svg_scheme + plots[
                 f"{fdsa_result.transcript_id}-{fdsa_result.feature_number}"
             ]["splice"]
