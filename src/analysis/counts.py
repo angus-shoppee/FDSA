@@ -133,7 +133,7 @@ def run_feature_counts(
     _ending_length = len(bam_ending)
     bam_file_paths = [p for p in os.listdir(bam_files_dir) if p[-_ending_length:] == bam_ending]
 
-    paired_flag = "-p " if paired_end_reads else ""
+    paired_flag = "-p --countReadPairs " if paired_end_reads else ""
     primary_flag = "--primary " if primary_alignment_only else ""
 
     full_cmd = f"{feature_counts_executable} -T {threads} {paired_flag}-t exon -g gene_id {primary_flag}" +\
