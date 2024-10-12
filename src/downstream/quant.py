@@ -15,11 +15,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from typing import Dict, Optional
+from typing import List, Dict, Optional
 import logging
 import os
 import subprocess
+import csv
+import pandas as pd
 
+from config.quant_merged_column_names import (
+    QUANT_MERGED_PREFIX_NORM_CPM, QUANT_MERGED_PREFIX_TRANSCRIPTS_WITHOUT_FEATURE
+)
+from reporting.process_results import FdsaResult
 from downstream.process_stringtie import format_stringtie_matrices, annotate_formatted_stringtie_results
 
 
@@ -241,3 +247,36 @@ def quantify_isoforms(
     else:
 
         logger.info("[FDSA] No FDSA output supplied - stringtie results will not be annotated.")
+
+
+def write_merged_frequencies_and_gene_counts(
+    fdsa_results: List[FdsaResult],
+    norm_gene_counts: pd.DataFrame,
+    output_path: str
+) -> None:
+
+    # sample_names = list(fdsa_results[0].stringtie_frequencies.keys())
+    sample_names = norm_gene_counts.columns.tolist()
+
+    with open(output_path, "w") as f:
+
+        dump_output_writer = csv.writer(f)
+
+        dump_output_writer.writerow(
+            FdsaResult.get_serialized_header_for_info_cols() +
+            [f"{QUANT_MERGED_PREFIX_NORM_CPM}.{sample_name}" for sample_name in sample_names] +
+            [f"{QUANT_MERGED_PREFIX_TRANSCRIPTS_WITHOUT_FEATURE}.{sample_name}" for sample_name in sample_names]
+        )
+
+        for fdsa_result in fdsa_results:
+
+            cpm = norm_gene_counts.loc[fdsa_result.gene_id]
+
+            # stringtie_frequencies_list = [self.stringtie_frequencies[sample_name] for sample_name in sample_names]
+            # *[f"{fq:.4f}" for fq in stringtie_frequencies_list]
+
+            dump_output_writer.writerow(
+                fdsa_result.serialize_info_cols() +
+                [f"{cpm[sample_name]:.4f}" for sample_name in sample_names] +
+                [f"{fdsa_result.frequencies[sample_name]:.4f}" for sample_name in sample_names]
+            )

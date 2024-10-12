@@ -12,9 +12,9 @@
     <p>
         Two figures are given for each transcript feature. The first compares gene expression against splice event
         detection rate. Gene expression (X axis) is calculated as counts per million (CPM) normalized using the
-        Trimmed Mean of M-values (TMM) method. Splice event detection rate (Y axis) is calculated as the percentage
-        of RNA sequencing reads encompassing or overlapping the feature that contain a splice junction that encompasses
-        or overlaps the feature.
+        Trimmed Mean of M-values (TMM) method. Abundance of transcripts lacking the specified feature (Y axis) is
+        calculated as sum of abundances of all stringtie transcripts lacking the feature divided by the total sum of
+        abundances of all stringtie transcripts, transformed to a percentage.
         <br><br>
         The second figure depicts all detected splice junctions in each individual sample. Each exon is depicted as a
         box, labeled by exon number. Canonical splicing between adjacent exons is depicted with horizontal lines

@@ -13,11 +13,10 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
+import csv
 # FDSA RESULTS PLOTTING AND REPORTING
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import logging
 import os
 from pandas import read_csv as pd_read_csv
@@ -30,7 +29,9 @@ from analysis.counts import run_feature_counts, get_gene_counts_from_tsv, get_tm
 from reporting.process_results import load_fdsa_results
 from reporting.plot import plot_transcript, plot_splice_rate
 from reporting.generate_html_report import generate_html_report
-from downstream.quant import STRINGTIE_OUTPUT_DIR_NAME, COMBINED_RESULTS_FILE_NAME
+from downstream.quant import (
+    STRINGTIE_OUTPUT_DIR_NAME, COMBINED_RESULTS_FILE_NAME, write_merged_frequencies_and_gene_counts
+)
 
 
 GENE_COUNTS_DEFAULT_FILE_NAME = "gene_counts.tsv"
@@ -182,6 +183,8 @@ def create_report(
         os.path.abspath(run_config.output_path), STRINGTIE_OUTPUT_DIR_NAME, f"{COMBINED_RESULTS_FILE_NAME}.csv"
     )
 
+    found_stringtie_results: bool = os.path.isfile(stringtie_results_path)
+
     # Load FDSA results
     fdsa_results = load_fdsa_results(
         fdsa_results_path,
@@ -191,12 +194,34 @@ def create_report(
         min_total_number_occurrences_across_all_samples=run_config.report_min_total_n_occurrences_across_all_samples,
         min_per_sample_occurrences_number_occurrences=run_config.report_min_n_occurrences_in_sample,
         min_per_sample_occurrences_in_at_least_n_samples=run_config.report_occurrences_in_at_least_n_samples,
-        stringtie_results_path=stringtie_results_path if os.path.isfile(stringtie_results_path) else None,
+        stringtie_results_path=stringtie_results_path if found_stringtie_results else None,
         stringtie_remove_sample_name_ending=run_config.bam_ending
     )
 
+    # Write merged results to file
+    # TODO: Config option to enable/disable
+
+    dump_output_path: Optional[str] = None
+    if found_stringtie_results:
+
+        logger.info("Serializing combined results...")
+
+        dump_output_path = os.path.join(
+            output_dir_absolute,
+            f"{name_output(run_config.report_name, run_config.feature_name)}.csv"
+        )
+
+        write_merged_frequencies_and_gene_counts(
+            fdsa_results,
+            norm_gene_counts,
+            dump_output_path
+        )
+
+        logger.info("... done")
+
     logger.info("Generating figures for report...")
 
+    # Generate plots, capping at N per sample group if specified to do so by user
     plots: Dict[str, Dict[str, str]] = {}
     _current = 1
     _total = len(fdsa_results) if run_config.report_max_n_plotted is None \
@@ -219,7 +244,6 @@ def create_report(
         if run_config.report_transcript_plot_max_samples_per_group is not None:
             limit_transcript_plots_to_samples = flatten_nested_lists([
                 sample_names[:run_config.report_transcript_plot_max_samples_per_group]  # Slice each group to max n
-                # sample_names
                 for sample_names in run_config.sample_groups.values()
             ])
         else:
@@ -253,13 +277,15 @@ def create_report(
         plots
     )
 
-    output_path = os.path.join(
+    html_output_path = os.path.join(
         # output_dir_absolute, f"Report - {name_output(run_config.report_name, run_config.feature_name)}.html"
         output_dir_absolute, f"{name_output(run_config.report_name, run_config.feature_name)}.html"
     )
 
-    with open(output_path, "w") as output_file:
+    with open(html_output_path, "w") as output_file:
         output_file.write(report_html)
 
-    logger.info(f"Report written to {output_path}")
+    if found_stringtie_results:
+        logger.info(f"Combined results (stringtie quantification) written to {dump_output_path}")
+    logger.info(f"Report written to {html_output_path}")
     logger.info("...finished")

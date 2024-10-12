@@ -18,7 +18,7 @@
 # FEATURECOUNTS DISPATCH AND PARSING GENE COUNT DATA
 
 from dataclasses import dataclass
-from typing import Dict, List, Union
+from typing import Dict, List, Optional
 import os
 import subprocess
 import pandas as pd
@@ -47,7 +47,7 @@ class FeatureCountsResult:
 
 def get_tmm_cpm_from_gene_counts(
     feature_counts_result: FeatureCountsResult,
-    threads: Union[None, int] = None,
+    threads: Optional[int] = None
 ) -> pd.DataFrame:
 
     # TODO: Implement setting NUMEXPR_MAX_THREADS here via optional threads argument

@@ -120,9 +120,35 @@ class FdsaResult:
 
         self.stringtie_frequencies = stringtie_frequencies
 
+    # Unused
     def total_number_occurrences_across_all_samples(self) -> int:
 
         return sum([sum([locus.n for locus in loci] for loci in self.overlapping.values())])
+
+    def get_exon_positions_string(self) -> str:
+
+        return " ".join([f"{e[0]}-{e[1]}" for e in self.exon_positions])
+
+    def get_feature_region_string(self) -> str:
+
+        return f"{self.feature_region[0]}-{self.feature_region[1]}"
+
+    @classmethod
+    def get_serialized_header_for_info_cols(cls) -> List[str]:
+
+        return [
+            cols.GENE_ID, cols.GENE_NAME, cols.CHROMOSOME, cols.STRAND,
+            cols.EXON_POSITIONS, cols.FEATURE_QUALIFIERS, cols.FEATURE_REGION,
+            cols.N_FEATURES_IN_TRANSCRIPT, cols.FEATURE_NUMBER
+        ]
+
+    def serialize_info_cols(self) -> List[str]:
+
+        return [
+            self.gene_id, self.gene_name, self.chromosome, self.strand,
+            self.get_exon_positions_string(), self.feature_qualifiers, self.get_feature_region_string(),
+            str(self.total_features_in_transcript), str(self.feature_number)
+        ]
 
 
 def load_fdsa_results_as_df(

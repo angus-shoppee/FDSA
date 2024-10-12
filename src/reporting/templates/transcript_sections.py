@@ -24,6 +24,9 @@ from config.parse_config import ProgramRunConfig
 from reporting.process_results import FdsaResult
 
 
+# TODO: Conditionally include stringtie plot explanation depending on whether stringtie output was found
+
+
 TRANSCRIPT_SECTIONS_TEMPLATE = "transcript_sections.html"
 TRANSCRIPT_SECTION_UNIT_TEMPLATE = "transcript_section_unit.html"
 TRANSCRIPT_SECTIONS_CSS = "transcript_sections.css"
