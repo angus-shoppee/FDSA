@@ -243,8 +243,8 @@ def write_merged_frequencies_and_gene_counts(
     output_path: str
 ) -> None:
 
-    # sample_names = list(fdsa_results[0].stringtie_frequencies.keys())
-    sample_names = norm_gene_counts.columns.tolist()
+    sample_names = list(fdsa_results[0].stringtie_frequencies.keys())
+    # sample_names = norm_gene_counts.columns.tolist()
 
     with open(output_path, "w") as f:
 
