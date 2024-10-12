@@ -41,6 +41,9 @@ def generate_html_report(
     svg_scheme: str = SVG_SCHEME
 ) -> str:
 
+    # TODO: Show stringtie percentages in Results table
+    # TODO: Add option to sort by stringtie percentage instead of internal percentage
+
     results_table_html = results_table(run_config, fdsa_results)
 
     sections_html, all_section_render_info = transcript_sections(

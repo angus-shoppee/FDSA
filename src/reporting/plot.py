@@ -246,7 +246,8 @@ class PlotJunction:
 
 def plot_transcript(
     fdsa_result: FdsaResult,
-    sample_group_by_sample_name: Dict[str, str],
+    group_name_by_sample_name: Dict[str, str],
+    color_by_group_name: Dict[str, str],
     draw_junctions_with_min_n_occurrences: int = 1,
     show_main_title: bool = True,
     limit_to_samples: Union[None, List[str]] = None
@@ -454,7 +455,7 @@ def plot_transcript(
         ylim = [0.5 - (0.03 * tallest_curve_reached), 2.5 + (1.05 * tallest_curve_reached)]
 
         subplot_elements[plot_index]["sample_name"] = sample_name
-        subplot_elements[plot_index]["sample_group"] = sample_group_by_sample_name[sample_name]
+        subplot_elements[plot_index]["sample_group"] = group_name_by_sample_name[sample_name]
         subplot_elements[plot_index]["exon_annotations"] = exon_annotations
         subplot_elements[plot_index]["curve_annotations"] = curve_annotations
         subplot_elements[plot_index]["connection_annotations"] = connection_annotations
@@ -541,8 +542,20 @@ def plot_transcript(
 
         ax.axis("off")
 
-        ax.set_title(sample_name, size=24)
-        ax.set_subtitle(sample_group, size=18)
+        ax.set_title(
+            sample_name,
+            size=24
+        )
+        ax.text(
+            0.5,
+            1.0,
+            sample_group,
+            color=color_by_group_name[sample_group],
+            size=18,
+            ha='center',
+            va='top',
+            transform=ax.transAxes
+        )
 
     main_title = f"{fdsa_result.gene_name} - Feature {fdsa_result.feature_number} " + \
                  f"of {fdsa_result.total_features_in_transcript}"

@@ -110,11 +110,11 @@ def create_report(
     for bam_path in bam_file_absolute_paths:
         sample = Sample(bam_path, run_config.bam_ending)
         samples[sample.name] = sample
-    sample_group_by_sample_name = {
-        sample_name: group_name
-        for group_name, sample_names in run_config.sample_groups.items()
-        for sample_name in sample_names
-    }
+    # sample_group_by_sample_name = {
+    #     sample_name: group_name
+    #     for group_name, sample_names in run_config.sample_groups.items()
+    #     for sample_name in sample_names
+    # }
 
     # Get gene counts
     gene_counts_path = run_config.report_gene_count_matrix \
@@ -268,7 +268,9 @@ def create_report(
             ),
             "splice": plot_transcript(
                 fdsa_result,
-                sample_group_by_sample_name,
+                # sample_group_by_sample_name,
+                run_config.group_name_by_sample_name,
+                run_config.color_by_group_name,
                 draw_junctions_with_min_n_occurrences=run_config.report_draw_junctions_min_count,
                 show_main_title=False,
                 limit_to_samples=limit_transcript_plots_to_samples
