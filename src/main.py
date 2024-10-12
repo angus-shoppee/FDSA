@@ -609,8 +609,12 @@ def main() -> None:
 
         elif mode_arg.mode in ("run", "report", "filter"):
 
+            # TODO: Remove [RUN] config options to enable/disable subsequent report & filter modes
+            #       Should be controlled by command line flags only
+
             enable_generate_report = False
             enable_generate_filtered_bam_files = False
+            enable_quant = False
 
             if mode_arg.mode == "run":
                 parser = get_run_parser()
@@ -619,10 +623,15 @@ def main() -> None:
                 enable_generate_report = True
                 parser = get_report_parser()
                 usage = FDSA_REPORT_COMMAND_USAGE
-            else:
+            elif mode_arg.mode == "filter":
                 enable_generate_filtered_bam_files = True
                 parser = get_filter_parser()
                 usage = FDSA_FILTER_COMMAND_USAGE
+            # elif mode_arg.mode == "quant":
+            #     parser = get_quant_parser()
+            #     usage = FDSA_QUANT_COMMAND_USAGE
+            else:
+                raise ValueError(f"Unexpected program mode: {mode_arg.mode}")
 
             if any([arg in subsequent_args for arg in ("-h", "--help")]):
                 # parser.print_help()
@@ -636,12 +645,26 @@ def main() -> None:
 
             args = parser.parse_args(subsequent_args)
 
-            if args.run_config_path is None:
-                logger.error(
-                    f"usage: {usage}\n\n"
-                    "Use \"fdsa run --help\" for more information on usage."
-                )
-                exit()
+            if mode_arg.mode == "quant":
+                # For standalone QUANT mode, a run config path can be omitted if genome, input and output are set
+                if args.run_config_path is None and any([
+                    args.genome is None,
+                    args.input is None,
+                    args.output is None
+                ]):
+                    logger.error(
+                        f"Usage:\n{FDSA_QUANT_COMMAND_USAGE}\n\n" +
+                        "Use \"fdsa quant --help\" for more information on usage."
+                    )
+                    exit()
+            else:
+                # For RUN, FILTER and REPORT modes, a run config path is always required
+                if args.run_config_path is None:
+                    logger.error(
+                        f"usage: {usage}\n\n"
+                        "Use \"fdsa run --help\" for more information on usage."
+                    )
+                    exit()
 
             run_config_path = args.run_config_path
 
@@ -661,26 +684,29 @@ def main() -> None:
                         enable_generate_filtered_bam_files = True
                         run_config.generate_filtered_bam_files = True
                         run_config.check_samtools()  # Ensure samtoolsExecutable is set
+                    if args.quant:
+                        enable_generate_filtered_bam_files = True
+                        enable_quant = True
             except ValueError as e:
                 logger.error(CONFIG_FILE_FORMATTING_ERROR_MESSAGE + "\n" + str(e))
                 exit()
 
             if mode_arg.mode == "run":
 
+                # TODO: Remove
                 # Enable report generation if specified in config file and not via command line flag
                 if run_config.generate_report:
                     enable_generate_report = True
-
                 # The --no-report flag will override behaviour specified elsewhere
                 if args.no_report:
                     enable_generate_report = False
 
+                # TODO: Remove
                 # Enable BAM file filtering if specified in config file and not via command line flag
                 if run_config.generate_filtered_bam_files:
                     enable_generate_filtered_bam_files = True
-
                 # The --no-filter flag will override behaviour specified elsewhere
-                if args.no_filter:
+                if args.no_filter and not enable_quant:
                     enable_generate_filtered_bam_files = False
 
                 species_specific_data_dir = os.path.join(base_dir, "data", run_config.species)
@@ -692,15 +718,32 @@ def main() -> None:
                     run_config
                 )
 
-            if enable_generate_report:
-
-                # Execute report
-                _report(run_config)
-
             if enable_generate_filtered_bam_files:
 
                 # Execute filter
                 _filter(run_config)
+
+            if enable_quant:
+
+                # Execute quant
+                _quant(
+                    run_config,
+                    user_config,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None
+                )
+
+            if enable_generate_report:
+
+                # Execute report
+                _report(run_config)
 
         elif mode_arg.mode == "quant":
 
@@ -708,7 +751,6 @@ def main() -> None:
             quant_args = quant_parser.parse_args(subsequent_args)
 
             if any([arg in subsequent_args for arg in ("-h", "--help")]):
-                # build_parser.print_help()
                 help_message = quant_parser.format_help()
                 print(
                     FDSA_QUANT_COMMAND_USAGE +

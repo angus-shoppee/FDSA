@@ -368,7 +368,7 @@ def perform_splice_analysis(
                 if _progress_plus_i % 100 == 0:
                     logger.info(
                         # "\x1b[A" +
-                        f"Progress: {int(100 * _progress_plus_i / transcript_library.number_of_transcripts)}%"
+                        f"Progress: {(100 * _progress_plus_i / transcript_library.number_of_transcripts):.1f}%"
                     )
 
             # Skip if gene set is defined and gene name is not in gene set

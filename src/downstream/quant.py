@@ -108,12 +108,6 @@ def quantify_isoforms(
             check=check_exit_code
         )
 
-        # # DEV: Break after second iteration
-        # _n += 1
-        # if _n >= 2:
-        #     logger.debug("[DEV] stopped after 2 files")
-        #     break
-
     logger.info("[Stringtie] ... done")
 
     # Run stringtie in --merge mode to get the combined transcript GTF
@@ -179,12 +173,6 @@ def quantify_isoforms(
             check=check_exit_code
         )
 
-        # # DEV: Break after second iteration
-        # _n += 1
-        # if _n >= 2:
-        #     logger.debug("[DEV] stopped after 2 files")
-        #     break
-
     logger.info("[Stringtie] ... done")
 
     # Run prepDE script
@@ -209,7 +197,7 @@ def quantify_isoforms(
         "-t", prep_de_transcript_counts_path
     ]
     if read_length is not None:
-        prep_de_cmd_split += ["-l", read_length]
+        prep_de_cmd_split += ["-l", str(read_length)]
     subprocess.run(
         prep_de_cmd_split,
         cwd=prep_de_out_dir,
@@ -277,6 +265,8 @@ def write_merged_frequencies_and_gene_counts(
 
             dump_output_writer.writerow(
                 fdsa_result.serialize_info_cols() +
-                [f"{cpm[sample_name]:.4f}" for sample_name in sample_names] +
-                [f"{fdsa_result.frequencies[sample_name]:.4f}" for sample_name in sample_names]
+                # [f"{cpm[sample_name]:.4f}" for sample_name in sample_names] +
+                # [f"{fdsa_result.frequencies[sample_name]:.4f}" for sample_name in sample_names]
+                [cpm[sample_name] for sample_name in sample_names] +
+                [fdsa_result.frequencies[sample_name] for sample_name in sample_names]
             )

@@ -111,11 +111,12 @@ def create_report(
         sample = Sample(bam_path, run_config.bam_ending)
         samples[sample.name] = sample
 
-    # Get TMM CPM
+    # Get gene counts
     gene_counts_path = run_config.report_gene_count_matrix \
         if run_config.report_gene_count_matrix is not None \
         else os.path.join(output_dir_absolute, GENE_COUNTS_DEFAULT_FILE_NAME)
 
+    # TODO: Put featureCounts output in feature_counts subdir within REPORT dir
     if not os.path.exists(gene_counts_path):
         logger.info("Running feature counts...")
         run_feature_counts(
@@ -208,7 +209,8 @@ def create_report(
 
         dump_output_path = os.path.join(
             output_dir_absolute,
-            f"{name_output(run_config.report_name, run_config.feature_name)}.csv"
+            # TODO: Define output file naming scheme in internal config
+            f"QUANTIFIED - {name_output(run_config.report_name, run_config.feature_name)}.csv"
         )
 
         write_merged_frequencies_and_gene_counts(

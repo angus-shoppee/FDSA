@@ -147,7 +147,8 @@ def get_run_parser() -> ArgumentParser:
     run_parser.add_argument(
         "--report",
         action="store_true",
-        help="Generates a visual report for the output of FDSA's analysis upon completion."
+        help="Generates a visual report for the output of FDSA's analysis upon completion; generates a merged table of "
+             "TMM normalized gene counts and Stringtie frequencies if quant mode output is detected."
     )
     run_parser.add_argument(
         "--no-report",
@@ -166,6 +167,15 @@ def get_run_parser() -> ArgumentParser:
         "--no-filter",
         action="store_true",
         help="Disables filtered BAM file generation, overriding default behaviour and behaviour set in run config."
+    )
+
+    run_parser.add_argument(
+        "--quant",
+        action="store_true",
+        help=(
+            "(Force enables --filter) Wraps Stringtie to calculate transcript frequencies for genes with "
+            "detected splice activity; generates a Stringtie result summary annotated with feature information."
+        )
     )
 
     return run_parser

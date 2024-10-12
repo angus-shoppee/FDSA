@@ -139,6 +139,8 @@ def run_feature_counts(
     full_cmd = f"{feature_counts_executable} -T {threads} {paired_flag}-t exon -g gene_id {primary_flag}" +\
         f"-a {reference_gtf_path} -o {output_path} {' '.join(bam_file_paths)}"
 
+    print("DEBUG: Running featureCounts with command:", full_cmd)
+
     process = subprocess.run(full_cmd.split(" "), cwd=bam_files_dir, encoding="utf8", check=check_exit_code)
 
     return process.returncode
