@@ -608,6 +608,9 @@ def plot_splice_rate(
             s=100
         )
 
+    plt.xlim(left=0)
+    plt.ylim(bottom=0)
+
     plt.xlabel("Gene expression (TMM norm. CPM)", fontsize=22)
     # plt.ylabel("Splice event detection (%)", fontsize=22)
     plt.ylabel(y_label, fontsize=22)
