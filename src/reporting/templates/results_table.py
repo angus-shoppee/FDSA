@@ -90,9 +90,9 @@ def results_table(
     results_criteria_text = _generate_results_criteria_text(run_config)
 
     table_header = [
-       "Gene name", "Feature #", "Total features", "Avg. N", "Avg. %"
+       "Gene name", "Feature #", "Total features", "Avg. N", "Avg. Det."
     ] + list(fdsa_results[0].overlapping.keys()) + [
-       f"% {sample_name}"
+       f"Det. {sample_name}"
        for sample_name in fdsa_results[0].frequencies.keys()
     ]
     table_data = [
