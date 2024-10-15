@@ -43,6 +43,7 @@ class TranscriptSectionRenderInfo:
     section_title: str
     gene_name: str
     gene_id: str
+    transcript_id: str
     n_exons: int
     feature_name: str
     feature_qualifiers: str
@@ -52,7 +53,7 @@ class TranscriptSectionRenderInfo:
     splice_plot_uri: str
 
 
-def transcript_unit_section(
+def generate_transcript_unit_section(
     html_template: str,
     render_info: TranscriptSectionRenderInfo
 ) -> str:
@@ -78,6 +79,7 @@ def transcript_sections(
                           f"({fdsa_result.feature_number} of {fdsa_result.total_features_in_transcript})",
             gene_name=fdsa_result.gene_name,
             gene_id=fdsa_result.gene_id,
+            transcript_id=fdsa_result.transcript_id,
             n_exons=len(fdsa_result.exon_positions),
             feature_name=run_config.feature_name,
             feature_qualifiers=fdsa_result.feature_qualifiers,
@@ -125,7 +127,7 @@ def transcript_sections(
             max_per_group_text=max_per_group_text,
             junction_limit_text=junction_limit_text,
             transcript_unit_sections="\n".join([
-                transcript_unit_section(section_unit_template, render_info)
+                generate_transcript_unit_section(section_unit_template, render_info)
                 for render_info in all_section_render_info
             ])
         )
