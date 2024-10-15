@@ -52,6 +52,7 @@ class QuantifiedSpliceJunctionLocus:
         return False
 
 
+# TODO: Investigate NA values for stringtie frequencies in some samples
 class FdsaResult:
     transcript_id: str
     gene_id: str

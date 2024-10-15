@@ -43,9 +43,12 @@ def calculate_fraction_lacking_feature(
     scaling_factor = 100 if scale_to_percentage else 1
 
     return {
-        col_name.replace(stringtie_cols.QUANT_PREFIX_TRANSCRIPT, ""): scaling_factor * (1 - (
-            sum(qualifying_transcripts[col_name] / sum(all_transcripts[col_name]))
-        ))  # Subtract from 1 to get fraction of transcripts without the feature
+        col_name.replace(stringtie_cols.QUANT_PREFIX_TRANSCRIPT, ""): (
+            0.0 if qualifying_transcripts.get(col_name, None) is None  # Default to 0% if no qualifying transcript entry
+            else scaling_factor * (1 - (
+                sum(qualifying_transcripts[col_name] / sum(all_transcripts[col_name]))
+            ))
+        )  # Subtract from 1 to get fraction of transcripts without the feature
         for col_name in [
             _col_name for _col_name in all_transcripts.columns if stringtie_cols.QUANT_PREFIX_TRANSCRIPT in _col_name
         ]
