@@ -6,6 +6,27 @@ The Feature-Directed Splice Analysis (FDSA) pipeline is designed for analyzing s
 
 ---
 
+## **Installation & Usage**
+1. Install program and required dependencies:
+   ```bash
+   pip install .
+   ```
+2. Set user configuration:
+   ```bash
+   fdsa user $user_config_path
+   ```
+3. Build transcript library:
+   ```bash
+   fdsa build --species human --genome $reference_genome_gtf_path --threads $n_threads
+   ```
+4. Run full pipeline:
+    ```bash
+   fdsa run --filter --quant --report $run_config_path
+   ```
+
+
+---
+
 ## **Runtime Modes**
 FDSA comprises six runtime modes, divided into **setup** and **analysis** categories:
 
@@ -85,21 +106,13 @@ FDSA comprises six runtime modes, divided into **setup** and **analysis** catego
 
    **Command**:  
    ```bash
-   fdsa report RUN_CONFIG_PATH
+   fdsa report $run_config_path
    ```
    **Mandatory Run Config Section**: `[RUN]`.
 
    **Optional Sections**: `[REPORT]`, `[SAMPLES]`, `[COLORS]`, `[SHAPES]`.
 
    <br>
-
-
-### **Example Setup & Usage**
-   ```bash
-   fdsa user $path_to_user_config_file
-   fdsa build --species human --genome $path_to_genome_gtf --threads $n_threads
-   fdsa run --filter --quant --report $path_to_run_config_file
-   ```
 
 ---
 
@@ -326,18 +339,6 @@ Positional argument:
   - `StringTie`: Used in `quant` mode.
   - `FeatureCounts`: Used in `report` mode.
 
-
----
-
-## **Installation**
-1. Install program and required dependencies:
-   ```bash
-   pip install .
-   ```
-2. Configure user settings:
-   ```bash
-   fdsa user $user_config_path
-   ```
 
 ---
 
