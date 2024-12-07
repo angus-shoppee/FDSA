@@ -60,6 +60,7 @@ FDSA comprises six runtime modes, divided into **setup** and **analysis** catego
 
 5. **`quant`**: Performs transcript quantification using StringTie, annotates predicted transcript structures, and 
    calculates an estimated percentage of transcripts lacking the designated feature(s).
+
    **Usage**: Can be supplied a run config file, or run independently if required arguments are set.  
    **Command**:  
    ```bash
