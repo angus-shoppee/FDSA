@@ -49,7 +49,7 @@ FDSA comprises six runtime modes, divided into **setup** and **analysis** catego
    **Usage**: Requires a run config file.  
    **Command**:  
    ```bash
-   fdsa filter RUN_CONFIG_PATH
+   fdsa filter $run_config_path
    ```
    **Mandatory Run Config Section**: `[RUN]`.
 
@@ -249,6 +249,8 @@ Boolean parameters can be specified as either `True`/`False` or `Yes`/`No` and a
 
 ## **Command-Line Arguments**
 
+Runtime mode and accompanying options are set with command line arguments. Where applicable, command line arguments will override behaviour defined in the supplied run config.
+
 ### **User**
 - `user_config_path`: Path to a config file with a valid `[BUILD]` section, and optional `[DEFAULT RUN]`,
                       `[DEFAULT FILTER]`, `[DEFAULT QUANT]`, and `[DEFAULT REPORT]` sections.
@@ -340,8 +342,8 @@ Positional argument:
 ---
 
 ## **Notes**
-1. Currently, only mouse and human are officially supported. However, this is simply because only these species have
-   been tested and confirmed to work as intended. This program is species-agnostic, and any species should be usable as
+1. Currently, only mouse and human are supported by default, as only these species have
+   been tested and confirmed to work as intended. This program is species-agnostic, however, and any species should be usable as
    long as it has a reference genome and Genbank transcript annotations. To add support for a species:
    - Edit the [BUILD] section in src/config/internal.config
    - Add a user-facing species name to `allowedSpecies`, e.g. "human"
