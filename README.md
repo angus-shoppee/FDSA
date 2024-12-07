@@ -130,17 +130,17 @@ Boolean parameters can be specified as either `True`/`False` or `Yes`/`No` and a
 
 - **Optional Sections**:
   - `[DEFAULT RUN]`
-    <br>*For all parameters, see Run Config below*
+  <br>*For all parameters, see Run Config below*
   - `[DEFAULT FILTER]`
     - `samtools` / `samtoolsExecutablePath`: Path to the samtools executable file.
-    <br>*For all parameters, see Run Config below*
+  <br>*For all parameters, see Run Config below*
   - `[DEFAULT QUANT]`
     - `stringtie / stringtieExecutablePath`: Path to the stringtie executable file.
     - `prepDE / prepDEScriptPath`: Path to the prepDE.py3 script distributed alongside stringtie.
-    <br>*For all parameters, see Run Config below*
+  <br>*For all parameters, see Run Config below*
   - `[DEFAULT REPORT]`
     - `featureCounts` / `featureCountsExecutablePath`: Path to the featureCounts executable file.
-    <br>*For all parameters, see Run Config below*
+  <br>*For all parameters, see Run Config below*
 
 ### **Run Config**
 - **Purpose**: Specifies parameters for each analysis mode.
@@ -163,7 +163,7 @@ Boolean parameters can be specified as either `True`/`False` or `Yes`/`No` and a
     <br>Default = 0.5
     - `mapqForUniqueMapping`: Map quality score used by the aligner that generated input BAM files to indicate a unique alignment. For example, STAR aligner uses a mapq of 255 to indicate uniquely aligned reads.
     <br>Default = 255
-    - `includeAllJunctionsInOutput`: Include a column in the run results file listing all splice junctions for each gene (Required for downstream runtime modes).
+    - `includeAllJunctionsInOutput`: Include a column in the run results file listing all splice junctions for each gene (Required for `fdsa report` mode).
     <br>Default = True
     - `useOnlyLongestAnnotatedTranscript`: If there are multiple reference transcripts for a gene, only use the longest transcript with feature annotation information. Disabling this option will produce redundant output, but may catch edge cases where annotation of reference transcript variants is incomplete.
     <br>Default = True
@@ -186,9 +186,9 @@ Boolean parameters can be specified as either `True`/`False` or `Yes`/`No` and a
     - `minTotalOccurrencesAcrossAllSamples` / `minTotalNumberOccurrencesAcrossAllSamples`: Minimum overall number of splice events across all samples required for a gene to be included in the filtered BAM output.
     <br>Default = 1
     - *The following two options are to be used as a pair:*
-      - A^ `minOccurrencesInSample` / `minNumberOccurrencesInSample`: Only genes with a minimum of A^ splice events in at least B^ samples will be included in the filtered BAM output.
+      - **A^** `minOccurrencesInSample` / `minNumberOccurrencesInSample`: Only genes with a minimum of A^ splice events in at least B^ samples will be included in the filtered BAM output.
       <br>Default = 1
-      - B^ `inAtLeastNSamples` / `occurrencesInAtLeastNSamples`: Only genes with a minimum of A^ splice events in at least B^ samples will be included in the filtered BAM output.
+      - **B^** `inAtLeastNSamples` / `occurrencesInAtLeastNSamples`: Only genes with a minimum of A^ splice events in at least B^ samples will be included in the filtered BAM output.
       <br>*The wildcard character `*` may be used to specify that there must be at least A^ reads in ALL samples*
       <br>Default = 1
   - `[QUANT]`
@@ -215,9 +215,9 @@ Boolean parameters can be specified as either `True`/`False` or `Yes`/`No` and a
     - `minTotalOccurrencesAcrossAllSamples` / `minTotalNumberOccurrencesAcrossAllSamples`: Minimum overall number of splice events across all samples required for a gene to be included in the report.
     <br>Default = 1
     - *The following two options are to be used as a pair:*
-      - A^ `minOccurrencesInSample` / `minNumberOccurrencesInSample`: Only genes with a minimum of A^ splice events in at least B^ samples will be included in the report.
+      - **A^** `minOccurrencesInSample` / `minNumberOccurrencesInSample`: Only genes with a minimum of A^ splice events in at least B^ samples will be included in the report.
       <br>Default = 1
-      - B^ `inAtLeastNSamples` / `occurrencesInAtLeastNSamples`: Only genes with a minimum of A^ splice events in at least B^ samples will be included in the report.
+      - **B^** `inAtLeastNSamples` / `occurrencesInAtLeastNSamples`: Only genes with a minimum of A^ splice events in at least B^ samples will be included in the report.
       <br>*The wildcard character `*` may be used to specify that there must be at least A^ reads in ALL samples*
       <br>Default = 1
     - `drawJunctionsMin` / `drawJunctionsMinCount`: Minimum number of junction counts (only applies to junctions NOT overlapping features) required for a junction to be included in a splice graph.
