@@ -248,7 +248,6 @@ Boolean parameters can be specified as either `True`/`False` or `Yes`/`No` and a
 ---
 
 ## **Command-Line Arguments**
-For each mode, required arguments and options are parsed via the command line. Below is a summary of notable arguments for each mode:
 
 ### **User**
 - `user_config_path`: Path to a config file with a valid `[BUILD]` section, and optional `[DEFAULT RUN]`,
