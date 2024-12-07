@@ -236,12 +236,12 @@ Boolean parameters can be specified as either `True`/`False` or `Yes`/`No` and a
   - `[COLORS]`
     - *Designate colours to associate with experimental groups in the following format:*
       - `group_x = "red"`
-      - `group_x = "#0000FF"`
+      - `group_y = "#0000FF"`
       <br>*Either hex values or color names recognized by matplotlib may be used*
   - `[SHAPES]`
     - *Designate point shapes to associate with experimental groups in the following format:*
       - `group_x = "circle"`
-      - `group_x = "square"`
+      - `group_y = "square"`
       <br>*Either matplotlib shape codes or aliases such as "circle", "triangle", "star" may be used*
       <br>*All available aliases can be found in src/config/marker_aliases.py*
 
