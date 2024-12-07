@@ -90,17 +90,10 @@ FDSA comprises six runtime modes, divided into **setup** and **analysis** catego
    **Mandatory Run Config Section**: `[RUN]`.
 
    **Optional Run Config Section**: `[QUANT]`.
-   <br><br>
-
-   **Or, if running independently**:
-   ```bash
-   fdsa quant --stringtie $stringtie_path --prep-de $prep_de_path --input $bam_files_dir --output $output_dir --read-length $read_length --threads $n_threads
-   ```
-   *Note: If run independently, transcripts will not be annotated unless an FDSA results file is supplied (see below)*
 
    <br>
 
-
+   
 6. **`report`**: Generates a visual report from the output of the `run` and `quant` modes.  
    **Usage**: Requires a run config file with optional sections for customization.
 
@@ -110,7 +103,7 @@ FDSA comprises six runtime modes, divided into **setup** and **analysis** catego
    ```
    **Mandatory Run Config Section**: `[RUN]`.
 
-   **Optional Sections**: `[REPORT]`, `[SAMPLES]`, `[COLORS]`, `[SHAPES]`.
+   **Optional Run Config Sections**: `[REPORT]`, `[SAMPLES]`, `[COLORS]`, `[SHAPES]`.
 
    <br>
 
