@@ -89,7 +89,7 @@ FDSA comprises six runtime modes, divided into **setup** and **analysis** catego
    ```
    **Mandatory Run Config Section**: `[RUN]`.
 
-   **Optional Sections**: `[REPORT]`, `[SAMPLES]`, `[COLORS]`.
+   **Optional Sections**: `[REPORT]`, `[SAMPLES]`, `[COLORS]`, `[SHAPES]`.
 
    <br>
 
