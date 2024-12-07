@@ -273,6 +273,8 @@ def _run(
     run_config: ProgramRunConfig
 ) -> None:
 
+    # TODO: Enforce check that supplied reference genome GTF is the same assembly version as build assembly
+
     annotated_transcript_library_path = os.path.join(species_specific_data_dir, "annotated_transcript_library.object")
     if not os.path.exists(annotated_transcript_library_path):
         logger.error(BUILD_NOT_COMPLETED_MESSAGE)
@@ -645,6 +647,7 @@ def main() -> None:
 
             args = parser.parse_args(subsequent_args)
 
+            # TODO: Is this section unreachable?
             if mode_arg.mode == "quant":
                 # For standalone QUANT mode, a run config path can be omitted if genome, input and output are set
                 if args.run_config_path is None and any([
@@ -678,11 +681,11 @@ def main() -> None:
                 if mode_arg.mode == "run":
                     if args.report:
                         enable_generate_report = True
-                        run_config.generate_report = True
+                        run_config.chain_report = True
                         run_config.check_feature_counts()  # Ensure either featureCountsExecutable or geneCounts is set
                     if args.filter:
                         enable_generate_filtered_bam_files = True
-                        run_config.generate_filtered_bam_files = True
+                        run_config.chain_filter = True
                         run_config.check_samtools()  # Ensure samtoolsExecutable is set
                     if args.quant:
                         enable_generate_filtered_bam_files = True
@@ -695,7 +698,7 @@ def main() -> None:
 
                 # TODO: Remove
                 # Enable report generation if specified in config file and not via command line flag
-                if run_config.generate_report:
+                if run_config.chain_report:
                     enable_generate_report = True
                 # The --no-report flag will override behaviour specified elsewhere
                 if args.no_report:
@@ -703,7 +706,7 @@ def main() -> None:
 
                 # TODO: Remove
                 # Enable BAM file filtering if specified in config file and not via command line flag
-                if run_config.generate_filtered_bam_files:
+                if run_config.chain_filter:
                     enable_generate_filtered_bam_files = True
                 # The --no-filter flag will override behaviour specified elsewhere
                 if args.no_filter and not enable_quant:
