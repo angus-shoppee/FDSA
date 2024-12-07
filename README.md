@@ -2,7 +2,7 @@
 # **Feature-Directed Splice Analysis (FDSA)**
 
 ## **Overview**
-The Feature-Directed Splice Analysis (FDSA) pipeline is designed for analyzing splice events affecting specific transcript features in sequencing data. The pipeline relies on configuration files and command-line arguments for flexibility and reproducibility.
+The Feature-Directed Splice Analysis (FDSA) pipeline is designed for analyzing splice events affecting specific transcript features in sequencing data. The pipeline relies on configuration files for flexibility and reproducibility.
 
 ---
 
