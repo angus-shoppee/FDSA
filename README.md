@@ -186,10 +186,10 @@ Boolean parameters can be specified as either `True`/`False` or `Yes`/`No` and a
     - `minTotalOccurrencesAcrossAllSamples` / `minTotalNumberOccurrencesAcrossAllSamples`: Minimum overall number of splice events across all samples required for a gene to be included in the filtered BAM output.
     <br>Default = 1
     - *The following two options are to be used as a pair:*
-      - **A^** `minOccurrencesInSample` / `minNumberOccurrencesInSample`: Only genes with a minimum of A^ splice events in at least B^ samples will be included in the filtered BAM output.
+      - **(A)** `minOccurrencesInSample` / `minNumberOccurrencesInSample`: Only genes with a minimum of (A) splice events in at least (B) samples will be included in the filtered BAM output.
       <br>Default = 1
-      - **B^** `inAtLeastNSamples` / `occurrencesInAtLeastNSamples`: Only genes with a minimum of A^ splice events in at least B^ samples will be included in the filtered BAM output.
-      <br>*The wildcard character `*` may be used to specify that there must be at least A^ reads in ALL samples*
+      - **(B)** `inAtLeastNSamples` / `occurrencesInAtLeastNSamples`: Only genes with a minimum of (A) splice events in at least (B) samples will be included in the filtered BAM output.
+      <br>*The wildcard character `*` may be used to specify that there must be at least (A) reads in ALL samples*
       <br>Default = 1
   - `[QUANT]`
     - `readLength` / `inputReadLength`: Length of reads in input BAM files.
@@ -215,10 +215,10 @@ Boolean parameters can be specified as either `True`/`False` or `Yes`/`No` and a
     - `minTotalOccurrencesAcrossAllSamples` / `minTotalNumberOccurrencesAcrossAllSamples`: Minimum overall number of splice events across all samples required for a gene to be included in the report.
     <br>Default = 1
     - *The following two options are to be used as a pair:*
-      - **A^** `minOccurrencesInSample` / `minNumberOccurrencesInSample`: Only genes with a minimum of A^ splice events in at least B^ samples will be included in the report.
+      - **(A)** `minOccurrencesInSample` / `minNumberOccurrencesInSample`: Only genes with a minimum of (A) splice events in at least (B) samples will be included in the report.
       <br>Default = 1
-      - **B^** `inAtLeastNSamples` / `occurrencesInAtLeastNSamples`: Only genes with a minimum of A^ splice events in at least B^ samples will be included in the report.
-      <br>*The wildcard character `*` may be used to specify that there must be at least A^ reads in ALL samples*
+      - **(B)** `inAtLeastNSamples` / `occurrencesInAtLeastNSamples`: Only genes with a minimum of (A) splice events in at least (B) samples will be included in the report.
+      <br>*The wildcard character `*` may be used to specify that there must be at least (A) reads in ALL samples*
       <br>Default = 1
     - `drawJunctionsMin` / `drawJunctionsMinCount`: Minimum number of junction counts (only applies to junctions NOT overlapping features) required for a junction to be included in a splice graph.
     <br>Default = 2
