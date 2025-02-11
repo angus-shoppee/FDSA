@@ -701,16 +701,16 @@ def main() -> None:
                 if run_config.chain_report:
                     enable_generate_report = True
                 # The --no-report flag will override behaviour specified elsewhere
-                if args.no_report:
-                    enable_generate_report = False
+                # if args.no_report:
+                #     enable_generate_report = False
 
                 # TODO: Remove
                 # Enable BAM file filtering if specified in config file and not via command line flag
                 if run_config.chain_filter:
                     enable_generate_filtered_bam_files = True
                 # The --no-filter flag will override behaviour specified elsewhere
-                if args.no_filter and not enable_quant:
-                    enable_generate_filtered_bam_files = False
+                # if args.no_filter and not enable_quant:
+                #     enable_generate_filtered_bam_files = False
 
                 species_specific_data_dir = os.path.join(base_dir, "data", run_config.species)
 
