@@ -86,14 +86,18 @@ NO_EMAIL_ADDRESS_MESSAGE = ("An email address must be provided in order to make 
 # TODO: Add log file arg
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    # level=logging.DEBUG,
+    format="%(asctime)s : %(name)s : %(levelname)s : %(message)s",
     handlers=[
         # logging.FileHandler("fdsa.log"),
         logging.StreamHandler()
-    ]
+    ],
+    force=True
 )
 
 logger = logging.getLogger(__name__)
+
+# logger.debug("Logger is set to DEBUG")
 
 
 # ==================================================================================================================== #
@@ -225,13 +229,21 @@ def _build(
 
             transcripts_with_refseq = []
             for t in transcript_library.get_all_transcripts():
-                try:
-                    refseq = name_lookup.convert(t.transcript_id, "ensembl", "refseq")
-                    if refseq:
-                        # transcripts_with_refseq.append(t.transcript_id)
-                        transcripts_with_refseq.append(refseq)
-                except KeyError:
-                    pass
+                # Transcripts are only created in TranscriptLibrary.__init__ if there is a matching refseq
+                refseq = name_lookup.convert(t.transcript_id, "ensembl", "refseq")
+                assert refseq is not None
+                transcripts_with_refseq.append(refseq)
+                # try:
+                #     refseq = name_lookup.convert(t.transcript_id, "ensembl", "refseq")
+                #     assert refseq is not None
+                #     if refseq:
+                #         logger.debug(f"~~~ Found REFSEQ for transcript {t.transcript_id} ({t.gene_name})")
+                #         # transcripts_with_refseq.append(t.transcript_id)
+                #         transcripts_with_refseq.append(refseq)
+                # except KeyError:
+                #     logger.debug(f"~X~ No REFSEQ for transcript {t.transcript_id} ({t.gene_name})")
+                #     logger.debug(f"GBSEQ dump:\n{t.gbseq}")
+                #     pass
 
             download_and_save_feature_annotation_xml(
                 list(transcripts_with_refseq),
@@ -287,6 +299,7 @@ def _run(
 
     logger.info(f"Enabling screening for features containing term: \"{run_config.feature_name}\"...")
 
+    # TODO: Refactor function to return new object instead of modify input!
     set_analysis_features(
         run_config.feature_name,
         annotated_transcript_library,
@@ -350,6 +363,7 @@ def _filter(
 
 
 def _quant(
+    # TODO: Change to Optional[]
     run_config: Union[ProgramRunConfig, None],
     user_config: Union[ProgramUserConfig, None] = None,
     stringtie_executable_path: Union[str, None] = None,

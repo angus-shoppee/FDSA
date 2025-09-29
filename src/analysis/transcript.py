@@ -290,6 +290,8 @@ class TranscriptRecord:
             )
 
 
+# TODO: Use better resource for name_lookup build step
+
 class TranscriptLibrary:
 
     species: str
@@ -318,6 +320,7 @@ class TranscriptLibrary:
         _i = 0
         _t = len(gene_names)
 
+        # TODO: Using new lookup, iterate over gene IDs instead (same outcome)
         for gene_name in gene_names:
 
             if _i % 1000 == 0:
@@ -337,9 +340,12 @@ class TranscriptLibrary:
                 # TODO: Log number skipped due to no matching refseq
                 try:
                     refseq = name_lookup.convert(t_id, "ensembl", "refseq")
+                    # logger.debug(f"~~~ Found REFSEQ for transcript {t_id} ({gene_name})")
                 except KeyError:
                     refseq = ""
+                    # logger.debug(f"~X~ No REFSEQ for transcript {t_id} ({gene_name})")
                 if not refseq:
+                    # logger.debug(f"~X~ Got 'None' REFSEQ for transcript {t_id} ({gene_name})")
                     continue
 
                 transcripts[t_id] = TranscriptRecord(
@@ -427,7 +433,7 @@ def annotate_and_save_transcript_library(
     output_path: str,
 ) -> TranscriptLibrary:
 
-    """"Modifies transcript_library to add GBSeq objects for transcripts with a refseq_mrna ID;
+    """Modifies transcript_library to add GBSeq objects for transcripts with a refseq_mrna ID;
     all transcripts without a refseq_mrna ID are deleted"""
 
     # Get all transcripts that have a refseq ID
@@ -467,6 +473,7 @@ def annotate_and_save_transcript_library(
             transcript_library.number_of_transcripts -= 1
             _without_refseq += 1
 
+    # Possible TODO: Should _key_error be counted as a subset of _without_refseq rather than separate tallies?
     logger.info(
         f"... finished with {_successes} successes; removed {_without_refseq} transcripts without refseq ID, " +
         f"{_key_errors} unmappable due to missing or unrecognised ensembl ID, {_no_gbseq} without annotation, "

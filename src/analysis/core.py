@@ -47,6 +47,7 @@ def name_output(
     return sanitize_string_for_filename(f"{run_name} - {feature_name}")
 
 
+# TODO: Refactor function to return new object instead of modify input!
 def set_analysis_features(
     feature_substring: str,
     annotated_transcript_library: TranscriptLibrary,
@@ -359,6 +360,12 @@ def perform_splice_analysis(
         _progress = 0
         for transcripts_by_id in transcript_library.get_transcripts_for_all_genes().values():
 
+            # logger.debug(
+            #     "Analyzing transcripts: " + str(
+            #         [f"{t.transcript_id} ({t.gene_name})" for t in transcripts_by_id.values()]
+            #     )
+            # )
+
             if not transcripts_by_id:
                 continue
 
@@ -374,6 +381,7 @@ def perform_splice_analysis(
             # Skip if gene set is defined and gene name is not in gene set
             if genes is not None:
                 if not genes.get(transcripts[0].gene_name.lower(), False):
+                    # logger.debug(f"Skipped gene (not in gene list): {transcripts[0].gene_name}")
                     _progress += len(transcripts)
                     continue
 
@@ -381,6 +389,9 @@ def perform_splice_analysis(
             if not any(
                 [feature_substring in transcript.gbseq.get_analysis_features().keys() for transcript in transcripts]
             ):
+                # logger.debug(f"Skipped gene (no relevant feature annotation): {transcripts[0].gene_name}")
+                # for _transcript in transcripts:
+                #     logger.debug(f"{_transcript.transcript_id} gbseq.features: { [(_f.start, _f.end, _f.quals) for _f in _transcript.gbseq.features] }")
                 _progress += len(transcripts)
                 continue
 

@@ -27,13 +27,24 @@ import json
 logger = logging.getLogger(__name__)
 
 
+# TODO: Replace biomart with NCBI's "gene2ensembl" for name lookup
+# TODO: Remove redundant conversions from name lookup - only need ensembl -> refseq & ensembl -> geneID
+# TODO: (redundant once implementation upgraded?) fix values stored against "None" as key
+# Possible TODO: For human, allow use of the MANE_Select tag to filter transcripts
+
+
 class NameLookup:
 
-    def __init__(self, name_lookup_dict: Dict[str, Dict[str, Dict[str, str]]]):
+    def __init__(
+        self,
+        name_lookup_dict: Dict[str, Dict[str, Dict[str, str]]]
+    ):
 
         self._dict = name_lookup_dict
 
     def get_all_gene_names(self) -> List[str]:
+
+        # TODO: Refactor to get_all_gene_ids
 
         return [gene_name for gene_name in set(self._dict["ensembl"]["gene"].values()) if gene_name]
 
@@ -53,7 +64,7 @@ class NameLookup:
                 raise ValueError(f"to_format must be either refseq, ensembl or gene. Got: '{to_format}'")
 
         elif from_format == "ensembl":
-            if to_format == "refseq" or "gene":
+            if to_format == "refseq" or to_format == "gene":
                 return self._dict[from_format][to_format][value]
             elif to_format == "ensembl":
                 return value
