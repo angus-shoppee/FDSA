@@ -28,9 +28,12 @@ logger = logging.getLogger(__name__)
 
 
 # TODO: Replace biomart with NCBI's "gene2ensembl" for name lookup
+#       https://ftp.ncbi.nlm.nih.gov/gene/DATA/gene2ensembl.gz
+# TODO: Add option in build config to specify path to gene2ensembl file and avoid downloading
+#       (if auto-downloaded, should be stored in root of build folder for use in future build steps)
 # TODO: Remove redundant conversions from name lookup - only need ensembl -> refseq & ensembl -> geneID
 # TODO: (redundant once implementation upgraded?) fix values stored against "None" as key
-# Possible TODO: For human, allow use of the MANE_Select tag to filter transcripts
+# Possible TODO: For human, allow use of the MANE_Select tag to filter transcripts?
 
 
 class NameLookup:

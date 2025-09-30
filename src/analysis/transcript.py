@@ -290,8 +290,6 @@ class TranscriptRecord:
             )
 
 
-# TODO: Use better resource for name_lookup build step
-
 class TranscriptLibrary:
 
     species: str
@@ -338,6 +336,7 @@ class TranscriptLibrary:
 
                 # Only create TranscriptRecord instance if the transcript ID has a matching refseq ID
                 # TODO: Log number skipped due to no matching refseq
+                pass  # TEST
                 try:
                     refseq = name_lookup.convert(t_id, "ensembl", "refseq")
                     # logger.debug(f"~~~ Found REFSEQ for transcript {t_id} ({gene_name})")
