@@ -9,9 +9,9 @@ FDSA can be used for unbiased genome-wide screening, or directed to a specific l
 FDSA uses a specialized algorithm for identification of splice events, followed by integration of existing tools
 (Samtools, StringTie, and FeatureCounts) for downstream quantification. Finally, a graphical report summarizing splice events of interest can be generated as a portable HTML file.
 
-![Splice rate graph example]("https://imgur.com/d0MqZoJ)
+![Splice rate graph example](https://i.imgur.com/d0MqZoJ.png)
 
-![Splice junction graph example](https://imgur.com/vgV8yrC)
+![Splice junction graph example](https://i.imgur.com/vgV8yrC.png)
 
 ---
 
