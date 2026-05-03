@@ -207,7 +207,8 @@ def _build(
         if force_regenerate_transcript_library or not os.path.exists(transcript_library_path):
             logger.info("Importing reference GTF...")
             # TODO: Use existing internal implementation of GTF parsing and remove gtfparse dependency
-            ref_gtf = read_gtf(genome_gtf_path)
+            # ref_gtf = read_gtf(genome_gtf_path)
+            ref_gtf = read_gtf(genome_gtf_path).to_pandas()
             logger.info("...done\n")
 
             transcript_library = create_and_save_transcript_library(
@@ -308,7 +309,7 @@ def _run(
 
     logger.info(f"Enabling screening for features containing term: \"{run_config.feature_name}\"...")
 
-    # TODO: Refactor function to return new object instead of modify input!
+    # TODO: Refactor function to return new object instead of modify input
     set_analysis_features(
         run_config.feature_name,
         annotated_transcript_library,

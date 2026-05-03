@@ -28,12 +28,12 @@ setup(
     },
     include_package_data=True,
     install_requires=[
-        "conorm>=1.2.0",
+        "conorm==1.2.0",
         "entrezpy>=2.1.3",
-        "gtfparse==1.2.1",
-        "matplotlib>=3.0.0",
-        "numpy>=1.22.2",
-        "pandas>=1.2.4",
+        "gtfparse>=2.0.0",
+        "matplotlib>=3.8,<4",
+        "numpy>=1.26,<2",
+        "pandas>=1.5.3,<2.0",
         "pybiomart>=0.2.0",
         "pysam>=0.15.4"
     ],

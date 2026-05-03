@@ -1,7 +1,16 @@
 # **Feature-Directed Splice Analysis (FDSA)**
 
 ## **Overview**
-The Feature-Directed Splice Analysis (FDSA) pipeline is designed for analyzing splice events affecting specific transcript features in sequencing data. The pipeline relies on configuration files for flexibility and reproducibility.
+Feature-Directed Splice Analysis (FDSA) is a scalable pipeline for the identification and quantification of splice events affecting specific *transcript features* in RNA sequencing data.
+
+A *transcript feature* may be any term matching a feature annotation from GenBank, such as "transmembrane region" or "phosphorylation site".
+FDSA can be used for unbiased genome-wide screening, or directed to a specific list of genes. FDSA can be used with BAM files produced by any splice-aware sequence aligner.
+
+FDSA uses a specialized algorithm for identification of splice events, followed by integration of existing tools
+(Samtools, StringTie, and FeatureCounts) for downstream quantification. Finally, a graphical report summarizing splice events of interest can be generated as a portable HTML file.
+
+<img src="https://imgur.com/d0MqZoJ">
+<img src="https://imgur.com/vgV8yrC">
 
 ---
 
@@ -10,6 +19,9 @@ The Feature-Directed Splice Analysis (FDSA) pipeline is designed for analyzing s
    ```bash
    pip install .
    ```
+   *A conda/mamba environment with python 3.11 is recommended.*
+
+
 2. Set user configuration:
    ```bash
    fdsa user $user_config_path
@@ -23,13 +35,12 @@ The Feature-Directed Splice Analysis (FDSA) pipeline is designed for analyzing s
    fdsa run --filter --quant --report $run_config_path
    ```
 
-
 ---
 
 ## **Runtime Modes**
 FDSA comprises six runtime modes, divided into **setup** and **analysis** categories:
 
-### **Setup Modes**
+### **Setup**
 1. **`user`**: Specifies the location of the user config file, used for setting default parameters and paths to optional dependencies.  
    **Usage**: Run once after installation.  
    **Command**:  
@@ -53,7 +64,7 @@ FDSA comprises six runtime modes, divided into **setup** and **analysis** catego
 
 ---
 
-### **Analysis Modes**
+### **Analysis**
 3. **`run`**: Core analysis mode for detecting splice events.  
    **Usage**: Requires a run config file.  
    **Command**:  
@@ -110,6 +121,10 @@ FDSA comprises six runtime modes, divided into **setup** and **analysis** catego
 
 ## **Configuration Files**
 
+The FDSA pipeline is configured using .config files for flexibility and reproducibility.
+
+Templates for user and run config files can be found in the **examples** directory of this repository.
+
 Parameters may either be strings, integers, decimal numbers, or booleans. For example:
 - `species = "human"` (STRING)
 - `threads = 12` (INTEGER)
@@ -151,7 +166,7 @@ Boolean parameters can be specified as either `True`/`False` or `Yes`/`No` and a
 - **Mandatory Sections**:
   - `[RUN]`
     - (Mandatory) `name` / `runName`: Name to use when generating output directories and files.
-    - (Mandatory) `feature`: Exact text to be matched with feature annotation records to identify transcript features. For example: `feature = "transmembrane region"`
+    - (Mandatory) `feature`: Substring to be matched with feature annotation records to identify transcript features. For example: `feature = "transmembrane region"`
     - (Mandatory) `input` / `inputPath`: Directory containing indexed BAM files.
     - (Mandatory) `bamEnding`: Everything following the sample identifying part of the input BAM file names. For example: `bamEnding = "_Aligned.sortedByCoord.out.bam"`
     - (Mandatory) `pairedEnd` / `pairedEndReads`: Indicates whether input reads are paired-end type (True/False).
@@ -292,8 +307,8 @@ Positional argument:
 
 Options:
   - `--filter`: Chains results into filter mode.
-  - `--quant`: Chains results into quant mode
-  - `--report`: Generates a HTML report upon completion.
+  - `--quant`: Chains results into quant mode (automatically enables filter mode).
+  - `--report`: Generates an HTML report upon completion.
 
 ### **Filter**
 
@@ -342,8 +357,8 @@ Positional argument:
    - Add a mapping from user-facing species name to BioMart gene name to `biomartNameForSpecies`, e.g.
      "human:hsapiens_gene_ensembl"
 
-2. The BioMart API often experiences outages. Changing biomartMirror in user config (e.g. asia.ensembl.org) can sometimes 
-   resolve this, but sometimes all mirrors fail.
+2. The build step currently requires the BioMart API, which has become prone to outages. Changing `biomartMirror` in user 
+   config (e.g. asia.ensembl.org) can sometimes resolve this, but sometimes all mirrors fail.
    Removal of the BioMart dependency is on the roadmap; in the meantime, if unable to perform the build step,
    build files for human and mouse can be requested by raising a GitHub issue on this repository.
 
