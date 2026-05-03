@@ -342,4 +342,9 @@ Positional argument:
    - Add a mapping from user-facing species name to BioMart gene name to `biomartNameForSpecies`, e.g.
      "human:hsapiens_gene_ensembl"
 
+2. The BioMart API often experiences outages. Changing biomartMirror in user config (e.g. asia.ensembl.org) can sometimes 
+   resolve this, but sometimes all mirrors fail.
+   Removal of the BioMart dependency is on the roadmap; in the meantime, if unable to perform the build step,
+   build files for human and mouse can be requested by raising a GitHub issue on this repository.
+
 ---
