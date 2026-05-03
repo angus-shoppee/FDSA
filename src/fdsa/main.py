@@ -79,7 +79,7 @@ USER_CONFIG_NOT_SPECIFIED_MESSAGE = ("A user config file has not been set. No us
                                      "\"fdsa build\" command will require an email_for_apis address to be supplied at "
                                      "run time. To set a user config file, run: \"fdsa user [path-to-config-file]\"")
 
-NO_EMAIL_ADDRESS_MESSAGE = ("An email address must be provided in order to make GenBank API requests. Please "
+NO_EMAIL_ADDRESS_MESSAGE = ("An email address must be provided in order to make Entrez API requests. Please "
                             "either set a user config with a valid \"email\" parameter under the [BUILD] "
                             "section, or otherwise provide an email_for_apis address using the \"--email\" "
                             "option.")
@@ -171,10 +171,13 @@ def _build(
     # Create name lookup if required, otherwise load from file
     name_lookup_path = os.path.join(species_specific_data_dir, "name_lookup.json")
     if force_regenerate_whole_genome_lookup or not os.path.exists(name_lookup_path):
+        biomart_mirror = internal_config.default_biomart_mirror
+        if user_config is not None:
+            if user_config.user_default_biomart_mirror is not None:
+                biomart_mirror = user_config.user_default_biomart_mirror
         name_lookup = create_and_save_name_lookup(
             internal_config.biomart_name_for_species[species],
-            (user_config.user_default_biomart_mirror if user_config.user_default_biomart_mirror is not None
-             else internal_config.default_biomart_mirror),
+            biomart_mirror,
             name_lookup_path
         )
     else:
@@ -561,12 +564,18 @@ def main() -> None:
 
             build_args = build_parser.parse_args(subsequent_args)
 
+            email = build_args.email if build_args.email is not None else (
+                user_config.email_for_apis if user_config is not None else None
+            )
+            if email is None:
+                logger.error(NO_EMAIL_ADDRESS_MESSAGE)
+                exit()
+
             if build_args.run_config_path is None:
-                if not all([
+                if not all((
                     build_args.species,
-                    build_args.genome,
-                    build_args.email
-                ]):
+                    build_args.genome
+                )):
                     logger.error(
                         f"Usage:\n{FDSA_BUILD_COMMAND_USAGE}\n\n"
                         "If no run config file is provided, the --species and --genome options must be set.\n"
@@ -599,13 +608,6 @@ def main() -> None:
                 species = build_args.species
                 genome = build_args.genome
                 threads = build_args.threads if build_args.threads else 1  # Default to single-threaded
-
-            if build_args.email is None and user_config is None:
-                logger.error(NO_EMAIL_ADDRESS_MESSAGE)
-                exit()
-
-            email = build_args.email if build_args.email is not None else user_config.email_for_apis
-            # Possible TODO: Final check for valid email?
 
             if species not in internal_config.allowed_species:
                 logger.error(f"Invalid species (\"{species}\") specified. Options are: " +
