@@ -18,8 +18,8 @@
 from typing import List, Union
 import os
 
-from reporting.process_results import FdsaResult
-from config.parse_config import ProgramRunConfig
+from fdsa.reporting.process_results import FdsaResult
+from fdsa.config.parse_config import ProgramRunConfig
 
 
 RESULTS_TABLE_TEMPLATE = "results_table.html"

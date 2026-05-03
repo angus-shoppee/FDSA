@@ -20,8 +20,8 @@ import csv
 import os
 import configparser
 
-from config.marker_aliases import convert_marker_alias
-from utils.general import remove_quotes, flatten_nested_lists
+from fdsa.config.marker_aliases import convert_marker_alias
+from fdsa.utils.general import remove_quotes, flatten_nested_lists
 
 
 RANK_RESULTS_BY_ALLOWED_VALUES = ["frequency", "number"]

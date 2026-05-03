@@ -21,7 +21,7 @@ from typing import List, Tuple, NamedTuple
 from enum import Flag, auto
 from pysam import AlignmentFile
 
-from analysis.experiment import Sample
+from fdsa.analysis.experiment import Sample
 
 
 DEFAULT_MAPQ_FOR_UNIQUE_MAPPING = 255

@@ -24,8 +24,8 @@ import logging
 import os
 import pickle
 
-from analysis.annotation import GBSeq, RefseqExon
-from analysis.biomart import NameLookup
+from fdsa.analysis.annotation import GBSeq, RefseqExon
+from fdsa.analysis.biomart import NameLookup
 
 
 logger = logging.getLogger(__name__)

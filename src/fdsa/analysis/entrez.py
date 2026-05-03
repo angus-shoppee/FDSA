@@ -28,7 +28,7 @@ from socket import timeout as socket_timeout
 from xml.etree import cElementTree
 from xml.etree.ElementTree import Element
 
-from analysis.annotation import GBSeq, GBFeature, GBQual
+from fdsa.analysis.annotation import GBSeq, GBFeature, GBQual
 
 
 logger = logging.getLogger(__name__)

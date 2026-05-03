@@ -22,11 +22,11 @@ import subprocess
 import csv
 import pandas as pd
 
-from config.quant_merged_column_names import (
+from fdsa.config.quant_merged_column_names import (
     QUANT_MERGED_PREFIX_NORM_CPM, QUANT_MERGED_PREFIX_TRANSCRIPTS_WITHOUT_FEATURE
 )
-from reporting.process_results import FdsaResult
-from downstream.process_stringtie import format_stringtie_matrices, annotate_formatted_stringtie_results
+from fdsa.reporting.process_results import FdsaResult
+from fdsa.downstream.process_stringtie import format_stringtie_matrices, annotate_formatted_stringtie_results
 
 
 # TODO: Enable automatic deletion of generated files

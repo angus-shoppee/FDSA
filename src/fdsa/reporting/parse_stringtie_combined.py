@@ -2,7 +2,7 @@
 from typing import Dict
 import pandas as pd
 
-import config.stringtie_formatted_column_names as stringtie_cols
+import fdsa.config.stringtie_formatted_column_names as stringtie_cols
 
 
 GROUP_TRANSCRIPTS_BY_ID_TYPE = "ref_gene_id"  # Must always be ref_gene_id to match records to fdsa results

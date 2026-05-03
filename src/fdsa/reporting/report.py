@@ -21,14 +21,14 @@ import os
 from pandas import read_csv as pd_read_csv
 from functools import reduce
 
-from config.parse_config import ProgramRunConfig
-from analysis.core import name_output
-from analysis.experiment import Sample
-from analysis.counts import run_feature_counts, get_gene_counts_from_tsv, get_tmm_cpm_from_gene_counts
-from reporting.process_results import load_fdsa_results
-from reporting.plot import plot_transcript, plot_splice_rate
-from reporting.generate_html_report import generate_html_report
-from downstream.quant import (
+from fdsa.config.parse_config import ProgramRunConfig
+from fdsa.analysis.core import name_output
+from fdsa.analysis.experiment import Sample
+from fdsa.analysis.counts import run_feature_counts, get_gene_counts_from_tsv, get_tmm_cpm_from_gene_counts
+from fdsa.reporting.process_results import load_fdsa_results
+from fdsa.reporting.plot import plot_transcript, plot_splice_rate
+from fdsa.reporting.generate_html_report import generate_html_report
+from fdsa.downstream.quant import (
     STRINGTIE_OUTPUT_DIR_NAME, COMBINED_RESULTS_FILE_NAME, write_merged_frequencies_and_gene_counts
 )
 

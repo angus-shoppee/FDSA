@@ -24,20 +24,20 @@ from sys import argv
 # TODO: Remove gtfparse dependency
 from gtfparse import read_gtf
 
-from config.parse_args import (
+from fdsa.config.parse_args import (
     get_mode_parser, get_build_parser, get_run_parser, get_report_parser, get_filter_parser, get_quant_parser
 )
-from config.parse_config import ProgramInternalConfig, ProgramUserConfig, ProgramRunConfig
-from analysis.transcript import (
+from fdsa.config.parse_config import ProgramInternalConfig, ProgramUserConfig, ProgramRunConfig
+from fdsa.analysis.transcript import (
     create_and_save_transcript_library, annotate_and_save_transcript_library, load_transcript_library_from_file
 )
-from analysis.entrez import download_and_save_feature_annotation_xml, get_gbseq_from_xml
-from analysis.biomart import create_and_save_name_lookup, load_name_lookup_from_file
-from analysis.experiment import Sample
-from analysis.core import set_analysis_features, perform_splice_analysis, name_output
-from reporting.report import create_report
-from downstream.filter import generate_filtered_bam_files, FILTERED_BAM_FILES_DEFAULT_DIRECTORY_NAME
-from downstream.quant import quantify_isoforms
+from fdsa.analysis.entrez import download_and_save_feature_annotation_xml, get_gbseq_from_xml
+from fdsa.analysis.biomart import create_and_save_name_lookup, load_name_lookup_from_file
+from fdsa.analysis.experiment import Sample
+from fdsa.analysis.core import set_analysis_features, perform_splice_analysis, name_output
+from fdsa.reporting.report import create_report
+from fdsa.downstream.filter import generate_filtered_bam_files, FILTERED_BAM_FILES_DEFAULT_DIRECTORY_NAME
+from fdsa.downstream.quant import quantify_isoforms
 
 
 # ==================================================================================================================== #

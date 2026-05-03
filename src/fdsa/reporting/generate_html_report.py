@@ -18,11 +18,11 @@
 from typing import List, Dict, Optional
 import os
 
-from config.parse_config import ProgramRunConfig
-from reporting.process_results import FdsaResult
-from reporting.templates.results_table import results_table
-from reporting.templates.transcript_sections import transcript_sections
-from reporting.templates.table_of_contents import table_of_contents
+from fdsa.config.parse_config import ProgramRunConfig
+from fdsa.reporting.process_results import FdsaResult
+from fdsa.reporting.templates.results_table import results_table
+from fdsa.reporting.templates.transcript_sections import transcript_sections
+from fdsa.reporting.templates.table_of_contents import table_of_contents
 
 
 REPORT_TEMPLATE = "templates/main_report.html"

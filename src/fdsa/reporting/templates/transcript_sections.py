@@ -20,8 +20,8 @@ import os
 import re
 from dataclasses import dataclass
 
-from config.parse_config import ProgramRunConfig
-from reporting.process_results import FdsaResult
+from fdsa.config.parse_config import ProgramRunConfig
+from fdsa.reporting.process_results import FdsaResult
 
 
 # TODO: Conditionally include stringtie plot explanation depending on whether stringtie output was found

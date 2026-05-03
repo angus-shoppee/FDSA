@@ -20,10 +20,10 @@ import logging
 import csv
 import os
 
-from utils.general import divide_or_default_zero
-from downstream.parse_gtf import get_stringtie_transcripts_from_gtf, GtfTranscript
-import config.stringtie_formatted_column_names as cols
-import config.output_column_names as fdsa_output_cols
+from fdsa.utils.general import divide_or_default_zero
+from fdsa.downstream.parse_gtf import get_stringtie_transcripts_from_gtf, GtfTranscript
+import fdsa.config.stringtie_formatted_column_names as cols
+import fdsa.config.output_column_names as fdsa_output_cols
 
 
 logger = logging.getLogger(__name__)

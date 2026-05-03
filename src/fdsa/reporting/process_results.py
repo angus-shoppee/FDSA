@@ -19,9 +19,9 @@ from typing import List, Tuple, Dict, Any, Union, Optional
 import csv
 import pandas as pd
 
-from config import output_column_names as cols
-from analysis.experiment import Sample
-from reporting.parse_stringtie_combined import calculate_fraction_lacking_feature
+from fdsa.config import output_column_names as cols
+from fdsa.analysis.experiment import Sample
+from fdsa.reporting.parse_stringtie_combined import calculate_fraction_lacking_feature
 
 
 FDSA_RESULT_FREQUENCY_COLUMN_PREFIX = "Percent "

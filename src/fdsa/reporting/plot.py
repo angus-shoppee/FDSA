@@ -24,7 +24,7 @@ from matplotlib import pyplot as plt
 from matplotlib import patches
 from matplotlib.path import Path
 
-from reporting.process_results import QuantifiedSpliceJunctionLocus, FdsaResult
+from fdsa.reporting.process_results import QuantifiedSpliceJunctionLocus, FdsaResult
 
 
 def find_location_within_exon(

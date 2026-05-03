@@ -20,9 +20,9 @@ import logging
 import os
 import subprocess
 
-from config.parse_config import ProgramRunConfig
-from analysis.core import name_output, Sample
-from reporting.process_results import load_fdsa_results
+from fdsa.config.parse_config import ProgramRunConfig
+from fdsa.analysis.core import name_output, Sample
+from fdsa.reporting.process_results import load_fdsa_results
 
 
 SAM_FLAG_REVERSE_STRAND = 16  # If this flag is present in a read, it is mapped to the reverse strand

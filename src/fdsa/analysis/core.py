@@ -26,10 +26,10 @@ import csv
 import time
 from statistics import mean
 
-from config import output_column_names as cols
-from analysis.transcript import TranscriptRecord, TranscriptLibrary
-from analysis.experiment import Sample
-from analysis.splice import DEFAULT_MAPQ_FOR_UNIQUE_MAPPING, SpliceJunction, get_splice_junctions_from_sample
+from fdsa.config import output_column_names as cols
+from fdsa.analysis.transcript import TranscriptRecord, TranscriptLibrary
+from fdsa.analysis.experiment import Sample
+from fdsa.analysis.splice import DEFAULT_MAPQ_FOR_UNIQUE_MAPPING, SpliceJunction, get_splice_junctions_from_sample
 
 
 logger = logging.getLogger(__name__)

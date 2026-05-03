@@ -20,10 +20,14 @@ from setuptools import setup, find_packages
 
 setup(
     name="fdsa",
-    version="0.1.0",
+    version="0.1.1",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     py_modules=["main"],
+    package_data={
+        "fdsa": ["config/*.config"]
+    },
+    include_package_data=True,
     install_requires=[
         "conorm>=1.2.0",
         "entrezpy>=2.1.3",
