@@ -23,7 +23,6 @@ setup(
     version="0.1.1",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
-    py_modules=["main"],
     package_data={
         "fdsa": ["config/*.config"]
     },
@@ -40,7 +39,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "fdsa=main:main"
+            "fdsa=fdsa.main:main"
         ]
     },
     classifiers=[

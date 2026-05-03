@@ -19,6 +19,7 @@ from typing import Union, List, Dict
 import csv
 import os
 import configparser
+from importlib.resources import files
 
 from fdsa.config.marker_aliases import convert_marker_alias
 from fdsa.utils.general import remove_quotes, flatten_nested_lists
@@ -708,7 +709,10 @@ class ProgramRunConfig:
         run_config.read(run_config_path)
 
         if user_config is None:
-            user_config = ProgramUserConfig(os.path.join("src", "config", "null_user.config"))
+            # user_config = ProgramUserConfig(os.path.join("src", "config", "null_user.config"))
+            user_config = ProgramUserConfig(
+                files("fdsa").joinpath("config/null_user.config")
+            )
 
         if "RUN" not in run_config:
             raise ValueError(_e + f"Missing mandatory section RUN (run settings)")

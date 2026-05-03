@@ -15,11 +15,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from typing import Union
+from typing import Union, Optional
 import gc
 import os
 import logging
 import argparse
+from pathlib import Path
+# TODO: Refactor all paths to pathlib.Path
+from platformdirs import user_data_dir
+from importlib.resources import files
 from sys import argv
 # TODO: Remove gtfparse dependency
 from gtfparse import read_gtf
@@ -42,6 +46,8 @@ from fdsa.downstream.quant import quantify_isoforms
 
 # ==================================================================================================================== #
 
+
+PROGRAM_NAME = "fdsa"
 
 PROGRAM_DESCRIPTION = "Feature-Directed Splice Analysis"
 
@@ -139,7 +145,7 @@ def _build(
     email: str,
     n_threads: int,
     internal_config: ProgramInternalConfig,
-    user_config: ProgramUserConfig,
+    user_config: Optional[ProgramUserConfig],
     force_redo_annotate_transcript_library: bool = False,
     force_regenerate_whole_genome_lookup: bool = False,
     force_regenerate_transcript_library: bool = False,
@@ -467,8 +473,12 @@ def _quant(
 
 def main() -> None:
 
-    base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))  # Parent directory of src
-    stored_user_config_path = os.path.join(base_dir, "data", ".user_config_path")
+    # base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))  # Parent directory of src
+
+    data_dir = Path(user_data_dir(PROGRAM_NAME))
+    data_dir.mkdir(parents=True, exist_ok=True)
+
+    stored_user_config_path = os.path.join(data_dir, "data", ".user_config_path")
 
     mode_parser = get_mode_parser(PROGRAM_DESCRIPTION)
 
@@ -507,8 +517,8 @@ def main() -> None:
 
     else:
 
-        if not os.path.isdir(os.path.join(base_dir, "data")):
-            os.mkdir(os.path.join(base_dir, "data"))
+        if not os.path.isdir(os.path.join(data_dir, "data")):
+            os.mkdir(os.path.join(data_dir, "data"))
 
         if os.path.exists(stored_user_config_path):
             with open(stored_user_config_path, "r") as f:
@@ -520,8 +530,9 @@ def main() -> None:
             logger.warning(USER_CONFIG_NOT_SPECIFIED_MESSAGE + "\n")
             user_config_path = None
 
+        # internal_config = ProgramInternalConfig(os.path.join(base_dir, "src", "config", "internal.config"))
         internal_config = ProgramInternalConfig(
-            os.path.join(base_dir, "src", "config", "internal.config")
+            files("fdsa").joinpath("config/internal.config")
         )
         if user_config_path is not None:
             try:
@@ -605,9 +616,10 @@ def main() -> None:
                 logger.error(f"The specified reference genome GTF file was not found. Path: {genome}")
                 exit()
 
-            species_specific_data_dir = os.path.join(base_dir, "data", str(species))
+            species_specific_data_dir = os.path.join(data_dir, "data", str(species))
 
             # Execute build
+            logger.info(f"Writing build files to: {species_specific_data_dir}")
             _build(
                 species_specific_data_dir,
                 species,
@@ -726,7 +738,7 @@ def main() -> None:
                 # if args.no_filter and not enable_quant:
                 #     enable_generate_filtered_bam_files = False
 
-                species_specific_data_dir = os.path.join(base_dir, "data", run_config.species)
+                species_specific_data_dir = os.path.join(data_dir, "data", run_config.species)
 
                 # Execute run
                 _run(
