@@ -246,6 +246,8 @@ class PlotJunction:
 
 def plot_transcript(
     fdsa_result: FdsaResult,
+    group_name_by_sample_name: Dict[str, str],
+    color_by_group_name: Dict[str, str],
     draw_junctions_with_min_n_occurrences: int = 1,
     show_main_title: bool = True,
     limit_to_samples: Union[None, List[str]] = None
@@ -453,6 +455,7 @@ def plot_transcript(
         ylim = [0.5 - (0.03 * tallest_curve_reached), 2.5 + (1.05 * tallest_curve_reached)]
 
         subplot_elements[plot_index]["sample_name"] = sample_name
+        subplot_elements[plot_index]["sample_group"] = group_name_by_sample_name[sample_name]
         subplot_elements[plot_index]["exon_annotations"] = exon_annotations
         subplot_elements[plot_index]["curve_annotations"] = curve_annotations
         subplot_elements[plot_index]["connection_annotations"] = connection_annotations
@@ -476,6 +479,7 @@ def plot_transcript(
     for plot_index in range(n_samples):
 
         sample_name = subplot_elements[plot_index]["sample_name"]
+        sample_group = subplot_elements[plot_index]["sample_group"]
         # exon_annotations = subplot_elements[plot_index]["exon_annotations"]
         curve_annotations = subplot_elements[plot_index]["curve_annotations"]
         connection_annotations = subplot_elements[plot_index]["connection_annotations"]
@@ -538,7 +542,20 @@ def plot_transcript(
 
         ax.axis("off")
 
-        ax.set_title(sample_name, size=24)
+        ax.set_title(
+            sample_name,
+            size=24
+        )
+        ax.text(
+            0.5,
+            1.0,
+            sample_group,
+            color=color_by_group_name[sample_group],
+            size=18,
+            ha='center',
+            va='top',
+            transform=ax.transAxes
+        )
 
     main_title = f"{fdsa_result.gene_name} - Feature {fdsa_result.feature_number} " + \
                  f"of {fdsa_result.total_features_in_transcript}"
@@ -576,8 +593,16 @@ def plot_splice_rate(
     show_main_title: bool = True
 ) -> str:
 
+    # use_stringtie_frequency = fdsa_result.stringtie_frequencies is not None
+    # y_label = "Transcripts without feature (%)" if use_stringtie_frequency else "Splice event detection (%)"
+    y_label = "Transcripts without feature (%)"
+
+    # TODO: Include both graphs if desired by user
+    frequencies_for_plotting = fdsa_result.stringtie_frequencies
+
     x, y, color, shape, labels = [], [], [], [], []
-    for sample_name, frequency in fdsa_result.frequencies.items():
+    # for sample_name, frequency in fdsa_result.frequencies.items():
+    for sample_name, frequency in frequencies_for_plotting.items():
         y.append(frequency)
         x.append(norm_gene_counts.loc[fdsa_result.gene_id][sample_name])
         color.append(color_by_group_name[group_name_by_sample[sample_name]])
@@ -596,8 +621,12 @@ def plot_splice_rate(
             s=100
         )
 
+    plt.xlim(left=0)
+    plt.ylim(bottom=0)
+
     plt.xlabel("Gene expression (TMM norm. CPM)", fontsize=22)
-    plt.ylabel("Splice event detection (%)", fontsize=22)
+    # plt.ylabel("Splice event detection (%)", fontsize=22)
+    plt.ylabel(y_label, fontsize=22)
     ax.tick_params(axis='both', which='major', labelsize=18)
 
     handles, labels = ax.get_legend_handles_labels()

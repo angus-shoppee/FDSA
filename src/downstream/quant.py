@@ -15,12 +15,26 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from typing import Dict, Optional
+from typing import List, Dict, Optional
 import logging
 import os
 import subprocess
+import csv
+import pandas as pd
 
+from config.quant_merged_column_names import (
+    QUANT_MERGED_PREFIX_NORM_CPM, QUANT_MERGED_PREFIX_TRANSCRIPTS_WITHOUT_FEATURE
+)
+from reporting.process_results import FdsaResult
 from downstream.process_stringtie import format_stringtie_matrices, annotate_formatted_stringtie_results
+
+
+# TODO: Enable automatic deletion of generated files
+
+
+STRINGTIE_OUTPUT_DIR_NAME = "STRINGTIE"
+
+COMBINED_RESULTS_FILE_NAME = "combined_stringtie_results"
 
 
 logger = logging.getLogger(__name__)
@@ -48,7 +62,7 @@ def quantify_isoforms(
     if not os.path.isdir(filtered_bam_dir):
         raise ValueError(f"Invalid path supplied for filtered BAM directory: {filtered_bam_dir}")
 
-    stringtie_out_dir = os.path.join(output_base_dir, "STRINGTIE")
+    stringtie_out_dir = os.path.join(output_base_dir, STRINGTIE_OUTPUT_DIR_NAME)
     if not os.path.isdir(stringtie_out_dir):
         if os.path.exists(stringtie_out_dir):
             raise FileExistsError(f"Could not create output directory ({stringtie_out_dir}): already exists as file")
@@ -93,12 +107,6 @@ def quantify_isoforms(
             encoding="utf8",
             check=check_exit_code
         )
-
-        # # DEV: Break after second iteration
-        # _n += 1
-        # if _n >= 2:
-        #     logger.debug("[DEV] stopped after 2 files")
-        #     break
 
     logger.info("[Stringtie] ... done")
 
@@ -165,12 +173,6 @@ def quantify_isoforms(
             check=check_exit_code
         )
 
-        # # DEV: Break after second iteration
-        # _n += 1
-        # if _n >= 2:
-        #     logger.debug("[DEV] stopped after 2 files")
-        #     break
-
     logger.info("[Stringtie] ... done")
 
     # Run prepDE script
@@ -195,7 +197,7 @@ def quantify_isoforms(
         "-t", prep_de_transcript_counts_path
     ]
     if read_length is not None:
-        prep_de_cmd_split += ["-l", read_length]
+        prep_de_cmd_split += ["-l", str(read_length)]
     subprocess.run(
         prep_de_cmd_split,
         cwd=prep_de_out_dir,
@@ -207,7 +209,7 @@ def quantify_isoforms(
 
     logger.info("[FDSA] Combining stringtie results...")
 
-    formatted_stringtie_output_path = os.path.join(stringtie_out_dir, "combined_stringtie_results.csv")
+    formatted_stringtie_output_path = os.path.join(stringtie_out_dir, f"{COMBINED_RESULTS_FILE_NAME}.csv")
 
     format_stringtie_matrices(
         prep_de_gene_counts_path,
@@ -233,3 +235,37 @@ def quantify_isoforms(
     else:
 
         logger.info("[FDSA] No FDSA output supplied - stringtie results will not be annotated.")
+
+
+def write_merged_frequencies_and_gene_counts(
+    fdsa_results: List[FdsaResult],
+    norm_gene_counts: pd.DataFrame,
+    output_path: str
+) -> None:
+
+    sample_names = list(fdsa_results[0].stringtie_frequencies.keys())
+
+    with open(output_path, "w") as f:
+
+        dump_output_writer = csv.writer(f)
+
+        dump_output_writer.writerow(
+            FdsaResult.get_serialized_header_for_info_cols() +
+            [f"{QUANT_MERGED_PREFIX_NORM_CPM}.{sample_name}" for sample_name in sample_names] +
+            [f"{QUANT_MERGED_PREFIX_TRANSCRIPTS_WITHOUT_FEATURE}.{sample_name}" for sample_name in sample_names]
+        )
+
+        for fdsa_result in fdsa_results:
+
+            cpm = norm_gene_counts.loc[fdsa_result.gene_id]
+
+            # stringtie_frequencies_list = [self.stringtie_frequencies[sample_name] for sample_name in sample_names]
+            # *[f"{fq:.4f}" for fq in stringtie_frequencies_list]
+
+            dump_output_writer.writerow(
+                fdsa_result.serialize_info_cols() +
+                # [f"{cpm[sample_name]:.4f}" for sample_name in sample_names] +
+                # [f"{fdsa_result.frequencies[sample_name]:.4f}" for sample_name in sample_names]
+                [cpm[sample_name] for sample_name in sample_names] +
+                [fdsa_result.stringtie_frequencies[sample_name] for sample_name in sample_names]
+            )

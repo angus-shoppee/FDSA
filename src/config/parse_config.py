@@ -69,6 +69,9 @@ class ProgramInternalConfig:
     biomart_name_for_species: Dict[str, str]
     default_biomart_mirror: str
     default_mapq_for_unique_mapping: int
+    default_chain_filter: bool
+    default_chain_quant: bool
+    default_chain_report: bool
     default_rank_results_by: str
     default_feature_junction_overlap_threshold: float
     default_max_n_features_in_transcript: int
@@ -77,14 +80,12 @@ class ProgramInternalConfig:
     # ^ skip_transcripts_with_redundant_feature_annotation is overridden by only_use_longest_annotated_transcript=True
     default_include_all_junctions_in_output: bool
     default_paired_end_reads: bool
-    default_generate_report: bool
     default_save_normalized_gene_counts: bool
     default_draw_junctions_min_count: int
     default_point_color_in_plot: str
     default_point_shape_in_plot: str
     default_feature_counts_primary_alignment_only: bool
     # Possible TODO: Generalise default_feature_counts_primary_alignment_only to default_primary_alignment_only
-    default_generate_filtered_bam_files: bool
     default_filter_unique_mapping_only: bool
     default_assign_reference_gene: bool
 
@@ -125,6 +126,27 @@ class ProgramInternalConfig:
         self.default_biomart_mirror = default_biomart_mirror
 
         # [RUN]
+
+        default_chain_filter = config.get(
+            "RUN", "defaultEnableFilter", fallback=None
+        )
+        if default_chain_filter is None:
+            raise ValueError(_e + f"Missing mandatory parameter \"defaultEnableFilter\" in section RUN")
+        self.default_chain_filter = parse_bool(default_chain_filter)
+
+        default_chain_quant = config.get(
+            "RUN", "defaultEnableQuant", fallback=None
+        )
+        if default_chain_quant is None:
+            raise ValueError(_e + f"Missing mandatory parameter \"defaultEnableQuant\" in section RUN")
+        self.default_chain_quant = parse_bool(default_chain_quant)
+
+        default_chain_report = config.get(
+            "RUN", "defaultEnableReport", fallback=None
+        )
+        if default_chain_report is None:
+            raise ValueError(_e + f"Missing mandatory parameter \"defaultGenerateReport\" in section RUN")
+        self.default_chain_report = parse_bool(default_chain_report)
 
         default_mapq_for_unique_mapping = config.get(
             "RUN", "defaultMapqForUniqueMapping", fallback=None
@@ -194,13 +216,6 @@ class ProgramInternalConfig:
 
         # [REPORT]
 
-        default_generate_report = config.get(
-            "REPORT", "defaultGenerateReport", fallback=None
-        )
-        if default_generate_report is None:
-            raise ValueError(_e + f"Missing mandatory parameter \"defaultGenerateReport\" in section REPORT")
-        self.default_generate_report = parse_bool(default_generate_report)
-
         default_save_normalized_gene_counts = config.get(
             "REPORT", "defaultSaveNormalizedGeneCounts", fallback=None
         )
@@ -241,13 +256,6 @@ class ProgramInternalConfig:
 
         # [FILTER]
 
-        default_filter_bam_files = config.get(
-            "FILTER", "defaultFilterBamFiles", fallback=None
-        )
-        if default_filter_bam_files is None:
-            raise ValueError(_e + f"Missing mandatory parameter \"defaultFilterBamFiles\" in section FILTER")
-        self.default_generate_filtered_bam_files = parse_bool(default_filter_bam_files)
-
         default_filter_unique_mapping_only = config.get(
             "FILTER", "defaultUniqueMappingOnly", fallback=None
         )
@@ -272,8 +280,9 @@ class ProgramInternalConfig:
 class ProgramUserConfig:
     email_for_apis: str
     user_default_biomart_mirror: Union[None, str]
-    user_default_generate_report: Union[None, bool]
-    user_default_generate_filtered_bam_files: Union[None, bool]
+    user_default_chain_filter: Union[None, bool]
+    user_default_chain_quant: Union[None, bool]
+    user_default_chain_report: Union[None, bool]
     user_default_n_threads: Union[None, int]
     user_default_max_n_features_in_transcript: Union[None, int]
     user_default_only_use_longest_annotated_transcript: Union[None, int]
@@ -334,17 +343,29 @@ class ProgramUserConfig:
 
         # [DEFAULT RUN]
 
-        user_default_generate_report = user_config.get("DEFAULT RUN", "report", fallback=None)
-        self.user_default_generate_report = None if user_default_generate_report is None else \
-            parse_bool(user_default_generate_report)
-
-        user_default_generate_filtered_bam_files = user_config.get(
-            "DEFAULT RUN", "filterBamFiles", fallback=user_config.get(
+        user_default_chain_filter = user_config.get(
+            "DEFAULT RUN", "enableFilter", fallback=user_config.get(
                 "DEFAULT RUN", "filter", fallback=None
             )
         )
-        self.user_default_generate_filtered_bam_files = None if user_default_generate_filtered_bam_files is None else \
-            parse_bool(user_default_generate_filtered_bam_files)
+        self.user_default_chain_filter = None if user_default_chain_filter is None else \
+            parse_bool(user_default_chain_filter)
+
+        user_default_chain_quant = user_config.get(
+            "DEFAULT RUN", "enableQuant", fallback=user_config.get(
+                "DEFAULT RUN", "quant", fallback=None
+            )
+        )
+        self.user_default_chain_quant = None if user_default_chain_quant is None else \
+            parse_bool(user_default_chain_quant)
+
+        user_default_chain_report = user_config.get(
+            "DEFAULT RUN", "enableReport", fallback=user_config.get(
+                "DEFAULT RUN", "report", fallback=None
+            )
+        )
+        self.user_default_chain_report = None if user_default_chain_report is None else \
+            parse_bool(user_default_chain_report)
 
         user_default_n_threads = user_config.get("DEFAULT RUN", "threads", fallback=None)
         self.user_default_n_threads = None if user_default_n_threads is None else int(user_default_n_threads)
@@ -520,7 +541,9 @@ class ProgramUserConfig:
         user_default_filter_samtools_executable = user_config.get(
             "DEFAULT FILTER", "samtoolsExecutableLocation", fallback=user_config.get(
                 "DEFAULT FILTER", "samtoolsExecutablePath", fallback=user_config.get(
-                    "DEFAULT FILTER", "samtoolsExecutable", fallback=None
+                    "DEFAULT FILTER", "samtoolsExecutable", fallback=user_config.get(
+                        "DEFAULT FILTER", "samtools", fallback=None
+                    )
                 )
             )
         )
@@ -640,8 +663,9 @@ class ProgramRunConfig:
     feature_junction_overlap_threshold: float
     primary_alignment_only: bool
     mapq_for_unique_mapping: int
-    generate_report: bool
-    generate_filtered_bam_files: bool
+    chain_filter: bool
+    chain_quant: bool
+    chain_report: bool
     report_name: str
     report_genes: Union[None, Dict[str, bool]]  # As with .genes, check .report_genes.get(gene_name, False)
     report_n_threads: int
@@ -706,14 +730,22 @@ class ProgramRunConfig:
                                   f"match) in section RUN")
         self.feature_name = feature_name
 
-        output_path = run_config.get("RUN", "output", fallback=None)
+        output_path = run_config.get(
+            "RUN", "outputPath", fallback=run_config.get(
+                "RUN", "output", fallback=None
+            )
+        )
         if output_path is None:
             raise ValueError(_e + f"Missing mandatory parameter \"output\" (output path for results) in section RUN")
         if os.path.exists(output_path) and not os.path.isdir(output_path):
             raise ValueError(_e + f"The specified output path exists but it is not a directory: {output_path}")
         self.output_path = output_path
 
-        input_path = run_config.get("RUN", "input", fallback=None)
+        input_path = run_config.get(
+            "RUN", "inputPath", fallback=run_config.get(
+                "RUN", "input", fallback=None
+            )
+        )
         if input_path is None:
             raise ValueError(_e + f"Missing mandatory parameter \"input\" (path to folder containing BAM files) in "
                                   f"section RUN")
@@ -769,6 +801,8 @@ class ProgramRunConfig:
                                   f"section RUN")
         self.genome = genome
 
+        # [RUN] - Optional parameters
+
         genes = run_config.get(
             "RUN", "geneList", fallback=run_config.get(
                 "RUN", "geneSet", fallback=run_config.get(
@@ -795,8 +829,6 @@ class ProgramRunConfig:
             # Allow inline gene set to be delimited by either spaces or commas
             self.genes = {remove_quotes(gene_name).lower(): True for gene_name in genes.replace(",", " ").split()}
 
-        # [RUN] - Optional parameters
-
         n_threads = run_config.get("RUN", "threads", fallback=(
             user_config.user_default_n_threads
             if user_config.user_default_n_threads is not None
@@ -820,24 +852,35 @@ class ProgramRunConfig:
         else:
             self.max_n_features_in_transcript = int(max_n_features_in_transcript)
 
-        generate_report = run_config.get("RUN", "report", fallback=(
-            user_config.user_default_generate_report
-            if user_config.user_default_generate_report is not None
-            else internal_config.default_generate_report
-        ))
-        self.generate_report = parse_bool(generate_report)
-
-        generate_filtered_bam_files = run_config.get(
-            "RUN", "filterBamFiles", fallback=run_config.get(
+        chain_filter = run_config.get(
+            "RUN", "enableFilter", fallback=run_config.get(
                 "RUN", "filter", fallback=(
-                    user_config.user_default_generate_filtered_bam_files
-                    if user_config.user_default_generate_filtered_bam_files is not None
-                    else internal_config.default_generate_filtered_bam_files
+                    user_config.user_default_chain_filter
+                    if user_config.user_default_chain_filter is not None
+                    else internal_config.default_chain_filter
                 )
             )
         )
-        self.generate_filtered_bam_files = parse_bool(generate_filtered_bam_files)
+        self.chain_filter = parse_bool(chain_filter)
 
+        chain_quant = run_config.get(
+            "RUN", "enableQuant", fallback=run_config.get(
+                "RUN", "quant", fallback=(
+                    user_config.user_default_chain_quant
+                    if user_config.user_default_chain_quant is not None
+                    else internal_config.default_chain_quant
+                )
+            )
+        )
+
+        chain_report = run_config.get("RUN", "report", fallback=(
+            user_config.user_default_chain_report
+            if user_config.user_default_chain_report is not None
+            else internal_config.default_chain_report
+        ))
+        self.chain_report = parse_bool(chain_report)
+
+        # TODO: Make obsolete?
         primary_alignment_only = run_config.get(
             "RUN", "primaryAlignmentOnly", fallback=run_config.get(
                 "RUN", "primaryAlignment", fallback=(
@@ -1087,7 +1130,9 @@ class ProgramRunConfig:
         filter_samtools_executable = run_config.get(
             "FILTER", "samtoolsExecutableLocation", fallback=run_config.get(
                 "FILTER", "samtoolsExecutablePath", fallback=run_config.get(
-                    "FILTER", "samtoolsExecutable", fallback=user_config.user_default_filter_samtools_executable
+                    "FILTER", "samtoolsExecutable", fallback=run_config.get(
+                        "FILTER", "samtools", fallback=user_config.user_default_filter_samtools_executable
+                    )
                 )
             )
         )
@@ -1289,7 +1334,7 @@ class ProgramRunConfig:
     def check_feature_counts(self) -> None:
 
         if all([
-            self.generate_report,
+            self.chain_report,
             self.report_feature_counts_executable is None,
             self.report_gene_count_matrix is None
         ]):
@@ -1300,7 +1345,7 @@ class ProgramRunConfig:
 
     def check_samtools(self) -> None:
 
-        if self.generate_filtered_bam_files and self.filter_samtools_executable is None:
+        if self.chain_filter and self.filter_samtools_executable is None:
             raise ValueError(f"Generation of filtered BAM files requires samtools. "
                              f"If the filterBamFiles option has been enabled, then the samtoolsExecutable parameter "
                              f"must be set either in the FILTER section of run config, or in the DEFAULT FILTER "

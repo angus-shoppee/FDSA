@@ -15,12 +15,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 import os
+import re
 from dataclasses import dataclass
 
 from config.parse_config import ProgramRunConfig
 from reporting.process_results import FdsaResult
+
+
+# TODO: Conditionally include stringtie plot explanation depending on whether stringtie output was found
 
 
 TRANSCRIPT_SECTIONS_TEMPLATE = "transcript_sections.html"
@@ -39,27 +43,32 @@ class TranscriptSectionRenderInfo:
     section_title: str
     gene_name: str
     gene_id: str
+    transcript_id: str
     n_exons: int
     feature_name: str
     feature_qualifiers: str
     feature_no: int
     n_features: int
-    expression_plot_uri: str
+    expression_plot_uri: Optional[str]
     splice_plot_uri: str
 
 
-def transcript_unit_section(
+def generate_transcript_unit_section(
     html_template: str,
     render_info: TranscriptSectionRenderInfo
 ) -> str:
 
-    return html_template.format(**vars(render_info))
+    formatted_html = html_template.format(**vars(render_info))
+
+    # Delete expression plot container div if image is null
+    null_src_regex_pattern = r"""<div class="expression-plot-container">.*?<img src=""[^>]*>.*?</div>"""
+    return re.sub(null_src_regex_pattern, '', formatted_html, flags=re.DOTALL)
 
 
 def transcript_sections(
     run_config: ProgramRunConfig,
     fdsa_results: List[FdsaResult],
-    plots: Dict[str, Dict[str, str]],
+    plots: Dict[str, Dict[str, Optional[str]]],
     svg_scheme: str
 ) -> Tuple[str, List[TranscriptSectionRenderInfo]]:
 
@@ -70,14 +79,19 @@ def transcript_sections(
                           f"({fdsa_result.feature_number} of {fdsa_result.total_features_in_transcript})",
             gene_name=fdsa_result.gene_name,
             gene_id=fdsa_result.gene_id,
+            transcript_id=fdsa_result.transcript_id,
             n_exons=len(fdsa_result.exon_positions),
             feature_name=run_config.feature_name,
             feature_qualifiers=fdsa_result.feature_qualifiers,
             feature_no=fdsa_result.feature_number,
             n_features=fdsa_result.total_features_in_transcript,
-            expression_plot_uri=svg_scheme + plots[
-                f"{fdsa_result.transcript_id}-{fdsa_result.feature_number}"
-            ]["expression"],
+            expression_plot_uri="" if plots[
+                    f"{fdsa_result.transcript_id}-{fdsa_result.feature_number}"
+                ]["expression"] is None else (
+                svg_scheme + plots[
+                    f"{fdsa_result.transcript_id}-{fdsa_result.feature_number}"
+                ]["expression"]
+            ),
             splice_plot_uri=svg_scheme + plots[
                 f"{fdsa_result.transcript_id}-{fdsa_result.feature_number}"
             ]["splice"]
@@ -113,7 +127,7 @@ def transcript_sections(
             max_per_group_text=max_per_group_text,
             junction_limit_text=junction_limit_text,
             transcript_unit_sections="\n".join([
-                transcript_unit_section(section_unit_template, render_info)
+                generate_transcript_unit_section(section_unit_template, render_info)
                 for render_info in all_section_render_info
             ])
         )

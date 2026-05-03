@@ -1,4 +1,3 @@
-
 # **Feature-Directed Splice Analysis (FDSA)**
 
 ## **Overview**
@@ -130,7 +129,6 @@ Boolean parameters can be specified as either `True`/`False` or `Yes`/`No` and a
 - **Purpose**: Sets default parameters and paths to optional dependencies.
 - **Mandatory Section**:
   - `[BUILD]`
-    - `email` / `emailAddress`: Email address to attach to Entrez API queries.
     - `biomart` / `biomartMirror`: (Optional) Ensembl base URL for API queries.
     <br>Default = "http://asia.ensembl.org"
 

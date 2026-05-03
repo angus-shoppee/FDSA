@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from typing import List, Dict
+from typing import List, Dict, Optional
 import os
 
 from config.parse_config import ProgramRunConfig
@@ -37,9 +37,12 @@ JUMP_TO_TRANSCRIPTS_ID = "transcript-sections-intro"
 def generate_html_report(
     run_config: ProgramRunConfig,
     fdsa_results: List[FdsaResult],
-    plots: Dict[str, Dict[str, str]],
+    plots: Dict[str, Dict[str, Optional[str]]],
     svg_scheme: str = SVG_SCHEME
 ) -> str:
+
+    # TODO: Show stringtie percentages in Results table
+    # TODO: Add option to sort by stringtie percentage instead of internal percentage
 
     results_table_html = results_table(run_config, fdsa_results)
 

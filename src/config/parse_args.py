@@ -90,7 +90,7 @@ def get_build_parser() -> ArgumentParser:
         "--threads",
         type=int,
         required=False,
-        help="Number of threads to use during build process for speed improvements"
+        help="Number of threads to use during build process for speed improvements."
     )
     build_parser.add_argument(
         "--regenerate-lookup",
@@ -147,13 +147,14 @@ def get_run_parser() -> ArgumentParser:
     run_parser.add_argument(
         "--report",
         action="store_true",
-        help="Generates a visual report for the output of FDSA's analysis upon completion."
+        help="Generates a visual report for the output of FDSA's analysis upon completion; generates a merged table of "
+             "TMM normalized gene counts and Stringtie frequencies if quant mode output is detected."
     )
-    run_parser.add_argument(
-        "--no-report",
-        action="store_true",
-        help="Disables automatic report generation, overriding default behaviour and behaviour set in run config."
-    )
+    # run_parser.add_argument(
+    #     "--no-report",
+    #     action="store_true",
+    #     help="Disables automatic report generation, overriding default behaviour and behaviour set in run config."
+    # )
     run_parser.add_argument(
         "--filter",
         action="store_true",
@@ -162,10 +163,19 @@ def get_run_parser() -> ArgumentParser:
             "output upon completion."
         )
     )
+    # run_parser.add_argument(
+    #     "--no-filter",
+    #     action="store_true",
+    #     help="Disables filtered BAM file generation, overriding default behaviour and behaviour set in run config."
+    # )
+
     run_parser.add_argument(
-        "--no-filter",
+        "--quant",
         action="store_true",
-        help="Disables filtered BAM file generation, overriding default behaviour and behaviour set in run config."
+        help=(
+            "(Force enables --filter) Wraps Stringtie to calculate transcript frequencies for genes with "
+            "detected splice activity; generates a Stringtie result summary annotated with feature information."
+        )
     )
 
     return run_parser
@@ -293,7 +303,7 @@ def get_quant_parser() -> ArgumentParser:
         help="(If not defined in run config or user config, optional) Disables inference of reference gene IDs and "
              "reference gene names for stringtie results without these values. By default, if a given stringtie gene "
              "has at least one transcript with an associated reference gene ID and reference gene name, fdsa quant "
-             "will assign these to all other transcripts for that gene, as long as there is no ambiguity (transcripts "
+             "will assign these values to all other transcripts for that gene, as long as there is no ambiguity (transcripts "
              "from a single stringtie gene associated with multiple reference gene IDs)"
     )
 

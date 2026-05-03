@@ -18,8 +18,9 @@
 # FEATURECOUNTS DISPATCH AND PARSING GENE COUNT DATA
 
 from dataclasses import dataclass
-from typing import Dict, List, Union
+from typing import Dict, List, Optional
 import os
+import logging
 import subprocess
 import pandas as pd
 import conorm
@@ -27,6 +28,9 @@ import conorm
 
 DEFAULT_FEATURE_COUNTS_OUTPUT_GENE_ID_COLUMN_INDEX = 0
 DEFAULT_FEATURE_COUNTS_OUTPUT_LEFTMOST_COUNTS_COLUMN_INDEX = 6
+
+
+logger = logging.getLogger(__name__)
 
 
 # Possible TODO: Move from src/analysis to src/reporting
@@ -47,7 +51,7 @@ class FeatureCountsResult:
 
 def get_tmm_cpm_from_gene_counts(
     feature_counts_result: FeatureCountsResult,
-    threads: Union[None, int] = None,
+    threads: Optional[int] = None
 ) -> pd.DataFrame:
 
     # TODO: Implement setting NUMEXPR_MAX_THREADS here via optional threads argument
@@ -116,6 +120,8 @@ def get_gene_counts_from_tsv(
     return FeatureCountsResult(index_by_sample_name, counts_by_gene_id)
 
 
+# TODO: Implement strandedness parameter!
+#       --> Allow user to specify strandedness in either the [RUN] or [REPORT] section
 def run_feature_counts(
     feature_counts_executable: str,
     bam_files_dir: str,
@@ -133,11 +139,13 @@ def run_feature_counts(
     _ending_length = len(bam_ending)
     bam_file_paths = [p for p in os.listdir(bam_files_dir) if p[-_ending_length:] == bam_ending]
 
-    paired_flag = "-p " if paired_end_reads else ""
+    paired_flag = "-p --countReadPairs " if paired_end_reads else ""
     primary_flag = "--primary " if primary_alignment_only else ""
 
     full_cmd = f"{feature_counts_executable} -T {threads} {paired_flag}-t exon -g gene_id {primary_flag}" +\
         f"-a {reference_gtf_path} -o {output_path} {' '.join(bam_file_paths)}"
+
+    logger.debug(f"Running featureCounts with command: {full_cmd}")
 
     process = subprocess.run(full_cmd.split(" "), cwd=bam_files_dir, encoding="utf8", check=check_exit_code)
 
