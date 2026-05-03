@@ -4,7 +4,7 @@
 Feature-Directed Splice Analysis (FDSA) is a scalable pipeline for the identification and quantification of splice events affecting specific *transcript features* in RNA sequencing data.
 
 A *transcript feature* may be any term matching a feature annotation from GenBank, such as "transmembrane region" or "phosphorylation site".
-FDSA can be used for unbiased genome-wide screening, or directed to a specific list of genes. FDSA can be used with BAM files produced by any splice-aware sequence aligner.
+FDSA can be used for unbiased genome-wide screening, or directed to a specific list of genes. FDSA is compatible with BAM files produced by any splice-aware sequence aligner.
 
 FDSA uses a specialized algorithm for identification of splice events, followed by integration of existing tools
 (Samtools, StringTie, and FeatureCounts) for downstream quantification. Finally, a graphical report summarizing splice events of interest can be generated as a portable HTML file.
