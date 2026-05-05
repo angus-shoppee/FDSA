@@ -72,7 +72,7 @@ def bam_op_consumes_reference(op: int) -> bool:
     return _BAM_OP_CONSUMES_REFERENCE[op]
 
 
-# TODO: Use mutable integers or replace with default tuples for speed improvement (creating named tuples is slow)
+# TODO: replace with default tuples for speed improvement
 
 NumberOfJunctions = NamedTuple("NumberOfJunctions", [("unique", int), ("multi", int)])
 

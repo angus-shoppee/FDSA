@@ -33,7 +33,7 @@ FDSA uses a specialized algorithm for identification of splice events, followed 
    ```
 4. Run full pipeline:
     ```bash
-   fdsa run --filter --quant --report $run_config_path
+   fdsa run --quant --report $run_config_path
    ```
 
 ---
@@ -145,8 +145,9 @@ Boolean parameters can be specified as either `True`/`False` or `Yes`/`No` and a
 - **Purpose**: Sets default parameters and paths to optional dependencies.
 - **Mandatory Section**:
   - `[BUILD]`
+    - `email` / `emailAddress` : Required to use Entrez API to fetch feature annotations.
     - `biomart` / `biomartMirror`: (Optional) Ensembl base URL for API queries.
-    <br>Default = "http://asia.ensembl.org"
+    <br>Default = "www.ensembl.org"
 
 - **Optional Sections**:
   - `[DEFAULT RUN]`
