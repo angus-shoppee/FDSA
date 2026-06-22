@@ -145,23 +145,23 @@ Boolean parameters can be specified as either `True`/`False` or `Yes`/`No` and a
 - **Purpose**: Sets default parameters and paths to optional dependencies.
 - **Mandatory Section**:
   - `[BUILD]`
-    - `email` / `emailAddress` : Required to use Entrez API to fetch feature annotations.
-    - `biomart` / `biomartMirror`: (Optional) Ensembl base URL for API queries.
+    - `email` / `emailAddress` : (Mandatory) Required to use Entrez API to fetch feature annotations during build step.
+    - `biomart` / `biomartMirror`: Ensembl base URL for API queries.
     <br>Default = "www.ensembl.org"
 
 - **Optional Sections**:
   - `[DEFAULT RUN]`
   <br>*For all parameters, see Run Config below*
   - `[DEFAULT FILTER]`
-    - `samtools` / `samtoolsExecutablePath`: Path to the samtools executable file.
   <br>*For all parameters, see Run Config below*
+    - `samtools` / `samtoolsExecutablePath`: Path to the samtools executable file.
   - `[DEFAULT QUANT]`
+  <br>*For all parameters, see Run Config below*
     - `stringtie / stringtieExecutablePath`: Path to the stringtie executable file.
     - `prepDE / prepDEScriptPath`: Path to the prepDE.py3 script distributed alongside stringtie.
-  <br>*For all parameters, see Run Config below*
   - `[DEFAULT REPORT]`
-    - `featureCounts` / `featureCountsExecutablePath`: Path to the featureCounts executable file.
   <br>*For all parameters, see Run Config below*
+    - `featureCounts` / `featureCountsExecutablePath`: Path to the featureCounts executable file.
 
 ### **Run Config**
 - **Purpose**: Specifies parameters for each analysis mode.
@@ -178,7 +178,7 @@ Boolean parameters can be specified as either `True`/`False` or `Yes`/`No` and a
     - `threads`: Number of threads to use for each enabled runtime mode.
     <br>Default = 1
     - `maxFeaturesInTranscript` / `maxNumberFeaturesInTranscript`: Maximum number of the specified feature annotation allowed in a given transcript for it to be included in the analysis. For example, combining `feature = "transmembrane region"` and
-      `maxNumberFeaturesInTranscript = 1` will exclude multi-pass receptors from the analysis.
+      `maxNumberFeaturesInTranscript = 1` will exclude multi-span receptors from the analysis.
     <br>Default = *
     - `overlapThreshold` / `featureJunctionOverlapThreshold`: Minimum exonic overlap (fraction, 0-1) of a splice junction with a feature locus required to count a junction as overlapping the feature.
     <br>Default = 0.5

@@ -82,6 +82,7 @@ def create_and_save_name_lookup(
     database_name: str,
     host_url: str,
     output_path: str,
+    use_first_id_match = True
 ) -> NameLookup:
 
     biomart_dataset = BiomartDataset(
@@ -127,18 +128,37 @@ def create_and_save_name_lookup(
             logger.info(f"Progress: ({_i}/{_t})")
         _i += 1
 
-        name_lookup_dict["refseq"]["ensembl"][rec[1]["RefSeq mRNA ID"]] = str(
-            rec[1]["Transcript stable ID version"]
-        ).replace("nan", "")
-        name_lookup_dict["refseq"]["gene"][rec[1]["RefSeq mRNA ID"]] = str(
-            rec[1]["Gene name"]
-        ).replace("nan", "")
-        name_lookup_dict["ensembl"]["refseq"][rec[1]["Transcript stable ID version"]] = str(
-            rec[1]["RefSeq mRNA ID"]
-        ).replace("nan", "")
-        name_lookup_dict["ensembl"]["gene"][rec[1]["Transcript stable ID version"]] = str(
-            rec[1]["Gene name"]
-        ).replace("nan", "")
+        if use_first_id_match:
+            name_lookup_dict["refseq"]["ensembl"].setdefault(
+                rec[1]["RefSeq mRNA ID"],
+                str(rec[1]["Transcript stable ID version"]).replace("nan", "")
+            )
+            name_lookup_dict["refseq"]["gene"].setdefault(
+                rec[1]["RefSeq mRNA ID"],
+                str(rec[1]["Gene name"]).replace("nan", "")
+            )
+            name_lookup_dict["ensembl"]["refseq"].setdefault(
+                rec[1]["Transcript stable ID version"],
+                str(rec[1]["RefSeq mRNA ID"]).replace("nan", "")
+            )
+            name_lookup_dict["ensembl"]["gene"].setdefault(
+                rec[1]["Transcript stable ID version"],
+                str(rec[1]["Gene name"]).replace("nan", "")
+            )
+        else:
+            # name_lookup_dict["refseq"]["ensembl"][rec[1]["RefSeq mRNA ID"]] = str(
+            #     rec[1]["Transcript stable ID version"]
+            # ).replace("nan", "")
+            # name_lookup_dict["refseq"]["gene"][rec[1]["RefSeq mRNA ID"]] = str(
+            #     rec[1]["Gene name"]
+            # ).replace("nan", "")
+            # name_lookup_dict["ensembl"]["refseq"][rec[1]["Transcript stable ID version"]] = str(
+            #     rec[1]["RefSeq mRNA ID"]
+            # ).replace("nan", "")
+            # name_lookup_dict["ensembl"]["gene"][rec[1]["Transcript stable ID version"]] = str(
+            #     rec[1]["Gene name"]
+            # ).replace("nan", "")
+            raise NotImplementedError("Only first-match is currently supported for multiple ID mappings")
 
     logger.info("...done\n")
     logger.info("Saving to file...")
