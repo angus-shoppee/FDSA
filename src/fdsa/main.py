@@ -621,6 +621,12 @@ def main() -> None:
 
             species_specific_data_dir = os.path.join(data_dir, "data", str(species))
 
+            if build_args.regenerate_all:
+                build_args.redo_annotation = True
+                build_args.regenerate_lookup = True
+                build_args.regenerate_transcripts = True
+                build_args.regenerate_features = True
+
             # Execute build
             logger.info(f"Writing build files to: {species_specific_data_dir}")
             _build(
