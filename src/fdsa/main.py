@@ -16,6 +16,7 @@
 
 
 from typing import Union, Optional
+import sys
 import gc
 import os
 import logging
@@ -29,9 +30,11 @@ from sys import argv
 from gtfparse import read_gtf
 
 from fdsa.config.parse_args import (
-    get_mode_parser, get_build_parser, get_run_parser, get_report_parser, get_filter_parser, get_quant_parser
+    get_mode_parser, get_build_parser, get_inspect_annotations_parser, get_inspect_analysis_features_parser,
+    get_run_parser, get_report_parser, get_filter_parser, get_quant_parser
 )
 from fdsa.config.parse_config import ProgramInternalConfig, ProgramUserConfig, ProgramRunConfig
+from fdsa.analysis.inspect import inspect_annotations, inspect_analysis_features
 from fdsa.analysis.transcript import (
     create_and_save_transcript_library, annotate_and_save_transcript_library, load_transcript_library_from_file
 )
@@ -50,6 +53,12 @@ from fdsa.downstream.quant import quantify_isoforms
 PROGRAM_NAME = "fdsa"
 
 PROGRAM_DESCRIPTION = "Feature-Directed Splice Analysis"
+
+FDSA_INSPECT_COMMAND_USAGE = "fdsa inspect TARGET"
+
+FDSA_INSPECT_ANNOTATIONS_COMMAND_USAGE = "fdsa inspect annotations --species SPECIES_NAME --output OUTPUT_PATH"
+
+FDSA_INSPECT_ANALYSIS_FEATURES_COMMAND_USAGE = "fdsa inspect analysis-features --config RUN_CONFIG_PATH --output OUTPUT_PATH"
 
 FDSA_USER_COMMAND_USAGE = "fdsa user USER_CONFIG_PATH"
 
@@ -477,8 +486,6 @@ def _quant(
 
 def main() -> None:
 
-    # base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))  # Parent directory of src
-
     data_dir = Path(user_data_dir(PROGRAM_NAME))
     data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -643,6 +650,90 @@ def main() -> None:
                 force_regenerate_genbank_features=build_args.regenerate_features,
                 restart_partial_download=build_args.regenerate_partial_features_download
             )
+
+        elif mode_arg.mode == "inspect":
+
+            # TODO: Override argparser default error messages which show misformatted usage e.g.
+            #       `usage: fdsa [-h] -s SPECIES -o OUTPUT` instead of `usage: fdsa inspect annotation -s SPECIES -o OUTPUT`
+
+            allowed_inspect_targets = ["annotations", "analysis-features"]
+            allowed_inspect_targets_string = f"[{'/'.join(allowed_inspect_targets)}]"
+
+            if not any([arg in subsequent_args for arg in allowed_inspect_targets]):
+                print(
+                    f"A target must be specified for inspect mode (allowed options: {allowed_inspect_targets_string}). "
+                    f"Usage:\n" + FDSA_INSPECT_COMMAND_USAGE
+                )
+                exit()
+
+            inspect_parser = argparse.ArgumentParser()
+            inspect_parser.add_argument(
+                "target",
+                type=str,
+                help=f"Target (FDSA internal resource) to inspect. Options: {allowed_inspect_targets_string}"
+            )
+
+            target_arg, subsequent_args = inspect_parser.parse_known_args(sys.argv[2:])  # Slice out mode arg
+
+            if target_arg.target == "annotations":
+
+                if any([arg in subsequent_args for arg in ("-h", "--help")]):
+                    help_message = inspect_parser.format_help()
+                    print(
+                        FDSA_INSPECT_ANNOTATIONS_COMMAND_USAGE +
+                        "\n" +
+                        help_message[help_message.index("\n"):]
+                    )
+                    exit()
+
+                inspect_annotations_parser = get_inspect_annotations_parser()
+
+                inspect_annotations_args = inspect_annotations_parser.parse_args(subsequent_args)
+
+                inspect_annotations(
+                    os.path.join(data_dir, "data", inspect_annotations_args.species),
+                    inspect_annotations_args.output
+                )
+
+            elif target_arg.target == "analysis-features":
+
+                if any([arg in subsequent_args for arg in ("-h", "--help")]):
+                    help_message = inspect_parser.format_help()
+                    print(
+                        FDSA_INSPECT_ANALYSIS_FEATURES_COMMAND_USAGE +
+                        "\n" +
+                        help_message[help_message.index("\n"):]
+                    )
+                    exit()
+
+                inspect_analysis_features_parser = get_inspect_analysis_features_parser()
+
+                inspect_analysis_features_args = inspect_analysis_features_parser.parse_args(subsequent_args)
+
+                if not os.path.exists(inspect_analysis_features_args.config):
+                    logger.error(INVALID_CONFIG_PATH_MESSAGE)
+                    exit()
+                try:
+                    run_config = ProgramRunConfig(
+                        inspect_analysis_features_args.config,
+                        internal_config,
+                        user_config
+                    )
+                except ValueError as e:
+                    logger.error(CONFIG_FILE_FORMATTING_ERROR_MESSAGE + "\n" + str(e))
+                    exit()
+
+                inspect_analysis_features(
+                    os.path.join(data_dir, "data", run_config.species),
+                    inspect_analysis_features_args.output,
+                    run_config
+                )
+
+            else:
+
+                raise ValueError(f"Unexpected target for inspect mode ({target_arg.target}). "
+                                 f"Allowed options: {allowed_inspect_targets_string}\n"
+                                 f"Usage: {FDSA_INSPECT_COMMAND_USAGE}")
 
         elif mode_arg.mode in ("run", "report", "filter"):
 

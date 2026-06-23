@@ -20,6 +20,7 @@
 from dataclasses import dataclass
 from typing import List, Dict, Union
 from pandas import DataFrame
+from pathlib import Path
 import logging
 import os
 import pickle
@@ -485,7 +486,7 @@ def annotate_and_save_transcript_library(
     return transcript_library
 
 
-def load_transcript_library_from_file(path: str):
+def load_transcript_library_from_file(path: Union[str, Path]):
 
     with open(path, "rb") as f:
 

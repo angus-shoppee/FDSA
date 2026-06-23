@@ -18,6 +18,8 @@
 from dataclasses import dataclass, asdict
 from typing import Optional, Tuple, Dict
 
+# TODO: Move generic GTF parsing code to utils
+
 
 STRINGTIE_SOURCE_NAME = "StringTie"
 

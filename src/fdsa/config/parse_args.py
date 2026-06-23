@@ -28,13 +28,15 @@ def get_mode_parser(program_description: str) -> ArgumentParser:
     mode_parser.add_argument(
         "mode",
         type=str,
-        choices=["user", "build", "run", "report", "filter", "quant"],
+        choices=["user", "build", "inspect", "run", "report", "filter", "quant"],
         # TODO: Format mode help text
         help="\n".join([
-            "user - (Required only once) Ssets the user config file containing build information and optional default "
+            "user - (Required only once) Sets the user config file containing build information and optional default "
             "parameters.",
             "build - (Required once per species, before first run) Parses transcripts from the provided reference "
             "genome GTF, downloads feature annotation data, and links the two to enable directed splice analysis.",
+            "inspect - Outputs information about a specified FDSA internal resource. Options: "
+            "[annotations, analysis-features].",
             "run - Performs splice analysis according to parameters set in the specified run config file.",
             "report - Generates a graphical report from the output of \"fdsa run\".",
             "filter - Generates filtered BAM files containing only reads aligned to genes that have splice events in "
@@ -46,6 +48,52 @@ def get_mode_parser(program_description: str) -> ArgumentParser:
     )
 
     return mode_parser
+
+
+def get_inspect_annotations_parser() -> ArgumentParser:
+
+    inspect_annotations_parser = ArgumentParser()
+
+    inspect_annotations_parser.add_argument(
+        "-s",
+        "--species",
+        type=str,
+        required=True,
+        help="Species to export annotated transcript library."
+    )
+
+    inspect_annotations_parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        required=True,
+        help="Destination for exported .csv file. "
+    )
+
+    return inspect_annotations_parser
+
+
+def get_inspect_analysis_features_parser() -> ArgumentParser:
+
+    inspect_analysis_features_parser = ArgumentParser()
+
+    inspect_analysis_features_parser.add_argument(
+        "-c",
+        "--config",
+        type=str,
+        required=True,
+        help="Path to run config file with a valid [RUN] section containing the `species` and `feature` parameters."
+    )
+
+    inspect_analysis_features_parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        required=True,
+        help="Destination for exported .csv file. "
+    )
+
+    return inspect_analysis_features_parser
 
 
 def get_build_parser() -> ArgumentParser:

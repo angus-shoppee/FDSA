@@ -38,6 +38,9 @@ class RefseqExonFeature:
     end: int
     qualifiers: str
 
+    def __str__(self):
+        return(f"({self.start}-{self.end}) {self.qualifiers}")
+
 
 class RefseqExon:
     start: int
@@ -140,3 +143,18 @@ class GBSeq:
                 qualifiers=gbfeature.get_qual_values()
             )
         )
+
+    def serialize_features(self) -> str:
+
+        return "|".join([
+            f"({feature.start}-{feature.end}) {feature.key}: "
+            f"{' / '.join([str(q.name + '=' + q.value) for q in feature.quals])}"
+            for feature in self.features
+        ])
+
+    def serialize_analysis_features(self) -> str:
+
+        return "|".join([
+            f"{k}: {' & '.join([str(refseq_exon_feature) for refseq_exon_feature in v])}"
+            for k, v in self.get_analysis_features().items()
+        ])
