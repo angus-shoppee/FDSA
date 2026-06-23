@@ -35,18 +35,10 @@ ANNOTATED_TRANSCRIPT_LIBRARY_PICKLE_OBJECT_NAME = "annotated_transcript_library.
 logger = logging.getLogger(__name__)
 
 
-# set_analysis_features(
-#     run_config.feature_name,
-#     annotated_transcript_library,
-#     only_use_longest_annotated_transcript=run_config.only_use_longest_annotated_transcript,
-#     skip_transcripts_with_redundant_feature_annotation=run_config.skip_transcripts_with_redundant_feature_annotation
-# )
-
-
 def inspect_analysis_features(
-        species_specific_data_dir: str,
-        output: str,
-        run_config: ProgramRunConfig
+    species_specific_data_dir: str,
+    output: str,
+    run_config: ProgramRunConfig
 ) -> None:
 
     inspect_annotations(
@@ -57,9 +49,9 @@ def inspect_analysis_features(
 
 
 def inspect_annotations(
-        species_specific_data_dir: str,
-        output: str,
-        run_config: Optional[ProgramRunConfig] = None
+    species_specific_data_dir: str,
+    output: str,
+    run_config: Optional[ProgramRunConfig] = None
 ) -> None:
 
     simulate_runtime = False if run_config is None else True

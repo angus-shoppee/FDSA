@@ -19,6 +19,7 @@ from typing import Union, Optional
 import sys
 import gc
 import os
+import csv
 import logging
 import argparse
 from pathlib import Path
@@ -38,6 +39,7 @@ from fdsa.analysis.inspect import inspect_annotations, inspect_analysis_features
 from fdsa.analysis.transcript import (
     create_and_save_transcript_library, annotate_and_save_transcript_library, load_transcript_library_from_file
 )
+from fdsa.analysis.annotation import GBFeature, GBQual
 from fdsa.analysis.entrez import download_and_save_feature_annotation_xml, get_gbseq_from_xml
 from fdsa.analysis.biomart import create_and_save_name_lookup, load_name_lookup_from_file
 from fdsa.analysis.experiment import Sample
@@ -318,10 +320,28 @@ def _run(
 
     logger.info(f"Enabling screening for features containing term: \"{run_config.feature_name}\"...")
 
+    manual_features = {}
+    if run_config.manual_features_path:
+        logger.info(f"Injecting manual feature annotations: {run_config.manual_features_path}")
+        with open(run_config.manual_features_path, "r") as f:
+            reader = csv.reader(f)
+            for row in reader:
+                # Store GBFeature against transcript refseq
+                if manual_features.get(row[0]) is None:
+                    manual_features[row[0]] = []
+                manual_features[row[0]].append(
+                    GBFeature(
+                        feature_key="injected_feature",
+                        feature_location=f"{row[1]}..{row[2]}",
+                        feature_quals=[GBQual(name="note", value=row[3])]
+                    )
+                )
+
     # TODO: Refactor function to return new object instead of modify input
     set_analysis_features(
         run_config.feature_name,
         annotated_transcript_library,
+        inject_manual_features=manual_features,
         only_use_longest_annotated_transcript=run_config.only_use_longest_annotated_transcript,
         skip_transcripts_with_redundant_feature_annotation=run_config.skip_transcripts_with_redundant_feature_annotation
     )

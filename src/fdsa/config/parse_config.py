@@ -656,6 +656,7 @@ class ProgramRunConfig:
     species: str
     genome: str
     genes: Union[None, Dict[str, bool]]  # Check .genes.get(gene_name, False) for speed improvement over list membership
+    manual_features_path: Union[None, str]
     n_threads: int
     rank_results_by: str
     max_n_features_in_transcript: int
@@ -832,6 +833,20 @@ class ProgramRunConfig:
         else:
             # Allow inline gene set to be delimited by either spaces or commas
             self.genes = {remove_quotes(gene_name).lower(): True for gene_name in genes.replace(",", " ").split()}
+
+        manual_features_path = run_config.get(
+            "RUN", "manualFeaturesPath", fallback=run_config.get(
+                "RUN", "manualFeatures", fallback=None
+            )
+        )
+        if manual_features_path is not None:
+            manual_features_path = remove_quotes(manual_features_path)
+            if not os.path.exists(manual_features_path):
+                raise ValueError(
+                    f"A file was specified for the parameter `manualFeatures` in section RUN, but its path is "
+                    f"not valid: {manual_features_path}"
+                )
+        self.manual_features_path = manual_features_path
 
         n_threads = run_config.get("RUN", "threads", fallback=(
             user_config.user_default_n_threads

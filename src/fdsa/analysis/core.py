@@ -18,7 +18,7 @@
 # FDSA CONFIG & CORE FUNCTIONS
 
 from dataclasses import dataclass
-from typing import Tuple, List, Dict, Union
+from typing import Tuple, List, Dict, Union, Optional
 from multiprocessing import Pool
 import logging
 import os
@@ -27,6 +27,7 @@ import time
 from statistics import mean
 
 from fdsa.config import output_column_names as cols
+from fdsa.analysis.annotation import GBFeature
 from fdsa.analysis.transcript import TranscriptRecord, TranscriptLibrary
 from fdsa.analysis.experiment import Sample
 from fdsa.analysis.splice import DEFAULT_MAPQ_FOR_UNIQUE_MAPPING, SpliceJunction, get_splice_junctions_from_sample
@@ -51,9 +52,15 @@ def name_output(
 def set_analysis_features(
     feature_substring: str,
     annotated_transcript_library: TranscriptLibrary,
+    inject_manual_features: Optional[Dict[str, List[GBFeature]]] = None,  # refseq_id --> List[GBFeature]
     only_use_longest_annotated_transcript: bool = True,
     skip_transcripts_with_redundant_feature_annotation: bool = True
 ) -> None:
+
+    if inject_manual_features is None:
+        inject_manual_features = {}
+
+    # NOTE: Where applicable, manual features are injected first, then treated the same as existing GB features
 
     if skip_transcripts_with_redundant_feature_annotation or only_use_longest_annotated_transcript:
 
@@ -71,6 +78,13 @@ def set_analysis_features(
 
                 reached_transcript_with_relevant_annotation = False
                 for transcript in transcripts_ordered_by_length:
+
+                    assert transcript.gbseq is not None
+
+                    manual_features = inject_manual_features.get(transcript.gbseq.refseq_id)
+                    if manual_features is not None:
+                        for manual_feature in manual_features:
+                            transcript.gbseq.set_feature(manual_feature)
 
                     for gbfeature in transcript.gbseq.features:
                         if gbfeature.has_qual_value_containing(feature_substring):
@@ -94,11 +108,20 @@ def set_analysis_features(
                 # Only use set_analysis_feature for transcripts with unique annotation, defaulting to longest
                 encountered = []
                 for transcript in transcripts_ordered_by_length:
+
+                    assert transcript.gbseq is not None
+
+                    manual_features = inject_manual_features.get(transcript.gbseq.refseq_id)
+                    if manual_features is not None:
+                        for manual_feature in manual_features:
+                            transcript.gbseq.set_feature(manual_feature)
+
                     summary_of_analysis_features = [
                         (
                             gbfeature.start, gbfeature.end
                         ) for gbfeature in analysis_features[transcript.transcript_id]
                     ]
+
                     if summary_of_analysis_features not in encountered:
                         encountered.append(summary_of_analysis_features)
                         for gbfeature in analysis_features[transcript.transcript_id]:
@@ -107,6 +130,14 @@ def set_analysis_features(
     else:
 
         for transcript in annotated_transcript_library.get_all_transcripts():
+
+            assert transcript.gbseq is not None
+
+            manual_features = inject_manual_features.get(transcript.gbseq.refseq_id)
+            if manual_features is not None:
+                for manual_feature in manual_features:
+                    transcript.gbseq.set_feature(manual_feature)
+
             for gbfeature in transcript.gbseq.features:
                 if gbfeature.has_qual_value_containing(feature_substring):
                     transcript.gbseq.set_analysis_feature(feature_substring, gbfeature)

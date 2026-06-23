@@ -54,6 +54,8 @@ class RefseqExon:
         self.length = 1 + end - start
 
 
+# TODO: Rename Seq, Feature and Qual classes to reflect that features may originate from GenBank or be manually injected
+
 @dataclass
 class GBQual:
     name: str
@@ -124,6 +126,13 @@ class GBSeq:
 
     def get_analysis_features(self) -> Dict:
         return self._analysis_features
+
+    def set_feature(
+        self,
+        gbfeature: GBFeature
+    ) -> None:
+
+        self.features.append(gbfeature)
 
     def set_analysis_feature(
         self,
